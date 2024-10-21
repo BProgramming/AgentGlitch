@@ -246,7 +246,14 @@ def main(win):
                 win.blit(black, (0, 0))
                 pygame.display.update()
                 time.sleep(0.01)
-            new_game = controller.main(show_continue=isfile("GameData/save.p"))
+            has_save = isfile("GameData/save.p")
+            if has_save:
+                controller.main_menu.buttons[0][1].set_alpha(255)
+                controller.main_menu.buttons[0][2].set_alpha(255)
+            else:
+                controller.main_menu.buttons[0][1].set_alpha(128)
+                controller.main_menu.buttons[0][2].set_alpha(128)
+            new_game = controller.main(show_continue=has_save)
             for i in range(64):
                 win.blit(slide, ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
                 win.blit(overlay, ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
@@ -446,7 +453,6 @@ def main(win):
 if __name__ == "__main__":
     main(WINDOW)
 
-# to do settings menu: controls
 # test switch pro and ps5 controllers
 # bugs: get sight ranges to display properly in the first spawn
 # assets:   levels
@@ -456,6 +462,10 @@ if __name__ == "__main__":
 #           shooting sprites
 #           player sprites
 #           screens
+#           story and dialogue
 # then package with nuitka
 
-# later: bosses, moving hazards with a sprite sheet (like tutorial flames), bouncers, lasers, missiles explode
+# later:    bosses
+#           sprite sheets for moving blocks, hazards, and moving hazards
+#           bouncers, lasers
+#           make missiles explode at end of range

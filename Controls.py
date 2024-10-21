@@ -35,6 +35,7 @@ class Controller:
         self.pause_menu = Menu(win, "PAUSED", [{"label": "Resume", "type": ButtonType.CLICK}, {"label": "Save game", "type": ButtonType.CLICK}, {"label": "Load game", "type": ButtonType.CLICK}, {"label": "Restart level", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Quit to menu", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}])
         self.settings_menu = Menu(win, "SETTINGS", [dif, {"label": "Controls", "type": ButtonType.CLICK}, {"label": "Volume", "type": ButtonType.CLICK}, {"label": "Toggle fullscreen", "type": ButtonType.CLICK}, {"label": "Back", "type": ButtonType.CLICK}])
         self.volume_menu = Menu(win, "VOLUME", [vol_bg, vol_pc, vol_fx, {"label": "Back", "type": ButtonType.CLICK}])
+        self.controls_menu = Menu(win, "CONTROLS", [{"label": "Keyboard", "type": ButtonType.CLICK}, {"label": "Controller", "type": ButtonType.CLICK}, {"label": "Back", "type": ButtonType.CLICK}])
         difficulty_images = [make_image_from_text(256, 128, "EASIEST", ["Agent is much stronger", "Enemies are much weaker", "Enemy sight ranges are visible"], border=5), make_image_from_text(256, 128, "EASY", ["Agent is stronger", "Enemies are weaker", "Enemy sight ranges are visible"], border=5), make_image_from_text(256, 128, "MEDIUM", ["Agent is normal strength", "Enemies are normal strength", "Enemy sight ranges are not visible"], border=5), make_image_from_text(256, 128, "HARD", ["Agent is weaker", "Enemies are stronger", "Enemy sight ranges are not visible"], border=5), make_image_from_text(256, 128, "HARDEST", ["Agent is much weaker", "Enemies are much stronger", "Enemy sight ranges are not visible"], border=5)]
         self.difficulty_picker = Selector(win, "CHOOSE DIFFICULTY", ["You can change this at any time."], difficulty_images, [DifficultyScale.EASIEST, DifficultyScale.EASY, DifficultyScale.MEDIUM, DifficultyScale.HARD, DifficultyScale.HARDEST], index=2)
         sprite_images, sprite_values = load_picker_sprites("Sprites")
@@ -45,6 +46,8 @@ class Controller:
             self.set_keyboard_layout(layout)
         self.gamepad = None
         self.active_gamepad_layout = None
+        self.keyboard_layout_picker = Selector(win, "KEYBOARD LAYOUT", ["This can be cycled with the F9 key."], load_images("Menu", "Keyboards").values(), list(self.KEYBOARD_LAYOUTS.keys()))
+        self.gamepad_layout_picker = Selector(win, "CONTROLLER LAYOUT", ["This is detected when you connect a controller."], load_images("Menu", "Controllers").values(), list(self.GAMEPAD_LAYOUTS.keys()), accept_only=True)
 
     def set_difficulty(self):
         if self.objects is not None:
@@ -137,16 +140,24 @@ class Controller:
         while True:
             time.sleep(0.01)
 
-            match selector.display(self.win):
-                case 0:
-                    selector.cycle_images(-1)
-                case 1:
-                    selector.cycle_images(1)
-                case 2:
-                    selector.fade_out(self.win)
-                    return
-                case _:
-                    pass
+            if len(selector.buttons) > 1:
+                match selector.display(self.win):
+                    case 0:
+                        selector.cycle_images(-1)
+                    case 1:
+                        selector.cycle_images(1)
+                    case 2:
+                        selector.fade_out(self.win)
+                        return
+                    case _:
+                        pass
+            else:
+                match selector.display(self.win):
+                    case 0:
+                        selector.fade_out(self.win)
+                        return
+                    case _:
+                        pass
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -160,7 +171,7 @@ class Controller:
             self.get_gamepad()
             if self.active_gamepad_layout is not None:
                 should_process_event = True
-                if abs(self.gamepad.get_axis(0)) > joystick_tolerance:
+                if abs(self.gamepad.get_axis(0)) > joystick_tolerance and len(selector.buttons) > 1:
                     selector.move_mouse_sideways(math.copysign(1, self.gamepad.get_axis(0)))
                     should_process_event = False
                 elif abs(self.gamepad.get_axis(1)) > joystick_tolerance:
@@ -238,6 +249,70 @@ class Controller:
                 if should_process_event and abs(joystick_movement) > joystick_tolerance:
                     self.settings_menu.move_mouse_pos(self.win, math.copysign(1, joystick_movement))
                     joystick_movement = 0
+    def controls(self, clear=None, joystick_tolerance=0.25):
+        pygame.mouse.set_visible(True)
+        self.controls_menu.fade_in(self.win)
+        if self.active_gamepad_layout is not None:
+            self.controls_menu.set_mouse_pos(self.win)
+            self.controls_menu.buttons[1][1].set_alpha(255)
+            self.controls_menu.buttons[1][2].set_alpha(255)
+        else:
+            self.controls_menu.buttons[1][1].set_alpha(128)
+            self.controls_menu.buttons[1][2].set_alpha(128)
+        joystick_movement = 0
+        self.controls_menu.clear = clear
+        while True:
+            time.sleep(0.01)
+
+            match self.controls_menu.display(self.win):
+                case 0:
+                    self.controls_menu.fade_out(self.win)
+                    self.keyboard_layout_picker.set_index(self.keyboard_layout_picker.values.index(self.active_keyboard_layout))
+                    self.pick_from_selector(self.keyboard_layout_picker, clear=self.controls_menu.clear)
+                    self.set_keyboard_layout(self.keyboard_layout_picker.values[self.keyboard_layout_picker.image_index])
+                    self.controls_menu.fade_in(self.win)
+                case 1:
+                    if self.active_gamepad_layout is not None:
+                        self.controls_menu.fade_out(self.win)
+                        self.gamepad_layout_picker.set_index(self.gamepad_layout_picker.values.index(self.active_gamepad_layout))
+                        self.pick_from_selector(self.gamepad_layout_picker, clear=self.controls_menu.clear)
+                        self.controls_menu.fade_in(self.win)
+                    else:
+                        display_text(["No controller connected."], self.win, self, type=False)
+                case 2:
+                    self.controls_menu.fade_out(self.win)
+                    return
+                case _:
+                    pass
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.save_profile(self)
+                    pygame.quit()
+                    sys.exit()
+                elif event.type == pygame.KEYDOWN and event.key in self.keys_pause_unpause:
+                    pygame.mouse.set_visible(False)
+                    return
+
+            self.get_gamepad()
+            if self.active_gamepad_layout is not None:
+                should_process_event = True
+                if abs(self.gamepad.get_axis(1)) > joystick_tolerance:
+                    joystick_movement = self.gamepad.get_axis(1)
+                    should_process_event = False
+                elif self.gamepad.get_numhats() > 0 and abs(self.gamepad.get_hat(0)[1]) == 1:
+                    joystick_movement = -self.gamepad.get_hat(0)[1]
+                    should_process_event = False
+                elif self.button_menu_up is not None and self.gamepad.get_button(self.button_menu_up):
+                    joystick_movement = -1
+                    should_process_event = False
+                elif self.button_menu_down is not None and self.gamepad.get_button(self.button_menu_down):
+                    joystick_movement = 1
+                    should_process_event = False
+
+                if should_process_event and abs(joystick_movement) > joystick_tolerance:
+                    self.controls_menu.move_mouse_pos(self.win, math.copysign(1, joystick_movement))
+                    joystick_movement = 0
 
     def settings(self, clear=None, joystick_tolerance=0.25):
         pygame.mouse.set_visible(True)
@@ -254,7 +329,7 @@ class Controller:
                 case 0:
                     pass #set difficulty
                 case 1:
-                    pass ##replace controls
+                    self.controls(self.settings_menu.clear)
                 case 2:
                     time.sleep(0.01)
                     self.volume(self.settings_menu.clear)

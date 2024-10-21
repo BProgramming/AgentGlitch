@@ -171,12 +171,12 @@ class Menu():
 
 
 class Selector(Menu):
-    def __init__(self, win, header, note, images, values, index=0, should_glitch=True):
+    def __init__(self, win, header, note, images, values, index=0, should_glitch=True, accept_only=False):
         self.clear = None
         self.notch_val = [None, None, None]
         self.arrow_asset = pygame.transform.smoothscale_by(load_images("Menu", "Arrows")["ARROW_WHITE"], 0.5)
         button_assets = load_images("Menu", "Buttons")
-        self.buttons = self.make_buttons(pygame.transform.smoothscale_by(button_assets["HALF_BUTTON_NORMAL"], 0.5), pygame.transform.smoothscale_by(button_assets["HALF_BUTTON_MOUSEOVER"], 0.5), pygame.transform.smoothscale_by(button_assets["BUTTON_NORMAL"], 0.5), pygame.transform.smoothscale_by(button_assets["BUTTON_MOUSEOVER"], 0.5))
+        self.buttons = self.make_buttons(pygame.transform.smoothscale_by(button_assets["HALF_BUTTON_NORMAL"], 0.5), pygame.transform.smoothscale_by(button_assets["HALF_BUTTON_MOUSEOVER"], 0.5), pygame.transform.smoothscale_by(button_assets["BUTTON_NORMAL"], 0.5), pygame.transform.smoothscale_by(button_assets["BUTTON_MOUSEOVER"], 0.5), accept_only=accept_only)
         self.header = pygame.font.SysFont("courier", 32).render(header, True, (255, 255, 255))
         self.note = []
         for line in note:
@@ -209,6 +209,10 @@ class Selector(Menu):
 
         pygame.mouse.set_pos((x, y))
 
+    def set_index(self, index):
+        self.image_index = index
+        self.image_selected = self.images[index]
+
     def cycle_images(self, direction):
         if direction > 0:
             self.image_index += 1
@@ -220,14 +224,15 @@ class Selector(Menu):
             self.image_index = len(self.images) - 1
         self.image_selected = self.images[self.image_index]
 
-    def make_buttons(self, half_button_normal, half_button_mouseover, button_normal, button_mouseover):
+    def make_buttons(self, half_button_normal, half_button_mouseover, button_normal, button_mouseover, accept_only=False):
         buttons = []
-        for i in range(3):
-            if i == 0:
+        loop_range = range(1 if accept_only else 3)
+        for i in loop_range:
+            if not accept_only and i == 0:
                 label = pygame.transform.flip(self.arrow_asset, True, False)
                 normal = half_button_normal.copy()
                 mouseover = half_button_mouseover.copy()
-            elif i == 1:
+            elif not accept_only and i == 1:
                 label = self.arrow_asset
                 normal = half_button_normal.copy()
                 mouseover = half_button_mouseover.copy()
@@ -252,10 +257,10 @@ class Selector(Menu):
         screen.blit(self.image_selected[1], (dest_x, dest_y))
 
         for i in range(len(self.buttons)):
-            if i == 0:
+            if len(self.buttons) > 1 and i == 0:
                 dest_x = (screen.get_width() - (self.buttons[i][0].width * 2)) // 2
                 dest_y = screen.get_height() - ((len(self.buttons) - 1) * self.buttons[i][0].height)
-            elif i == 1:
+            elif len(self.buttons) > 1 and i == 1:
                 dest_x = ((screen.get_width() - (self.buttons[i][0].width * 2)) // 2) + self.buttons[i][0].width
                 dest_y = screen.get_height() - ((len(self.buttons) - i) * self.buttons[i][0].height)
             else:
