@@ -54,6 +54,11 @@ def play_slide(slide, controller, text=None, should_glitch=False, win=WINDOW):
         black.set_alpha(255 - (4 * i))
         win.blit(black, (0, 0))
         pygame.display.update()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                controller.save_profile(controller)
+                pygame.quit()
+                sys.exit()
         time.sleep(0.01)
 
     pause_dtime = 0
@@ -81,6 +86,11 @@ def play_slide(slide, controller, text=None, should_glitch=False, win=WINDOW):
             for spot in glitch(0.5, win):
                 win.blit(spot[0], spot[1])
         pygame.display.update()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                controller.save_profile(controller)
+                pygame.quit()
+                sys.exit()
         time.sleep(0.01)
 
 
@@ -99,6 +109,11 @@ def fade(background, bg_image, player, objects, hud, offset_x, offset_y, control
             volume = 1
         win.blit(black, (0, 0))
         pygame.display.update()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                controller.save_profile(controller)
+                pygame.quit()
+                sys.exit()
         if pygame.mixer.music.get_busy():
             pygame.mixer.music.set_volume((controller.master_volume["background"] / 100) * volume)
         time.sleep(0.01)

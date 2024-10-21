@@ -176,7 +176,7 @@ class Selector(Menu):
         self.notch_val = [None, None, None]
         self.arrow_asset = pygame.transform.smoothscale_by(load_images("Menu", "Arrows")["ARROW_WHITE"], 0.5)
         button_assets = load_images("Menu", "Buttons")
-        self.buttons = self.make_buttons(pygame.transform.smoothscale_by(button_assets["HALF_BUTTON_NORMAL"], 0.5), pygame.transform.smoothscale_by(button_assets["HALF_BUTTON_MOUSEOVER"], 0.5))
+        self.buttons = self.make_buttons(pygame.transform.smoothscale_by(button_assets["HALF_BUTTON_NORMAL"], 0.5), pygame.transform.smoothscale_by(button_assets["HALF_BUTTON_MOUSEOVER"], 0.5), pygame.transform.smoothscale_by(button_assets["BUTTON_NORMAL"], 0.5), pygame.transform.smoothscale_by(button_assets["BUTTON_MOUSEOVER"], 0.5))
         self.header = pygame.font.SysFont("courier", 32).render(header, True, (255, 255, 255))
         self.note = []
         for line in note:
@@ -220,17 +220,21 @@ class Selector(Menu):
             self.image_index = len(self.images) - 1
         self.image_selected = self.images[self.image_index]
 
-    def make_buttons(self, button_normal, button_mouseover):
+    def make_buttons(self, half_button_normal, half_button_mouseover, button_normal, button_mouseover):
         buttons = []
         for i in range(3):
             if i == 0:
                 label = pygame.transform.flip(self.arrow_asset, True, False)
+                normal = half_button_normal.copy()
+                mouseover = half_button_mouseover.copy()
             elif i == 1:
                 label = self.arrow_asset
+                normal = half_button_normal.copy()
+                mouseover = half_button_mouseover.copy()
             else:
                 label = pygame.font.SysFont("courier", 32).render("Accept", True, (255, 255, 255))
-            normal = button_normal.copy()
-            mouseover = button_mouseover.copy()
+                normal = button_normal.copy()
+                mouseover = button_mouseover.copy()
             normal.blit(label, ((normal.get_width() - label.get_width()) // 2, (normal.get_height() - label.get_height()) // 2))
             mouseover.blit(label, ((mouseover.get_width() - label.get_width()) // 2, (mouseover.get_height() - label.get_height()) // 2))
             buttons.append([pygame.Rect(0, 0, max(normal.get_width(), mouseover.get_width()), max(normal.get_height(), mouseover.get_height())), normal, mouseover, ButtonType.CLICK])
