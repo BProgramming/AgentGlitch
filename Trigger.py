@@ -152,16 +152,17 @@ class Trigger(Object):
         elif self.type == TriggerType.SET_PROPERTY:
             if self.output is not None:
                 target, property, value = self.output["target"], self.output["property"], self.output["value"]
-                if value.upper() == "TRUE" or value == "FALSE":
-                    value = bool(value)
-                elif value.isnumeric():
-                    value = float(value)
-                    if value == int(value):
-                        value = int(value)
-                for obj in [self.player] + self.triggers + self.enemies + self.blocks + self.hazards:
-                    if obj.name[:len(target)].upper() == target.upper() and hasattr(obj, property):
-                        setattr(obj, property, value)
-                        break
+                if len(target) == len(property) == len(value):
+                    for i in range(len(target)):
+                        if value[i].upper() in ("TRUE", "FALSE"):
+                            value[i] = bool(value[i])
+                        elif value[i].isnumeric():
+                            value[i] = float(value[i])
+                            if value[i] == int(value[i]):
+                                value[i] = int(value[i])
+                        for obj in [self.player] + self.triggers + self.enemies + self.blocks + self.hazards:
+                            if obj.name[:len(target[i])].upper() == target[i].upper() and hasattr(obj, property[i]):
+                                setattr(obj, property[i], value[i])
 
         return [(time.perf_counter_ns() - start) // 1000000, end_level]
 

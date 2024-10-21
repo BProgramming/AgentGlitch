@@ -27,10 +27,10 @@ class Player(Actor):
         self.can_move_blocks = True
         self.is_blocking = False
         self.can_wall_jump = True
-        self.can_teleport = True
-        self.can_bullet_time = True
+        self.can_teleport = False
+        self.can_bullet_time = False
         self.is_slow_time = False
-        self.can_resize = True
+        self.can_resize = False
         self.can_heal = True
         self.max_jumps = 2
         self.attack_damage *= 2
