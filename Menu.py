@@ -1,0 +1,284 @@
+import math
+import time
+import pygame
+from enum import Enum
+from Helpers import load_images, glitch, DifficultyScale
+
+
+class ButtonType(Enum):
+    CLICK = 1
+    BAR = 2
+
+
+class Menu():
+    def __init__(self, win, header, button_labels, should_glitch=True):
+        self.clear = None
+        button_assets = load_images("Menu", "Buttons")
+        self.notch_val = []
+        self.buttons = self.make_buttons(button_labels, pygame.transform.smoothscale_by(button_assets["BUTTON_NORMAL"], 0.5), pygame.transform.smoothscale_by(button_assets["BUTTON_MOUSEOVER"], 0.5))
+        self.header = pygame.font.SysFont("courier", 32).render(header, True, (255, 255, 255))
+        self.screen = pygame.Surface((min(2 * win.get_width() // 3, max(self.buttons[0][0].width, self.header.get_width())), (self.buttons[0][0].height * len(self.buttons)) + self.header.get_height() + 10), pygame.SRCALPHA)
+        self.screen.fill((0, 0, 0, 128))
+        self.screen.blit(self.header, ((self.screen.get_width() - self.header.get_width()) // 2, 5))
+        self.should_glitch = should_glitch
+        self.glitch_timer = 0
+        self.glitches = None
+
+    def make_buttons(self, labels, button_normal, button_mouseover):
+        buttons = []
+        for label in labels:
+            text = pygame.font.SysFont("courier", 32).render(label["label"], True, (255, 255, 255))
+            normal = button_normal.copy()
+            mouseover = button_mouseover.copy()
+            notch_val = None
+            if label["type"] == ButtonType.CLICK:
+                normal.blit(text, ((normal.get_width() - text.get_width()) // 2, (normal.get_height() - text.get_height()) // 2))
+                mouseover.blit(text, ((mouseover.get_width() - text.get_width()) // 2, (mouseover.get_height() - text.get_height()) // 2))
+                buttons.append([pygame.Rect(0, 0, max(normal.get_width(), mouseover.get_width()), max(normal.get_height(), mouseover.get_height())), normal, mouseover, label["type"]])
+            elif label["type"] == ButtonType.BAR:
+                normal.blit(text, ((normal.get_width() - text.get_width()) // 10, (normal.get_height() - text.get_height()) // 4))
+                mouseover.blit(text, ((mouseover.get_width() - text.get_width()) // 10, (mouseover.get_height() - text.get_height()) // 4))
+                notch_val = (label["value"] - label["range"][0]) / (label["range"][-1] - label["range"][0])
+                buttons.append([pygame.Rect(0, 0, max(normal.get_width(), mouseover.get_width()), max(normal.get_height(), mouseover.get_height())), normal, mouseover, label["type"]])
+                if label["snap"]:
+                    buttons[-1].append(label["range"])
+            self.notch_val.append(notch_val)
+        return buttons
+
+    def fade_in(self, win):
+        if self.clear is None:
+            self.clear = pygame.display.get_surface().copy()
+        for i in range(32):
+            self.screen.set_alpha(8 * i)
+            self.display(win)
+            pygame.display.update()
+            time.sleep(0.01)
+
+    def fade_out(self, win):
+        if self.clear is None:
+            return
+        else:
+            for i in range(32, 0, -1):
+                self.screen.set_alpha(8 * i)
+                self.display(win)
+                pygame.display.update()
+                time.sleep(0.005)
+
+    def set_mouse_pos(self, win):
+        pygame.mouse.set_pos(((win.get_width() // 2) + (self.buttons[0][0].width // 2.5), (win.get_height() + self.screen.get_height() - (2 * (len(self.buttons) - 0.5) * self.buttons[0][0].height)) // 2))
+
+    def move_mouse_pos(self, win, direction):
+        target = pygame.mouse.get_pos()[1] + (direction * self.buttons[0][0].height)
+        top = (win.get_height() + self.screen.get_height() - (2 * (len(self.buttons) - 0.5) * self.buttons[0][0].height)) // 2
+        bottom = (win.get_height() + self.screen.get_height() - self.buttons[0][0].height) // 2
+
+        pygame.mouse.set_pos(((win.get_width() // 2) + (self.buttons[0][0].width // 2.5), max(top, min(bottom, target))))
+
+    def display(self, win, joystick_tolerance=0.25):
+        if self.clear is not None:
+            win.blit(self.clear, (0, 0))
+
+        screen = self.screen.copy()
+        for i in range(len(self.buttons)):
+            dest_x = (screen.get_width() - self.buttons[i][0].width) // 2
+            dest_y = screen.get_height() - ((len(self.buttons) - i) * self.buttons[i][0].height)
+            self.buttons[i][0].x = dest_x + ((win.get_width() - screen.get_width()) // 2)
+            self.buttons[i][0].y = dest_y + ((win.get_height() - screen.get_height()) // 2)
+
+            if self.buttons[i][3] == ButtonType.BAR:
+                bar = pygame.surface.Surface((self.buttons[i][0].width - 50, self.buttons[i][0].height // 10), pygame.SRCALPHA)
+                bar_rect = bar.get_rect()
+                notch = pygame.surface.Surface((self.buttons[i][0].height // 10, self.buttons[i][0].height // 5), pygame.SRCALPHA)
+                notch_rect = notch.get_rect()
+                bar_rect.x = dest_x + ((self.buttons[i][0].width - bar.get_width()) // 2)
+                bar_rect.y = dest_y + (3 * (self.buttons[i][0].height - bar.get_height()) // 4)
+                notch_rect.x = bar_rect.x - (notch.get_width() // 2) + (self.notch_val[i] * bar.get_width())
+                notch_rect.y = bar_rect.y - (bar.get_height() // 2)
+            else:
+                bar = None
+                bar_rect = None
+                notch = None
+                notch_rect = None
+
+            if self.buttons[i][0].collidepoint(pygame.mouse.get_pos()):
+                button_type = 2
+                for event in pygame.event.get():
+                    if self.buttons[i][3] == ButtonType.CLICK and ((event.type == pygame.MOUSEBUTTONDOWN and event.button == 1) or (event.type == pygame.JOYBUTTONDOWN and event.button == 0)):
+                        return i
+                    elif self.buttons[i][3] == ButtonType.BAR and self.notch_val[i] is not None:
+                        if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1) or (event.type == pygame.MOUSEMOTION and pygame.mouse.get_pressed()[0]):
+                            adj_x = pygame.mouse.get_pos()[0] - self.buttons[i][0].x - ((self.buttons[i][0].width - bar_rect.width) / 2)
+                            adj_y = pygame.mouse.get_pos()[1] - self.buttons[i][0].y
+                            if -10 <= adj_x <= bar_rect.width + 10 and self.buttons[i][0].height // 2 <= adj_y <= self.buttons[i][0].height:
+                                self.notch_val[i] = min(1, max(0, adj_x / bar.get_width()))
+                            if len(self.buttons[i]) > 4:
+                                index = 0
+                                for j in range(len(self.buttons[i][4])):
+                                    interval = (self.buttons[i][4][j] - self.buttons[i][4][0]) / (self.buttons[i][4][-1] - self.buttons[i][4][0])
+                                    if self.notch_val[i] > interval:
+                                        index += 1
+                                    elif self.notch_val[i] < interval:
+                                        break
+                                index = min(len(self.buttons[i][4]) - 1, max(0, index))
+                                adj_notch_val = (self.buttons[i][4][index] - self.buttons[i][4][0]) / (self.buttons[i][4][-1] - self.buttons[i][4][0])
+                                if index == 0:
+                                    self.notch_val[i] = adj_notch_val
+                                else:
+                                    adj_notch_val_down = (self.buttons[i][4][index - 1] - self.buttons[i][4][0]) / (self.buttons[i][4][-1] - self.buttons[i][4][0])
+                                    if self.notch_val[i] - adj_notch_val_down > adj_notch_val - self.notch_val[i]:
+                                        self.notch_val[i] = adj_notch_val
+                                    else:
+                                        self.notch_val[i] = adj_notch_val_down
+                        elif event.type == pygame.JOYAXISMOTION and event.axis == 0 and abs(event.value) > joystick_tolerance:
+                            if len(self.buttons[i]) > 4:
+                                self.notch_val[i] = (self.buttons[i][4][min(len(self.buttons[i][4]) - 1, max(0, (self.buttons[i][4].index((self.notch_val[i] * (self.buttons[i][4][-1] - self.buttons[i][4][0])) + self.buttons[i][4][0]) + int(math.copysign(1, event.value)))))] - self.buttons[i][4][0]) / (self.buttons[i][4][-1] - self.buttons[i][4][0])
+                                time.sleep(0.25)
+                            else:
+                                self.notch_val[i] = min(1, max(0, self.notch_val[i] + math.copysign(0.01, event.value)))
+            else:
+                button_type = 1
+
+            screen.blit(self.buttons[i][button_type], (dest_x, dest_y))
+
+            if self.buttons[i][3] == ButtonType.BAR:
+                if len(self.buttons[i]) > 4:
+                    label = str(DifficultyScale((self.notch_val[i] * (self.buttons[i][4][-1] - self.buttons[i][4][0])) + self.buttons[i][4][0]))
+                else:
+                    label = str(int(self.notch_val[i] * 100)) + "%"
+                text = pygame.font.SysFont("courier", 32).render(label, True, (255, 255, 255))
+                screen.blit(text, ((self.buttons[i][button_type].get_width() - text.get_width()) - (self.buttons[i][button_type].get_width() - text.get_width()) // 10, ((i + 1) * self.buttons[i][button_type].get_height()) - text.get_height()))
+                if button_type == 1:
+                    bar.fill((255, 255, 255))
+                    notch.fill((140, 140, 140))
+                elif button_type == 2:
+                    bar.fill((255, 255, 255))
+                    notch.fill((140, 0, 0))
+                screen.blit(bar, (bar_rect.x, bar_rect.y))
+                screen.blit(notch, (notch_rect.x, notch_rect.y))
+
+        if self.should_glitch:
+            if self.glitch_timer > 0:
+                self.glitch_timer -= 0.01
+            else:
+                self.glitches = glitch(0.1, screen)
+                self.glitch_timer = 0.1
+            if self.glitches is not None:
+                for spot in self.glitches:
+                    screen.blit(spot[0], spot[1])
+
+        win.blit(screen, ((win.get_width() - screen.get_width()) // 2, (win.get_height() - screen.get_height()) // 2))
+        pygame.display.update()
+
+
+class Selector(Menu):
+    def __init__(self, win, header, note, images, values, index=0, should_glitch=True):
+        self.clear = None
+        self.notch_val = [None, None, None]
+        self.arrow_asset = pygame.transform.smoothscale_by(load_images("Menu", "Arrows")["ARROW_WHITE"], 0.5)
+        button_assets = load_images("Menu", "Buttons")
+        self.buttons = self.make_buttons(pygame.transform.smoothscale_by(button_assets["HALF_BUTTON_NORMAL"], 0.5), pygame.transform.smoothscale_by(button_assets["HALF_BUTTON_MOUSEOVER"], 0.5))
+        self.header = pygame.font.SysFont("courier", 32).render(header, True, (255, 255, 255))
+        self.note = []
+        for line in note:
+            self.note.append(pygame.font.SysFont("courier", 16).render(line, True, (255, 255, 255)))
+        image_width = 0
+        image_height = 0
+        self.images = []
+        for image in images:
+            image_width = max(image_width, image.get_width())
+            image_height = max(image_height, image.get_height())
+            self.images.append([pygame.Rect(0, 0, image_width, image_height), image])
+        self.image_index = index
+        self.image_selected = self.images[self.image_index]
+        self.values = values
+        self.screen = pygame.Surface((min(2 * win.get_width() // 3, max(image_width, self.buttons[0][0].width * 2, self.header.get_width())), self.header.get_height() + image_height + (self.note[0].get_height() * len(self.note)) + (self.buttons[0][0].height * 2) + 20), pygame.SRCALPHA)
+        self.screen.fill((0, 0, 0, 128))
+        self.screen.blit(self.header, ((self.screen.get_width() - self.header.get_width()) // 2, 5))
+        for i in range(len(self.note)):
+            self.screen.blit(self.note[i], ((self.screen.get_width() - self.note[i].get_width()) // 2, self.header.get_height() + image_height + (i * self.note[i].get_height()) + 10))
+        self.should_glitch = should_glitch
+        self.glitch_timer = 0
+        self.glitches = None
+
+    def move_mouse_sideways(self, direction):
+        if direction > 0:
+            x = self.buttons[1][0].x + (self.buttons[1][0].width * 0.75)
+        else:
+            x = self.buttons[0][0].x + (self.buttons[0][0].width * 0.75)
+        y = self.buttons[0][0].y + (self.buttons[0][0].height * 0.5)
+
+        pygame.mouse.set_pos((x, y))
+
+    def cycle_images(self, direction):
+        if direction > 0:
+            self.image_index += 1
+        else:
+            self.image_index -= 1
+        if self.image_index >= len(self.images):
+            self.image_index = 0
+        elif self.image_index < 0:
+            self.image_index = len(self.images) - 1
+        self.image_selected = self.images[self.image_index]
+
+    def make_buttons(self, button_normal, button_mouseover):
+        buttons = []
+        for i in range(3):
+            if i == 0:
+                label = pygame.transform.flip(self.arrow_asset, True, False)
+            elif i == 1:
+                label = self.arrow_asset
+            else:
+                label = pygame.font.SysFont("courier", 32).render("Accept", True, (255, 255, 255))
+            normal = button_normal.copy()
+            mouseover = button_mouseover.copy()
+            normal.blit(label, ((normal.get_width() - label.get_width()) // 2, (normal.get_height() - label.get_height()) // 2))
+            mouseover.blit(label, ((mouseover.get_width() - label.get_width()) // 2, (mouseover.get_height() - label.get_height()) // 2))
+            buttons.append([pygame.Rect(0, 0, max(normal.get_width(), mouseover.get_width()), max(normal.get_height(), mouseover.get_height())), normal, mouseover, ButtonType.CLICK])
+        return buttons
+
+    def display(self, win, joystick_tolerance=0.25):
+        if self.clear is not None:
+            win.blit(self.clear, (0, 0))
+
+        screen = self.screen.copy()
+        dest_x = (screen.get_width() - self.image_selected[0].width) // 2
+        dest_y = self.header.get_height() + 10
+        self.image_selected[0].x = dest_x + ((win.get_width() - screen.get_width()) // 2)
+        self.image_selected[0].y = dest_y + ((win.get_height() - screen.get_height()) // 2)
+        screen.blit(self.image_selected[1], (dest_x, dest_y))
+
+        for i in range(len(self.buttons)):
+            if i == 0:
+                dest_x = (screen.get_width() - (self.buttons[i][0].width * 2)) // 2
+                dest_y = screen.get_height() - ((len(self.buttons) - 1) * self.buttons[i][0].height)
+            elif i == 1:
+                dest_x = ((screen.get_width() - (self.buttons[i][0].width * 2)) // 2) + self.buttons[i][0].width
+                dest_y = screen.get_height() - ((len(self.buttons) - i) * self.buttons[i][0].height)
+            else:
+                dest_x = (screen.get_width() - self.buttons[i][0].width) // 2
+                dest_y = screen.get_height() - ((len(self.buttons) - i) * self.buttons[i][0].height)
+            self.buttons[i][0].x = dest_x + ((win.get_width() - screen.get_width()) // 2)
+            self.buttons[i][0].y = dest_y + ((win.get_height() - screen.get_height()) // 2)
+
+            if self.buttons[i][0].collidepoint(pygame.mouse.get_pos()):
+                button_type = 2
+                for event in pygame.event.get():
+                    if self.buttons[i][3] == ButtonType.CLICK and ((event.type == pygame.MOUSEBUTTONDOWN and event.button == 1) or (event.type == pygame.JOYBUTTONDOWN and event.button == 0)):
+                        return i
+            else:
+                button_type = 1
+
+            screen.blit(self.buttons[i][button_type], (dest_x, dest_y))
+
+        if self.should_glitch:
+            if self.glitch_timer > 0:
+                self.glitch_timer -= 0.01
+            else:
+                self.glitches = glitch(0.1, screen)
+                self.glitch_timer = 0.1
+            if self.glitches is not None:
+                for spot in self.glitches:
+                    screen.blit(spot[0], spot[1])
+
+        win.blit(screen, ((win.get_width() - screen.get_width()) // 2, (win.get_height() - screen.get_height()) // 2))
+        pygame.display.update()
