@@ -154,7 +154,7 @@ class Trigger(Object):
                 target, property, value = self.output["target"], self.output["property"], self.output["value"]
                 if len(target) == len(property) == len(value):
                     for i in range(len(target)):
-                        if value[i].upper() in ("TRUE", "FALSE"):
+                        if isinstance(value[i], bool) or value[i].upper() in ("TRUE", "FALSE"):
                             value[i] = bool(value[i])
                         elif value[i].isnumeric():
                             value[i] = float(value[i])
@@ -163,6 +163,8 @@ class Trigger(Object):
                         for obj in [self.player] + self.triggers + self.enemies + self.blocks + self.hazards:
                             if obj.name[:len(target[i])].upper() == target[i].upper() and hasattr(obj, property[i]):
                                 setattr(obj, property[i], value[i])
+                                if self.controller.player_abilities.get(property[i]) is not None:
+                                    self.controller.player_abilities[property[i]] = value[i]
 
         return [(time.perf_counter_ns() - start) // 1000000, end_level]
 

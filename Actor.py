@@ -385,8 +385,11 @@ class Actor(Object):
 
         if self.cooldowns["resize_delay"] <= 0:
             if self.size != self.size_target:
+                if self.size > self.size_target:
+                    self.rect.y += self.rect.height // 3
+                else:
+                    self.rect.y -= self.rect.height // 2
                 self.size = self.size_target
-                self.rect.y += self.rect.height * (1 - self.size)
 
             if self.should_move_horiz:
                 scaled_target = dtime * target

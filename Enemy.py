@@ -75,11 +75,13 @@ class Enemy(Actor):
                 else:
                     self.direction = self.direction.swap()
                     self.facing = self.facing.swap()
+
+    def __adj_spot_range__(self):
+        return self.spot_range * self.player.size / (1.5 if self.player.is_crouching else 1)
+
     def spot_player(self, spot_cd=PLAYER_SPOT_COOLDOWN):
-        if self.player.is_crouching:
-            self.spot_range /= 2
         dist = math.dist(self.player.rect.center, self.rect.center)
-        if dist <= self.spot_range and (self.facing == MovementDirection(math.copysign(1, self.player.rect.centerx - self.rect.centerx)) or dist <= self.width // 2):
+        if dist <= self.__adj_spot_range__() and (self.facing == MovementDirection(math.copysign(1, self.player.rect.centerx - self.rect.centerx)) or dist <= self.width // 2):
             for i in range(round(dist)):
                 for obj in self.objects:
                     if obj.rect.collidepoint(self.rect.centerx + (self.facing * ((self.rect.width // 2) + i)), self.rect.y):
@@ -103,13 +105,11 @@ class Enemy(Actor):
             adj_y_image = self.rect.y - offset_y
             window_width = win.get_width()
             window_height = win.get_height()
-            if player.is_crouching:
-                self.spot_range /= 2
-            if -self.spot_range < adj_x_image <= window_width and -self.rect.height < adj_y_image <= window_height:
-                vision = pygame.surface.Surface((self.spot_range + (self.rect.width // 2), self.rect.height // 4), pygame.SRCALPHA)
-                gradient_max = 256
-                num_chunks = vision.get_width() // gradient_max
-                chunk = pygame.surface.Surface((num_chunks, vision.get_height()), pygame.SRCALPHA)
+            if -self.__adj_spot_range__() < adj_x_image <= window_width and -self.rect.height < adj_y_image <= window_height:
+                vision = pygame.surface.Surface((int(self.__adj_spot_range__()) + (self.rect.width // 2), self.rect.height // 4), pygame.SRCALPHA)
+                gradient_max = min(256, vision.get_width())
+                size_chunks = vision.get_width() // gradient_max
+                chunk = pygame.surface.Surface((size_chunks, vision.get_height()), pygame.SRCALPHA)
                 if self.cooldowns["spot_player"] <= 0:
                     chunk.fill((0, 255, 0))
                 else:
@@ -119,7 +119,7 @@ class Enemy(Actor):
                         chunk.set_alpha(i)
                     else:
                         chunk.set_alpha(gradient_max - i)
-                    vision.blit(chunk, (i * num_chunks, 0))
+                    vision.blit(chunk, (i * size_chunks, 0))
                 if self.facing == MovementDirection.LEFT:
                     adj_x_image -= self.spot_range - self.rect.width
                 else:

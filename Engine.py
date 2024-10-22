@@ -162,7 +162,7 @@ def save_player_profile(controller, level=None):
                     levels = levels[:i]
                     break
 
-    data = {"levels completed": levels, "master volume": controller.master_volume, "keyboard layout": controller.active_keyboard_layout, "gamepad layout": controller.active_gamepad_layout, "is fullscreen": pygame.display.is_fullscreen(), "difficulty": controller.difficulty, "selected sprite": controller.player_sprite_selected}
+    data = {"levels completed": levels, "master volume": controller.master_volume, "keyboard layout": controller.active_keyboard_layout, "gamepad layout": controller.active_gamepad_layout, "is fullscreen": pygame.display.is_fullscreen(), "difficulty": controller.difficulty, "selected sprite": controller.player_sprite_selected, "player abilities": controller.player_abilities}
     pickle.dump(data, open("GameData/profile.p", "wb"))
 
 
@@ -173,6 +173,7 @@ def load_player_profile(controller):
         controller.set_keyboard_layout(data["keyboard layout"])
         controller.difficulty = data["difficulty"]
         controller.player_sprite_selected = data["selected sprite"]
+        controller.player_abilities = data["player abilities"]
         if data["is fullscreen"]:
             pygame.display.toggle_fullscreen()
         return data["levels completed"]
@@ -308,6 +309,12 @@ def main(win):
             controller.objects = [level]
             level_bounds, player, blocks, triggers, hazards, enemies = build_level(levels[level], sprite_master, image_master, objects_dict, load_audios("PlayerAudio"), load_audios("EnemyAudio"), win, controller)
             controller.objects.append([player] + blocks + triggers + hazards + enemies)
+
+            if controller.player_abilities is not None:
+                for key in controller.player_abilities:
+                    setattr(player, key, controller.player_abilities[key])
+            else:
+                controller.player_abilities = {"can_wall_jump": player.can_wall_jump, "can_teleport": player.can_teleport, "can_bullet_time": player.can_bullet_time, "can_resize": player.can_resize, "can_heal": player.can_heal, "max_jumps": player.max_jumps}
 
             hud = HUD(player, win)
             controller.hud = hud
@@ -450,8 +457,12 @@ def main(win):
         else:
             controller.goto_main = False
 
+
 if __name__ == "__main__":
-    main(WINDOW)
+    try:
+        main(WINDOW)
+    except Exception as e:
+        print(repr(e))
 
 # test switch pro and ps5 controllers
 # bugs: get sight ranges to display properly in the first spawn

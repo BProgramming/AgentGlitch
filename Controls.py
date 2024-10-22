@@ -22,6 +22,7 @@ class Controller:
         self.save = save
         self.save_profile = save_profile
         self.player_sprite_selected = None
+        self.player_abilities = None
         self.difficulty = DifficultyScale.MEDIUM
         self.hud = None
         self.goto_load = self.goto_main = self.goto_restart = False
