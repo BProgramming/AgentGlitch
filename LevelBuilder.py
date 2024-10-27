@@ -4,7 +4,7 @@ from Enemy import Enemy
 from Trigger import Trigger, TriggerType
 
 
-def build_level(level, sprite_master, image_master, objects_dict, player_audios, enemy_audios, win, controller, block_size=96):
+def build_level(level, sprite_master, image_master, objects_dict, player_audios, enemy_audios, win, controller, player_sprite=None, block_size=96):
     width = len(level[-1]) * block_size
     height = len(level) * block_size
     level_bounds = [(0, 0), (width, height)]
@@ -74,7 +74,7 @@ def build_level(level, sprite_master, image_master, objects_dict, player_audios,
                     case _:
                         pass
 
-    player = Player(player_start[0], player_start[1], level_bounds, sprite_master, player_audios, controller.difficulty, sprite=controller.player_sprite_selected)
+    player = Player(player_start[0], player_start[1], level_bounds, sprite_master, player_audios, controller.difficulty, sprite=(player_sprite if player_sprite is not None else controller.player_sprite_selected))
 
     for trigger in triggers:
         trigger.player = player

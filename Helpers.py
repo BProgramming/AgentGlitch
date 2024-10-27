@@ -116,7 +116,7 @@ def load_sprite_sheets(dir1, dir2, sprite_master, direction=False):
                 if len(dir2) < len(dir) and dir2.upper() == dir[:len(dir2)].upper():
                     options.append(dir)
             if len(options) > 0:
-                i = random.randrange(0, len(options))
+                i = random.randint(0, len(options) - 1)
                 dir2 = options[i]
                 path = join("Assets", dir1, dir2)
             else:

@@ -3,12 +3,14 @@ import time
 import pygame
 import sys
 import pickle
+import traceback
 from os.path import join, isfile
 from Controls import Controller
 from Helpers import load_json_dict, load_levels, load_audios, display_text, glitch, DifficultyScale, handle_exception
 from LevelBuilder import build_level
 from HUD import HUD
 from Block import MovableBlock, MovingBlock
+from WeatherEffects import Rain, Snow
 
 pygame.init()
 
@@ -32,13 +34,37 @@ def get_background(name, level_bounds):
         _, _, width, height = image.get_rect()
 
         tiles = []
-        for i in range((level_bounds[1][0] // width) + 1):
-            for j in range((level_bounds[1][1] // height) + 1):
+        for i in range(max((level_bounds[1][0] // width), 1)):
+            for j in range(max((level_bounds[1][1] // height), 1)):
                 tiles.append((i * width, j * height))
 
         return tiles, image
     else:
         handle_exception(FileNotFoundError(file))
+
+
+def get_foreground(name):
+    if name is None:
+        return None
+    else:
+        file = join("Assets", "Foreground", name)
+        if isfile(file):
+            return pygame.image.load(file).convert_alpha()
+        else:
+            return None
+
+
+#NOTE: having weather with lots of particles + lots of enemies + bullets will decrease the frame rate
+def get_weather(name, level_bounds, greyscale=False):
+    if name is None:
+        return None
+    else:
+        if name.upper() == "RAIN":
+            return Rain(level_bounds, greyscale=greyscale)
+        elif name.upper() == "SNOW":
+            return Snow(level_bounds, greyscale=greyscale)
+        else:
+            return None
 
 
 def play_slide(slide, controller, text=None, should_glitch=False, win=WINDOW):
@@ -94,11 +120,11 @@ def play_slide(slide, controller, text=None, should_glitch=False, win=WINDOW):
         time.sleep(0.01)
 
 
-def fade(background, bg_image, player, objects, hud, offset_x, offset_y, controller, direction="in", win=WINDOW):
+def fade(background, bg_image, fg_image, player, objects, hud, weather, offset_x, offset_y, controller, direction="in", win=WINDOW):
     black = pygame.Surface((win.get_width(), win.get_height()), pygame.SRCALPHA)
     black.fill((0, 0, 0))
     for i in range(64):
-        draw(background, bg_image, player, objects, hud, offset_x, offset_y, controller.master_volume, win=win)
+        draw(background, bg_image, fg_image, player, objects, hud, weather, offset_x, offset_y, controller.master_volume, win=win)
         if direction == "in":
             black.set_alpha(255 - (4 * i))
             volume = (i + 1) / 64
@@ -119,22 +145,34 @@ def fade(background, bg_image, player, objects, hud, offset_x, offset_y, control
         time.sleep(0.01)
 
 
-def fade_in(background, bg_image, player, objects, hud, offset_x, offset_y, controller, win=WINDOW):
-    fade(background, bg_image, player, objects, hud, offset_x, offset_y, controller, direction="in", win=win)
+def fade_in(background, bg_image, fg_image, player, objects, hud, weather, offset_x, offset_y, controller, win=WINDOW):
+    fade(background, bg_image, fg_image, player, objects, hud, weather, offset_x, offset_y, controller, direction="in", win=win)
 
 
-def fade_out(background, bg_image, player, objects, hud, offset_x, offset_y, controller, win=WINDOW):
-    fade(background, bg_image, player, objects, hud, offset_x, offset_y, controller, direction="out", win=win)
+def fade_out(background, bg_image, fg_image, player, objects, hud, weather, offset_x, offset_y, controller, win=WINDOW):
+    fade(background, bg_image, fg_image, player, objects, hud, weather, offset_x, offset_y, controller, direction="out", win=win)
 
 
-def draw(background, bg_image, player, objects, hud, offset_x, offset_y, master_volume, glitches=None, win=WINDOW):
-    for tile in background:
-        win.blit(bg_image, (tile[0] - offset_x, tile[1] - offset_y))
+def draw(background, bg_image, fg_image, player, objects, hud, weather, offset_x, offset_y, master_volume, glitches=None, win=WINDOW):
+    screen = pygame.rect.Rect(offset_x, offset_y, win.get_width(), win.get_height())
+
+    if len(background) == 1:
+        win.blit(bg_image.subsurface(screen), (0, 0))
+    else:
+        for tile in background:
+            win.blit(bg_image, (tile[0] - offset_x, tile[1] - offset_y))
 
     for obj in objects:
         obj.output(win, offset_x, offset_y, player, master_volume)
 
     player.output(win, offset_x, offset_y, player, master_volume)
+
+    if fg_image is not None:
+        win.blit(fg_image.subsurface(screen), (0, 0))
+
+    if weather is not None:
+        weather.draw(win, offset_x, offset_y)
+
     hud.output()
 
     if glitches is not None:
@@ -306,8 +344,13 @@ def main(win):
                 else:
                     print("Starting level " + level)
 
+            if meta_dict.get(level) is not None and meta_dict[level].get("can_glitch") is not None and meta_dict[level]["can_glitch"].upper() == "FALSE":
+                can_glitch = False
+            else:
+                can_glitch = True
+
             controller.objects = [level]
-            level_bounds, player, blocks, triggers, hazards, enemies = build_level(levels[level], sprite_master, image_master, objects_dict, load_audios("PlayerAudio"), load_audios("EnemyAudio"), win, controller)
+            level_bounds, player, blocks, triggers, hazards, enemies = build_level(levels[level], sprite_master, image_master, objects_dict, load_audios("PlayerAudio"), load_audios("EnemyAudio"), win, controller, player_sprite=(None if meta_dict.get("level") is None or meta_dict[level].get("player_sprite") is None or meta_dict[level]["player_sprite"].upper() == "NONE" else meta_dict[level]["player_sprite"]))
             controller.objects.append([player] + blocks + triggers + hazards + enemies)
 
             if controller.player_abilities is not None:
@@ -327,15 +370,24 @@ def main(win):
             controller.get_gamepad()
 
             background, bg_image = get_background(("Blue.png" if meta_dict.get(level) is None or meta_dict[level].get("background") is None or not isfile(join("Assets", "Background", meta_dict[level]["background"])) else meta_dict[level]["background"]), level_bounds)
-            offset_x = 0
-            offset_y = 0
+            fg_image = get_foreground(None if meta_dict.get(level) is None or meta_dict[level].get("foreground") is None else meta_dict[level]["foreground"])
+
+            if meta_dict.get(level) is not None and meta_dict[level].get("weather") is not None:
+                if meta_dict[level].get("greyscale") is not None:
+                    weather = get_weather(meta_dict[level]["weather"], level_bounds, greyscale=meta_dict[level]["greyscale"])
+                else:
+                    weather = get_weather(meta_dict[level]["weather"], level_bounds)
+            else:
+                weather = None
+
+            offset_x = offset_y = 0
             scroll_area_width = WIDTH * 0.375
             scroll_area_height = HEIGHT * 0.125
     
             for enemy in enemies:
                 enemy.player = player
 
-            fade_in(background, bg_image, player, blocks + hazards + enemies, hud, offset_x, offset_y, controller)
+            fade_in(background, bg_image, fg_image, player, blocks + hazards + enemies, hud, weather, offset_x, offset_y, controller)
             display_text(["Arriving at mission " + controller.objects[0].replace("_", " ") + "."], win, controller)
     
             dtime_offset = 0
@@ -405,10 +457,13 @@ def main(win):
                         enemy.loop(FPS_TARGET, dtime, blocks, None, player)
                         enemy.patrol()
 
-                if glitch_timer <= 0 and random.randint(0, 100) / 100 > player.hp / player.max_hp:
+                if weather is not None:
+                    weather.move(dtime)
+
+                if can_glitch and glitch_timer <= 0 and random.randint(0, 100) / 100 > player.hp / player.max_hp:
                     glitches = glitch((1 - max(player.hp / player.max_hp, 0)) * 0.75, win)
                     glitch_timer = 0.5
-                draw(background, bg_image, player, blocks + hazards + enemies, hud, offset_x, offset_y, controller.master_volume, glitches=glitches)
+                draw(background, bg_image, fg_image, player, blocks + hazards + enemies, hud, weather, offset_x, offset_y, controller.master_volume, glitches=glitches)
                 pygame.display.update()
 
                 if player.rect.right - scroll_area_width < offset_x:
@@ -419,7 +474,7 @@ def main(win):
                     offset_x = level_bounds[0][0]
                 elif offset_x > level_bounds[1][0] - WIDTH:
                     offset_x = level_bounds[1][0] - WIDTH
-    
+
                 if player.rect.bottom - (2 * scroll_area_height) < offset_y:
                     offset_y = player.rect.bottom - (2 * scroll_area_height)
                 elif player.rect.top - (HEIGHT - scroll_area_height) > offset_y:
@@ -436,7 +491,7 @@ def main(win):
                 break
             elif level_completed:
                 save_player_profile(controller, level)
-                fade_out(background, bg_image, player, blocks + hazards + enemies, hud, offset_x, offset_y, controller)
+                fade_out(background, bg_image, fg_image, player, blocks + hazards + enemies, hud, weather, offset_x, offset_y, controller)
                 if meta_dict.get(level) is not None and meta_dict[level].get("end") is not None:
                     if isfile(join("Assets", "Screens", meta_dict[level]["end"])):
                         play_slide(pygame.image.load(join("Assets", "Screens", meta_dict[level]["end"])), controller)
@@ -462,7 +517,7 @@ if __name__ == "__main__":
     try:
         main(WINDOW)
     except Exception as e:
-        print(repr(e))
+        print(traceback.print_exception(e))
 
 # test switch pro and ps5 controllers
 # bugs: get sight ranges to display properly in the first spawn

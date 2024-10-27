@@ -32,7 +32,7 @@ class Controller:
         vol_bg = {"label": "Music", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["background"], "range": (0, 100)}
         vol_pc = {"label": "Player", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["player"], "range": (0, 100)}
         vol_fx = {"label": "Effects", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["non-player"], "range": (0, 100)}
-        self.main_menu = Menu(win, "MAIN MENU", [{"label": "Continue", "type": ButtonType.CLICK}, {"label": "New game", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}])
+        self.main_menu = Menu(win, "MAIN MENU", [{"label": "New game", "type": ButtonType.CLICK}, {"label": "Continue", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}])
         self.pause_menu = Menu(win, "PAUSED", [{"label": "Resume", "type": ButtonType.CLICK}, {"label": "Save game", "type": ButtonType.CLICK}, {"label": "Load game", "type": ButtonType.CLICK}, {"label": "Restart level", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Quit to menu", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}])
         self.settings_menu = Menu(win, "SETTINGS", [dif, {"label": "Controls", "type": ButtonType.CLICK}, {"label": "Volume", "type": ButtonType.CLICK}, {"label": "Toggle fullscreen", "type": ButtonType.CLICK}, {"label": "Back", "type": ButtonType.CLICK}])
         self.volume_menu = Menu(win, "VOLUME", [vol_bg, vol_pc, vol_fx, {"label": "Back", "type": ButtonType.CLICK}])
@@ -462,13 +462,6 @@ class Controller:
 
             match self.main_menu.display(self.win):
                 case 0:
-                    if show_continue:
-                        self.main_menu.fade_out(self.win)
-                        pygame.mouse.set_visible(False)
-                        return False
-                    else:
-                        display_text(["No game to load."], self.win, self, type=False)
-                case 1:
                     self.main_menu.fade_out(self.win)
                     self.pick_from_selector(self.sprite_picker, clear=self.main_menu.clear)
                     self.player_sprite_selected = self.sprite_picker.values[self.sprite_picker.image_index]
@@ -476,6 +469,13 @@ class Controller:
                     self.difficulty = self.difficulty_picker.values[self.difficulty_picker.image_index]
                     pygame.mouse.set_visible(False)
                     return True
+                case 1:
+                    if show_continue:
+                        self.main_menu.fade_out(self.win)
+                        pygame.mouse.set_visible(False)
+                        return False
+                    else:
+                        display_text(["No game to load."], self.win, self, type=False)
                 case 2:
                     time.sleep(0.01)
                     self.settings(self.main_menu.clear)
