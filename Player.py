@@ -14,7 +14,6 @@ class Player(Actor):
     MULTIPLIER_TELEPORT = 384
     TELEPORT_COOLDOWN = 3
     TELEPORT_DELAY = 0.5
-    ATTACK_COOLDOWN = 2
     BLOCK_COOLDOWN = 3
     BLOCK_TIME_ACTIVE = 2
     BULLET_TIME_COOLDOWN = 3
@@ -64,15 +63,15 @@ class Player(Actor):
         elif not self.is_blocking:
             self.is_blocking = True
             self.cooldowns["block_attempt"] = block_time
+            self.cooldowns["block"] = block_cd
         elif self.cooldowns["block_attempt"] <= 0:
             self.is_blocking = False
             self.cooldowns["block"] = block_cd
 
-    def get_hit(self, obj, block_cd=BLOCK_COOLDOWN, attack_cd=ATTACK_COOLDOWN):
+    def get_hit(self, obj, block_cd=BLOCK_COOLDOWN):
         if isinstance(obj, Enemy) and self.cooldowns["block"] <= 0 and self.is_blocking:
             self.cooldowns["block"] = block_cd
             self.is_blocking = False
-            obj.cooldowns["attack"] = attack_cd
         else:
             super().get_hit(obj)
 
@@ -97,9 +96,9 @@ class Player(Actor):
     def teleport(self, vel=(VELOCITY_TARGET * MULTIPLIER_TELEPORT), delay=TELEPORT_DELAY, cd=TELEPORT_COOLDOWN):
         if self.can_teleport and self.cooldowns["teleport"] <= 0:
             for i in range(int(vel) + 1, 0, -1):
-                cast = Object(self.rect.x + (self.direction * i), self.rect.y, self.rect.width, self.rect.height - 1)
+                cast = Object(self.level, self.rect.x + (self.direction * i), self.rect.y, self.rect.width, self.rect.height - 1)
                 collision = False
-                for obj in self.objects:
+                for obj in self.level.get_objects():
                     if pygame.sprite.collide_rect(cast, obj):
                         collision = True
                         break
@@ -109,14 +108,14 @@ class Player(Actor):
                     self.cooldowns["teleport"] = cd
                     return
 
-    def attack(self, push=ATTACK_PUSHBACK, attack_cd=ATTACK_COOLDOWN):
+    def attack(self, push=ATTACK_PUSHBACK):
         if self.state in [MovementState.IDLE, MovementState.CROUCH, MovementState.RUN, MovementState.FALL, MovementState.JUMP, MovementState.DOUBLE_JUMP, MovementState.IDLE_ATTACK, MovementState.CROUCH_ATTACK, MovementState.RUN_ATTACK, MovementState.FALL_ATTACK, MovementState.JUMP_ATTACK, MovementState.DOUBLE_JUMP_ATTACK]:
-            self.cooldowns["attack"] = attack_cd
-            for obj in self.objects:
-                if isinstance(obj, Enemy) and pygame.sprite.collide_rect(self, obj):
+            self.is_attacking = True
+            for obj in self.level.get_objects():
+                if isinstance(obj, Enemy) and pygame.sprite.collide_rect(self, obj) and pygame.sprite.collide_mask(self, obj):
                     obj.get_hit(self)
                     obj.rect.x -= self.direction * push
-                elif isinstance(obj, BreakableBlock) and pygame.sprite.collide_rect(self, obj):
+                elif isinstance(obj, BreakableBlock) and pygame.sprite.collide_rect(self, obj) and pygame.sprite.collide_mask(self, obj):
                     obj.get_hit(self)
 
     def bullet_time(self, active_time=BULLET_TIME_ACTIVE, cd=BULLET_TIME_COOLDOWN):
@@ -130,21 +129,20 @@ class Player(Actor):
                 self.cooldowns["bullet_time_active"] = active_time
                 self.cooldowns["bullet_time"] = cd + active_time
 
-    def get_triggers(self, triggers):
+    def get_triggers(self):
         fired_triggers = 0
-        end = False
-        for trigger in triggers:
+        next_level = None
+        for trigger in self.level.triggers:
             if pygame.sprite.collide_rect(self, trigger):
-                result = trigger.collide(self)
+                result = trigger.collide()
                 fired_triggers += result[0]
-                end = result[1]
+                next_level = result[1]
                 if trigger.fire_once:
-                    triggers.remove(trigger)
-        return [fired_triggers, end]
+                    self.level.queue_purge(trigger)
+        return [fired_triggers, next_level]
 
-    def loop(self, fps, dtime, objects, triggers, player, target=VELOCITY_TARGET, drag=VELOCITY_DRAG, grav=GRAVITY):
+    def loop(self, fps, dtime, target=VELOCITY_TARGET, drag=VELOCITY_DRAG, grav=GRAVITY):
         if self.teleport_distance != 0:
-            self.objects = objects
             if self.cooldowns["teleport_delay"] <= 0:
                 self.move(self.teleport_distance, 0)
                 self.teleport_distance = 0
@@ -154,6 +152,6 @@ class Player(Actor):
         else:
             if self.is_slow_time and self.cooldowns["bullet_time_active"] <= 0:
                 self.is_slow_time = False
-            super().loop(fps, dtime, objects, triggers, player, target, drag, grav)
+            super().loop(fps, dtime, target=target, drag=drag, grav=grav)
 
-        return self.get_triggers(triggers)
+        return self.get_triggers()

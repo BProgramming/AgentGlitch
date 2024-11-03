@@ -106,7 +106,7 @@ def flip(sprites):
     return [pygame.transform.flip(sprite, True, False) for sprite in sprites]
 
 
-def load_sprite_sheets(dir1, dir2, sprite_master, direction=False):
+def load_sprite_sheets(dir1, dir2, sprite_master, direction=False, grayscale=False):
     if sprite_master.get(dir2) is None:
         path = join("Assets", dir1, dir2)
 
@@ -127,13 +127,15 @@ def load_sprite_sheets(dir1, dir2, sprite_master, direction=False):
         all_sprites = {}
         for image in images:
             sprite_sheet = pygame.image.load(join(path, image)).convert_alpha()
+            if grayscale:
+                sprite_sheet = pygame.transform.grayscale(sprite_sheet)
             width = height = sprite_sheet.get_height()
             if width > 32:
                 width = 32 * math.ceil(width / 32)
 
             sprites = []
             for i in range(sprite_sheet.get_width() // width):
-                surface = pygame.Surface((width, height), pygame.SRCALPHA, 32)
+                surface = pygame.surface.Surface((width, height), pygame.SRCALPHA, 32)
                 rect = pygame.Rect(i * width, 0, width, height)
                 surface.blit(sprite_sheet, (0, 0), rect)
                 sprites.append(pygame.transform.scale2x(surface))
@@ -170,7 +172,7 @@ def load_levels(dir):
         for f in files:
             with open(join(path, f)) as level:
                 reader = csv.reader(level, delimiter=",", quotechar='"')
-                levels[str.upper(f.replace(".txt", "").replace("_", " "))] = [row for row in reader]
+                levels[str.upper(f.replace(".txt", ""))] = [row for row in reader]
 
         return levels
     else:
@@ -210,62 +212,79 @@ def load_audios(dir):
         handle_exception(FileNotFoundError(path))
 
 
-def display_text(output, win, controller, type=True):
-    clear = pygame.display.get_surface().copy()
-    for line in output:
-        if type:
-            text = []
-            for i in range(len(line)):
-                text.append(line[i])
-                if (i == 0 and line[0] == "\"") or (i < len(line) - 1 and line[i + 1] == "\""):
-                    pass
-                else:
-                    text_line = pygame.font.SysFont("courier", 32).render("".join(text), True, (255, 255, 255))
-                    text_box = pygame.Surface((text_line.get_width() + 10, text_line.get_height() + 10), pygame.SRCALPHA)
-                    text_box.fill((0, 0, 0, 128))
-                    text_box.blit(text_line, (5, 5))
-                    win.blit(clear, (0, 0))
-                    win.blit(text_box, ((win.get_width() - text_box.get_width()) // 2, win.get_height() - (text_box.get_height() + 100)))
-                    pygame.display.update()
-                    pause_dtime = 0
-                    while pause_dtime < 80:
-                        for event in pygame.event.get():
-                            if event.type == pygame.QUIT:
-                                controller.save_profile(controller)
-                                pygame.quit()
-                                sys.exit()
-                            elif event.type == pygame.KEYDOWN:
-                                pause_dtime += controller.handle_pause_unpause(event.key)
-                            elif event.type == pygame.JOYBUTTONDOWN:
-                                pause_dtime += controller.handle_pause_unpause(event.button)
-                        if controller.goto_load or controller.goto_main:
-                            return
-                        time.sleep(0.01)
-                        pause_dtime += 10
-        else:
-            text = line
-            text_line = pygame.font.SysFont("courier", 32).render("".join(text), True, (255, 255, 255))
-            text_box = pygame.Surface((text_line.get_width() + 10, text_line.get_height() + 10), pygame.SRCALPHA)
-            text_box.fill((0, 0, 0, 128))
-            text_box.blit(text_line, (5, 5))
-            win.blit(clear, (0, 0))
-            win.blit(text_box, ((win.get_width() - text_box.get_width()) // 2, win.get_height() - (text_box.get_height() + 100)))
-            pygame.display.update()
+def load_text_from_file(file):
+    path = join("Assets", "Text", file)
+    if isfile(path):
+        text = []
+        with open(path, "r") as file:
+            for line in file:
+                text.append(line.replace("\n", ""))
+        return text
+    else:
+        handle_exception(FileNotFoundError(path))
 
-        sleep_time = max((len(text) // 20), 1) * 1000
-        pause_dtime = 0
-        while pause_dtime < sleep_time:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    controller.save_profile(controller)
-                    pygame.quit()
-                    sys.exit()
-            if type and controller.handle_anykey():
-                break
-            if controller.goto_load or controller.goto_main:
-                return
-            time.sleep(0.01)
-            pause_dtime += 10
+
+def display_text(output, win, controller, type=True):
+    if output is None or output == "":
+        return
+    else:
+        if not isinstance(output, list):
+            output = [output]
+        clear = pygame.display.get_surface().copy()
+        for line in output:
+            if type:
+                text = []
+                for i in range(len(line)):
+                    text.append(line[i])
+                    if (i == 0 and line[0] == "\"") or (i < len(line) - 1 and line[i + 1] == "\""):
+                        pass
+                    else:
+                        text_line = pygame.font.SysFont("courier", 32).render("".join(text), True, (255, 255, 255))
+                        text_box = pygame.Surface((text_line.get_width() + 10, text_line.get_height() + 10), pygame.SRCALPHA)
+                        text_box.fill((0, 0, 0, 128))
+                        text_box.blit(text_line, (5, 5))
+                        win.blit(clear, (0, 0))
+                        win.blit(text_box, ((win.get_width() - text_box.get_width()) // 2, win.get_height() - (text_box.get_height() + 100)))
+                        pygame.display.update()
+                        pause_dtime = 0
+                        while pause_dtime < 80:
+                            for event in pygame.event.get():
+                                if event.type == pygame.QUIT:
+                                    controller.save_profile(controller)
+                                    pygame.quit()
+                                    sys.exit()
+                                elif event.type == pygame.KEYDOWN:
+                                    pause_dtime += controller.handle_pause_unpause(event.key)
+                                elif event.type == pygame.JOYBUTTONDOWN:
+                                    pause_dtime += controller.handle_pause_unpause(event.button)
+                            if controller.goto_load or controller.goto_main:
+                                return
+                            time.sleep(0.01)
+                            pause_dtime += 10
+            else:
+                text = line
+                text_line = pygame.font.SysFont("courier", 32).render("".join(text), True, (255, 255, 255))
+                text_box = pygame.Surface((text_line.get_width() + 10, text_line.get_height() + 10), pygame.SRCALPHA)
+                text_box.fill((0, 0, 0, 128))
+                text_box.blit(text_line, (5, 5))
+                win.blit(clear, (0, 0))
+                win.blit(text_box, ((win.get_width() - text_box.get_width()) // 2, win.get_height() - (text_box.get_height() + 100)))
+                pygame.display.update()
+
+            sleep_time = max((len(text) // 20), 1) * 1000
+            pause_dtime = 0
+            while pause_dtime < sleep_time:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        controller.save_profile(controller)
+                        pygame.quit()
+                        sys.exit()
+                if type and controller.handle_anykey():
+                    break
+                if controller.goto_load or controller.goto_main:
+                    return
+                time.sleep(0.01)
+                pause_dtime += 10
 
 
 def glitch(odds, screen):

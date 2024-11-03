@@ -9,8 +9,8 @@ class Enemy(Actor):
     PLAYER_SPOT_RANGE = 288
     PLAYER_SPOT_COOLDOWN = 2
 
-    def __init__(self, x, y, level_bounds, sprite_master, audios, difficulty, path=None, hp=100, can_shoot=False, spot_range=PLAYER_SPOT_RANGE, sprite=None, proj_sprite=None, name="Enemy"):
-        super().__init__(x, y, level_bounds, sprite_master, audios, difficulty, can_shoot=can_shoot, sprite=sprite, proj_sprite=proj_sprite, name=name)
+    def __init__(self, level, x, y, sprite_master, audios, difficulty, path=None, hp=100, can_shoot=False, spot_range=PLAYER_SPOT_RANGE, sprite=None, proj_sprite=None, name="Enemy"):
+        super().__init__(level, x, y, sprite_master, audios, difficulty, can_shoot=can_shoot, sprite=sprite, proj_sprite=proj_sprite, name=name)
         self.patrol_path = path
         self.spot_range = spot_range
         if path is None:
@@ -27,6 +27,21 @@ class Enemy(Actor):
         self.max_hp = self.hp = self.cached_hp = hp * self.difficulty
         self.cooldowns.update({"spot_player": 0})
         self.cached_cooldowns = self.cooldowns.copy()
+        vision_hidden = pygame.surface.Surface((256, 10), pygame.SRCALPHA)
+        vision_spotted = vision_hidden.copy()
+        chunk = pygame.surface.Surface((1, 10), pygame.SRCALPHA)
+        chunk.fill((0, 255, 0))
+        for i in range(256):
+            chunk.set_alpha(i)
+            vision_hidden.blit(chunk, (i, 0))
+        chunk.fill((255, 0, 0))
+        for i in range(256):
+            chunk.set_alpha(i)
+            vision_spotted.blit(chunk, (i, 0))
+        if self.level.grayscale:
+            vision_hidden = pygame.transform.grayscale(vision_hidden)
+            vision_spotted = pygame.transform.grayscale(vision_spotted)
+        self.vision = {"hidden": {MovementDirection.LEFT: vision_hidden, MovementDirection.RIGHT: pygame.transform.flip(vision_hidden, True, False)}, "spotted": {MovementDirection.LEFT: vision_spotted, MovementDirection.RIGHT: pygame.transform.flip(vision_spotted, True, False)}}
 
     def increment_patrol_index(self):
         if self.patrol_path_index < 0:
@@ -38,92 +53,93 @@ class Enemy(Actor):
         elif self.patrol_path_index == -(len(self.patrol_path) + 1):
             self.patrol_path_index = 0
 
+    def find_floor(self, dist):
+        for block in self.level.blocks:
+            if block.rect.collidepoint(self.rect.centerx + dist, self.rect.bottom + 1):
+                return True
+        return False
+
     def patrol(self, vel=VELOCITY_TARGET):
         self.should_move_horiz = False
-        if self.patrol_path is None:
-            self.direction = self.facing = MovementDirection(math.copysign(1, self.player.rect.centerx - self.rect.centerx))
-            if self.cooldowns["spot_player"] <= 0:
-                self.spot_player()
-        elif self.cooldowns["get_hit"] <= 0:
-            if self.spot_player() and self.cooldowns["spot_player"] > 0:
-                dist = math.dist(self.player.rect.center, self.rect.center)
-                self.should_move_horiz = True
-                if self.can_shoot:
-                    self.direction = MovementDirection(math.copysign(1, self.rect.centerx - self.player.rect.centerx))
-                    self.facing = self.direction.swap()
-                    if dist < self.spot_range // 2:
-                        self.x_vel = self.direction * vel
+        if self.cooldowns["get_hit"] <= 0:
+            if self.patrol_path is None:
+                self.direction = self.facing = MovementDirection(math.copysign(1, self.level.get_player().rect.centerx - self.rect.centerx))
+                if self.cooldowns["spot_player"] <= 0:
+                    self.spot_player()
+            else:
+                if self.spot_player() and self.cooldowns["spot_player"] > 0:
+                    dist = math.dist(self.level.get_player().rect.center, self.rect.center)
+                    if self.can_shoot:
+                        self.direction = MovementDirection(math.copysign(1, self.rect.centerx - self.level.get_player().rect.centerx))
+                        self.facing = self.direction.swap()
+                        if dist < self.spot_range // 2:
+                            self.x_vel = self.direction * vel
+                        else:
+                            self.is_attacking = True
+                            self.x_vel = 0.0
                     else:
-                        self.x_vel = 0
+                        self.direction = self.facing = MovementDirection(math.copysign(1, self.level.get_player().rect.centerx - self.rect.centerx))
+                        if dist > self.rect.width:
+                            self.x_vel = self.direction * min(vel, dist - (3 * self.rect.width / 4))
+                        else:
+                            self.is_attacking = True
+                            self.x_vel = 0.0
+                    self.should_move_horiz = self.find_floor(self.x_vel)
                 else:
-                    self.direction = self.facing = MovementDirection(math.copysign(1, self.player.rect.centerx - self.rect.centerx))
-                    self.x_vel = self.direction * min(vel, abs(dist - (3 * self.width // 4)))
-            elif self.cooldowns["spot_player"] <= 0:
-                self.facing = self.direction
-                if self.patrol_path_index >= 0 and self.direction == MovementDirection.LEFT:
-                    if self.rect.x > self.patrol_path[self.patrol_path_index][0]:
-                        self.x_vel = self.direction * vel
-                        self.should_move_horiz = True
+                    self.is_attacking = False
+                    self.facing = self.direction
+                    if self.patrol_path_index >= 0 and self.direction == MovementDirection.LEFT:
+                        if self.rect.x > self.patrol_path[self.patrol_path_index][0]:
+                            self.x_vel = self.direction * vel
+                            self.should_move_horiz = True
+                        else:
+                            self.increment_patrol_index()
+                    elif self.patrol_path_index < 0 and self.direction == MovementDirection.RIGHT:
+                        if self.rect.x < self.patrol_path[self.patrol_path_index][0]:
+                            self.x_vel = self.direction * vel
+                            self.should_move_horiz = True
+                        else:
+                            self.increment_patrol_index()
                     else:
-                        self.increment_patrol_index()
-                elif self.patrol_path_index < 0 and self.direction == MovementDirection.RIGHT:
-                    if self.rect.x < self.patrol_path[self.patrol_path_index][0]:
-                        self.x_vel = self.direction * vel
-                        self.should_move_horiz = True
-                    else:
-                        self.increment_patrol_index()
-                else:
-                    self.direction = self.direction.swap()
-                    self.facing = self.facing.swap()
+                        self.direction = self.direction.swap()
+                        self.facing = self.facing.swap()
+
+                    if self.jump_count < self.max_jumps and self.state in [MovementState.FALL, MovementState.FALL_ATTACK]:
+                        self.jump()
 
     def __adj_spot_range__(self):
-        return self.spot_range * self.player.size / (1.5 if self.player.is_crouching else 1)
+        return self.spot_range * self.level.get_player().size / (1.5 if self.level.get_player().is_crouching else 1)
 
     def spot_player(self, spot_cd=PLAYER_SPOT_COOLDOWN):
-        dist = math.dist(self.player.rect.center, self.rect.center)
-        if dist <= self.__adj_spot_range__() and (self.facing == MovementDirection(math.copysign(1, self.player.rect.centerx - self.rect.centerx)) or dist <= self.width // 2):
+        dist = math.dist(self.level.get_player().rect.center, self.rect.center)
+        if dist <= self.__adj_spot_range__() and (self.facing == MovementDirection(math.copysign(1, self.level.get_player().rect.centerx - self.rect.centerx)) or self.cooldowns["get_hit"] > 0):
             for i in range(round(dist)):
-                for obj in self.objects:
+                for obj in self.level.blocks:
                     if obj.rect.collidepoint(self.rect.centerx + (self.facing * ((self.rect.width // 2) + i)), self.rect.y):
                         return False
             self.cooldowns["spot_player"] = spot_cd
             if self.state in [MovementState.IDLE, MovementState.CROUCH, MovementState.RUN, MovementState.IDLE_ATTACK, MovementState.CROUCH_ATTACK, MovementState.RUN_ATTACK] and self.can_shoot and dist > self.spot_range // 3:
-                self.shoot_at_target(self.player.rect.center)
+                self.shoot_at_target(self.level.get_player().rect.center)
             return True
         return False
 
     def collide(self, obj):
-        if obj != self.player and not obj.is_stacked and self.direction == MovementDirection(math.copysign(1, obj.rect.centerx - self.rect.centerx)):
+        if obj != self.level.get_player() and not obj.is_stacked and self.direction == MovementDirection(math.copysign(1, obj.rect.centerx - self.rect.centerx)):
             self.jump()
         elif self.cooldowns["spot_player"] <= 0 and self.patrol_path is not None:
             self.increment_patrol_index()
         return True
 
-    def output(self, win, offset_x, offset_y, player, master_volume):
+    def output(self, win, offset_x, offset_y, master_volume):
         if self.difficulty <= DifficultyScale.EASY:
-            adj_x_image = self.rect.x - offset_x
-            adj_y_image = self.rect.y - offset_y
+            adj_x_image = self.rect.centerx - offset_x - (self.__adj_spot_range__() if self.facing == MovementDirection.LEFT else 0)
+            adj_y_image = self.rect.y - offset_y + (7 * self.rect.height // 24)
             window_width = win.get_width()
             window_height = win.get_height()
             if -self.__adj_spot_range__() < adj_x_image <= window_width and -self.rect.height < adj_y_image <= window_height:
-                vision = pygame.surface.Surface((int(self.__adj_spot_range__()) + (self.rect.width // 2), self.rect.height // 4), pygame.SRCALPHA)
-                gradient_max = min(256, vision.get_width())
-                size_chunks = vision.get_width() // gradient_max
-                chunk = pygame.surface.Surface((size_chunks, vision.get_height()), pygame.SRCALPHA)
-                if self.cooldowns["spot_player"] <= 0:
-                    chunk.fill((0, 255, 0))
+                if self.cooldowns["spot_player"] > 0:
+                    vision = self.vision["spotted"][self.facing]
                 else:
-                    chunk.fill((255, 0, 0))
-                for i in range(gradient_max):
-                    if self.facing == MovementDirection.LEFT:
-                        chunk.set_alpha(i)
-                    else:
-                        chunk.set_alpha(gradient_max - i)
-                    vision.blit(chunk, (i * size_chunks, 0))
-                if self.facing == MovementDirection.LEFT:
-                    adj_x_image -= self.spot_range - self.rect.width
-                else:
-                    adj_x_image += (self.rect.width // 2)
-                adj_y_image += 7 * self.rect.height // 24
-                win.blit(vision, (adj_x_image, adj_y_image))
-        super().output(win, offset_x, offset_y, player, master_volume)
+                    vision = self.vision["hidden"][self.facing]
+                win.blit(pygame.transform.scale(vision, (self.__adj_spot_range__(), self.rect.height // 4)), (adj_x_image, adj_y_image))
+        super().output(win, offset_x, offset_y, master_volume)

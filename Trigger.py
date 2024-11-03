@@ -2,7 +2,7 @@ import time
 import pygame
 from enum import Enum
 from os.path import join, isfile
-from Helpers import display_text
+from Helpers import display_text, load_text_from_file
 from Object import Object
 from Block import Block, BreakableBlock, MovableBlock, Hazard, MovingBlock, MovingHazard
 from Enemy import Enemy
@@ -14,24 +14,19 @@ class TriggerType(Enum):
     SPAWN = 3
     REVERT = 4
     SAVE = 5
-    END = 6
+    CHANGE_LEVEL = 6
     SET_PROPERTY = 7
 
 
 class Trigger(Object):
-    def __init__(self, x, y, width, height, win, controller, spawn_dict, level_bounds, sprite_master, enemy_audios, image_master, block_size, fire_once=False, type=None, input=None, name="Trigger"):
-        super().__init__(x, y, width, height, name=name)
+    def __init__(self, level, x, y, width, height, win, controller, objects_dict, sprite_master, enemy_audios, image_master, block_size, fire_once=False, type=None, input=None, name="Trigger"):
+        super().__init__(level, x, y, width, height, name=name)
         self.win = win
         self.controller = controller
         self.fire_once = fire_once
         self.has_fired = False
         self.type = type
-        self.output = self.load_input(input, spawn_dict, level_bounds, sprite_master, enemy_audios, image_master, block_size)
-        self.player = None
-        self.triggers = None
-        self.enemies = None
-        self.blocks = None
-        self.hazards = None
+        self.value = self.load_input(input, objects_dict, sprite_master, enemy_audios, image_master, block_size)
 
     def save(self):
         if self.has_fired:
@@ -42,19 +37,13 @@ class Trigger(Object):
     def load(self, obj):
         self.has_fired = obj["has_fired"]
 
-    def load_input(self, input, objects_dict, level_bounds, sprite_master, enemy_audios, image_master, block_size):
+    def load_input(self, input, objects_dict, sprite_master, enemy_audios, image_master, block_size):
         if input is None or self.type is None:
             return None
-        elif self.type == TriggerType.TEXT or self.type == TriggerType.END:
-            path = join("Assets", "Text", input)
-            if not isfile(path) or len(input) < 4 or input[-4:] != ".txt":
-                text = ["Error: text file " + path + " not found."]
-            else:
-                text = []
-                with open(path, "r") as file:
-                    for line in file:
-                        text.append(line.replace("\n", ""))
-            return text
+        elif self.type == TriggerType.TEXT:
+            return load_text_from_file(input)
+        elif self.type == TriggerType.CHANGE_LEVEL:
+            return input.upper()
         elif self.type == TriggerType.SOUND:
             path = join("Assets", "TriggerAudio", input)
             if not isfile(path) or len(input) < 4 or (input[-4:] != ".wav" and input[-4:] != ".mp3"):
@@ -70,10 +59,10 @@ class Trigger(Object):
                 match entry["type"].upper():
                     case "BLOCK":
                         is_stacked = False
-                        return Block(j * block_size, i * block_size, block_size, block_size, image_master, is_stacked, coord_x=data["coord_x"], coord_y=data["coord_y"])
+                        return Block(self.level, j * block_size, i * block_size, block_size, block_size, image_master, is_stacked, coord_x=data["coord_x"], coord_y=data["coord_y"])
                     case "BREAKABLEBLOCK":
                         is_stacked = False
-                        return BreakableBlock(j * block_size, i * block_size, block_size, block_size, image_master, is_stacked, coord_x=data["coord_x"], coord_y=data["coord_y"])
+                        return BreakableBlock(self.level, j * block_size, i * block_size, block_size, block_size, image_master, is_stacked, coord_x=data["coord_x"], coord_y=data["coord_y"])
                     case "MOVINGBLOCK":
                         if data["path"].upper() == "NONE":
                             path = None
@@ -83,12 +72,12 @@ class Trigger(Object):
                             for k in range(0, len(path_in), 2):
                                 path.append(((path_in[k] + j) * block_size, (path_in[k + 1] + i) * block_size))
                         is_stacked = False
-                        return MovingBlock(j * block_size, i * block_size, level_bounds, block_size, block_size, image_master, is_stacked, speed=data["speed"], path=path, coord_x=data["coord_x"], coord_y=data["coord_y"])
+                        return MovingBlock(self.level, j * block_size, i * block_size, block_size, block_size, image_master, is_stacked, speed=data["speed"], path=path, coord_x=data["coord_x"], coord_y=data["coord_y"])
                     case "MOVABLEBLOCK":
                         is_stacked = False
-                        return MovableBlock(j * block_size, i * block_size, level_bounds, block_size, block_size, image_master, is_stacked, coord_x=data["coord_x"], coord_y=data["coord_y"])
+                        return MovableBlock(self.level, j * block_size, i * block_size, block_size, block_size, image_master, is_stacked, coord_x=data["coord_x"], coord_y=data["coord_y"])
                     case "HAZARD":
-                        return Hazard(j * block_size, i * block_size, block_size, data["height"], image_master, self.controller.difficulty, coord_x=data["coord_x"], coord_y=data["coord_y"])
+                        return Hazard(self.level, j * block_size, i * block_size, block_size, data["height"], image_master, self.controller.difficulty, coord_x=data["coord_x"], coord_y=data["coord_y"])
                     case "MOVINGHAZARD":
                         if data["path"].upper() == "NONE":
                             path = None
@@ -98,15 +87,15 @@ class Trigger(Object):
                             for k in range(0, len(path_in), 2):
                                 path.append(((path_in[k] + j) * block_size, (path_in[k + 1] + i) * block_size))
                         is_stacked = False
-                        return MovingHazard(j * block_size, i * block_size, level_bounds, block_size, data["height"], image_master, self.controller.difficulty, is_stacked, speed=data["speed"], path=path, coord_x=data["coord_x"], coord_y=data["coord_y"])
+                        return MovingHazard(self.level, j * block_size, i * block_size, block_size, data["height"], image_master, self.controller.difficulty, is_stacked, speed=data["speed"], path=path, coord_x=data["coord_x"], coord_y=data["coord_y"])
                     case "ENEMY":
                         path_in = list(map(int, data["path"].split(' ')))
                         path = []
                         for k in range(0, len(path_in), 2):
                             path.append(((path_in[k] + j) * block_size, (path_in[k + 1] + i) * block_size))
-                        return Enemy(j * block_size, i * block_size, level_bounds, sprite_master, enemy_audios, self.controller.difficulty, path=path, hp=data["hp"], can_shoot=bool(data["can_shoot"].upper() == "TRUE"), sprite=data["sprite"], proj_sprite=(None if data["proj_sprite"].upper() == "NONE" else data["proj_sprite"]))
+                        return Enemy(self.level, j * block_size, i * block_size, sprite_master, enemy_audios, self.controller.difficulty, path=path, hp=data["hp"], can_shoot=bool(data["can_shoot"].upper() == "TRUE"), sprite=data["sprite"], proj_sprite=(None if data["proj_sprite"].upper() == "NONE" else data["proj_sprite"]))
                     case "TRIGGER":
-                        return Trigger(j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, self.win, self.controller, objects_dict, level_bounds, sprite_master, enemy_audios, image_master, block_size, fire_once=bool(data["fire_once"].upper() == "TRUE"), type=TriggerType(data["type"]), input=data["input"], name=element)
+                        return Trigger(self.level, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, self.win, self.controller, objects_dict, sprite_master, enemy_audios, image_master, block_size, fire_once=bool(data["fire_once"].upper() == "TRUE"), type=TriggerType(data["type"]), input=data["input"], name=element)
                     case _:
                         pass
             return None
@@ -118,40 +107,38 @@ class Trigger(Object):
         else:
             return None
 
-    def collide(self, player):
+    def collide(self):
         start = time.perf_counter_ns()
 
-        end_level = False
-        if (self.fire_once and self.has_fired) or self.type is None or self.output is None:
-            return [0, end_level]
+        next_level = None
+        if (self.fire_once and self.has_fired) or self.type is None or self.value is None:
+            return [0, next_level]
         self.has_fired = True
 
         if self.type == TriggerType.TEXT:
-            display_text(self.output, self.win, self.controller)
+            display_text(self.value, self.win, self.controller)
         elif self.type == TriggerType.SOUND:
-            if self.output is not None:
-                pygame.mixer.find_channel(force=True).play(self.output)
+            if self.value is not None:
+                pygame.mixer.find_channel(force=True).play(self.value)
         elif self.type == TriggerType.SPAWN:
-            if self.output is not None:
-                if isinstance(self.output, Trigger):
-                    self.triggers.append(self.output)
-                elif isinstance(self.output, Enemy):
-                    self.output.player = self.player
-                    self.enemies.append(self.output)
-                elif isinstance(self.output, Hazard):
-                    self.hazards.append(self.output)
-                elif isinstance(self.output, Block):
-                    self.blocks.append(self.output)
+            if self.value is not None:
+                if isinstance(self.value, Trigger):
+                    self.level.triggers.append(self.value)
+                elif isinstance(self.value, Enemy):
+                    self.level.enemies.append(self.value)
+                elif isinstance(self.value, Hazard):
+                    self.level.hazards.append(self.value)
+                elif isinstance(self.value, Block):
+                    self.level.blocks.append(self.value)
         elif self.type == TriggerType.REVERT:
-            player.revert()
+            self.level.get_player().revert()
         elif self.type == TriggerType.SAVE:
-            player.save()
-        elif self.type == TriggerType.END:
-            display_text(self.output, self.win, self.controller)
-            end_level = True
+            self.level.get_player().save()
+        elif self.type == TriggerType.CHANGE_LEVEL:
+            next_level = self.value
         elif self.type == TriggerType.SET_PROPERTY:
-            if self.output is not None:
-                target, property, value = self.output["target"], self.output["property"], self.output["value"]
+            if self.value is not None:
+                target, property, value = self.value["target"], self.value["property"], self.value["value"]
                 if len(target) == len(property) == len(value):
                     for i in range(len(target)):
                         if isinstance(value[i], bool) or value[i].upper() in ("TRUE", "FALSE"):
@@ -160,11 +147,14 @@ class Trigger(Object):
                             value[i] = float(value[i])
                             if value[i] == int(value[i]):
                                 value[i] = int(value[i])
-                        for obj in [self.player] + self.triggers + self.enemies + self.blocks + self.hazards:
+                        for obj in [self.level.get_player()] + self.level.get_objects():
                             if obj.name[:len(target[i])].upper() == target[i].upper() and hasattr(obj, property[i]):
                                 setattr(obj, property[i], value[i])
                                 if self.controller.player_abilities.get(property[i]) is not None:
                                     self.controller.player_abilities[property[i]] = value[i]
 
-        return [(time.perf_counter_ns() - start) // 1000000, end_level]
+        return [(time.perf_counter_ns() - start) // 1000000, next_level]
+
+    def output(self, win, offset_x, offset_y, master_volume):
+        pass
 

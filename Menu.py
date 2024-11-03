@@ -103,7 +103,7 @@ class Menu():
             if self.buttons[i][0].collidepoint(pygame.mouse.get_pos()):
                 button_type = 2
                 for event in pygame.event.get():
-                    if self.buttons[i][3] == ButtonType.CLICK and ((event.type == pygame.MOUSEBUTTONDOWN and event.button == 1) or (event.type == pygame.JOYBUTTONDOWN and event.button == 0)):
+                    if self.buttons[i][2].get_alpha() == 255 and self.buttons[i][3] == ButtonType.CLICK and ((event.type == pygame.MOUSEBUTTONDOWN and event.button == 1) or (event.type == pygame.JOYBUTTONDOWN and event.button == 0)):
                         return i
                     elif self.buttons[i][3] == ButtonType.BAR and self.notch_val[i] is not None:
                         if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1) or (event.type == pygame.MOUSEMOTION and pygame.mouse.get_pressed()[0]):

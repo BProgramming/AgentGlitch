@@ -17,23 +17,23 @@ class Controller:
         "PS5": {"button_menu_up": None, "button_menu_down": None, "button_quicksave": 8, "button_left": None, "button_right": None, "axis_horiz": 0, "hat_horiz": 0, "button_crouch_uncrouch": 1, "button_jump": 0, "button_teleport_dash": 2, "button_pause_unpause": 9, "axis_attack": "a5", "axis_block": "a2", "button_bullet_time": 3, "button_grow": 5, "button_shrink": 4},
         "NONE": {"button_menu_up": None, "button_menu_down": None, "button_quicksave": None, "button_left": None, "button_right": None, "axis_horiz": None, "hat_horiz": None, "button_crouch_uncrouch": None, "button_jump": None, "button_teleport_dash": None, "button_pause_unpause": None, "axis_attack": None, "axis_block": None, "button_bullet_time": None, "button_grow": None, "button_shrink": None}}
 
-    def __init__(self, win, save, save_profile, layout=None):
+    def __init__(self, level, win, save, save_player_profile, layout=None):
         self.win = win
         self.save = save
-        self.save_profile = save_profile
+        self.save_player_profile = save_player_profile
         self.player_sprite_selected = None
         self.player_abilities = None
         self.difficulty = DifficultyScale.MEDIUM
         self.hud = None
         self.goto_load = self.goto_main = self.goto_restart = False
-        self.objects = None
+        self.level = level
         self.master_volume = {"background": 1, "player": 1, "non-player": 1}
         dif = {"label": "Difficulty", "type": ButtonType.BAR, "snap": True, "value": self.difficulty, "range": (float(DifficultyScale.EASIEST), float(DifficultyScale.EASY), float(DifficultyScale.MEDIUM), float(DifficultyScale.HARD), float(DifficultyScale.HARDEST))}
         vol_bg = {"label": "Music", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["background"], "range": (0, 100)}
         vol_pc = {"label": "Player", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["player"], "range": (0, 100)}
         vol_fx = {"label": "Effects", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["non-player"], "range": (0, 100)}
         self.main_menu = Menu(win, "MAIN MENU", [{"label": "New game", "type": ButtonType.CLICK}, {"label": "Continue", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}])
-        self.pause_menu = Menu(win, "PAUSED", [{"label": "Resume", "type": ButtonType.CLICK}, {"label": "Save game", "type": ButtonType.CLICK}, {"label": "Load game", "type": ButtonType.CLICK}, {"label": "Restart level", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Quit to menu", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}])
+        self.pause_menu = Menu(win, "PAUSED", [{"label": "Resume", "type": ButtonType.CLICK}, {"label": "Load last save", "type": ButtonType.CLICK}, {"label": "Restart level", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Quit to menu", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}])
         self.settings_menu = Menu(win, "SETTINGS", [dif, {"label": "Controls", "type": ButtonType.CLICK}, {"label": "Volume", "type": ButtonType.CLICK}, {"label": "Toggle fullscreen", "type": ButtonType.CLICK}, {"label": "Back", "type": ButtonType.CLICK}])
         self.volume_menu = Menu(win, "VOLUME", [vol_bg, vol_pc, vol_fx, {"label": "Back", "type": ButtonType.CLICK}])
         self.controls_menu = Menu(win, "CONTROLS", [{"label": "Keyboard", "type": ButtonType.CLICK}, {"label": "Controller", "type": ButtonType.CLICK}, {"label": "Back", "type": ButtonType.CLICK}])
@@ -51,8 +51,8 @@ class Controller:
         self.gamepad_layout_picker = Selector(win, "CONTROLLER LAYOUT", ["This is detected when you connect a controller."], load_images("Menu", "Controllers").values(), list(self.GAMEPAD_LAYOUTS.keys()), accept_only=True)
 
     def set_difficulty(self):
-        if self.objects is not None:
-            for obj in self.objects[1]:
+        if self.level is not None:
+            for obj in [self.level.get_player()] + self.level.get_objects():
                 obj.set_difficulty(self.difficulty)
 
     def get_gamepad(self, notify=True, layout_options=GAMEPAD_LAYOUTS):
@@ -67,27 +67,27 @@ class Controller:
 
             if self.gamepad is None:
                 self.set_gamepad_layout("NONE", layout_options)
-                msg = ["Controller disconnected."]
+                msg = "Controller disconnected."
             else:
                 name = self.gamepad.get_name()
                 if name == "Nintendo Switch Pro Controller":
                     self.set_gamepad_layout("SWITCH PRO", layout_options)
-                    msg = ["Nintendo Switch controller detected."]
+                    msg = "Nintendo Switch controller detected."
                 elif name == "Controller (Xbox One For Windows)":
                     self.set_gamepad_layout("XBOX", layout_options)
-                    msg = ["Xbox controller detected."]
+                    msg = "Xbox controller detected."
                 elif name == "PS4 Controller":
                     self.set_gamepad_layout("PS4", layout_options)
-                    msg = ["PS4 controller detected."]
+                    msg = "PS4 controller detected."
                 elif name == "Sony Interactive Entertainment Wireless Controller":
                     self.set_gamepad_layout("PS5", layout_options)
-                    msg = ["PS5 controller detected."]
+                    msg = "PS5 controller detected."
                 elif name == "Wireless Gamepad":
                     self.set_gamepad_layout("NONE", layout_options)
                     msg = ["Nintendo Switch Joy-Con detected.", "Individual Joy-Cons are not supported. Please connect the full controller."]
                 else:
                     self.set_gamepad_layout("NONE", layout_options)
-                    msg = ["Sorry, this controller type is not supported."]
+                    msg = "Sorry, this controller type is not supported."
 
             if notify:
                 display_text(msg, self.win, self, type=False)
@@ -162,7 +162,11 @@ class Controller:
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    self.save_profile(self)
+                    if self.level is not None:
+                        self.save(self.level, self.hud)
+                        self.save_player_profile(self, self.level)
+                    else:
+                        self.save_player_profile(self)
                     pygame.quit()
                     sys.exit()
                 elif event.type == pygame.KEYDOWN and event.key in self.keys_pause_unpause:
@@ -224,7 +228,11 @@ class Controller:
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    self.save_profile(self)
+                    if self.level is not None:
+                        self.save(self.level, self.hud)
+                        self.save_player_profile(self, self.level)
+                    else:
+                        self.save_player_profile(self)
                     pygame.quit()
                     sys.exit()
                 elif event.type == pygame.KEYDOWN and event.key in self.keys_pause_unpause:
@@ -250,6 +258,7 @@ class Controller:
                 if should_process_event and abs(joystick_movement) > joystick_tolerance:
                     self.settings_menu.move_mouse_pos(self.win, math.copysign(1, joystick_movement))
                     joystick_movement = 0
+
     def controls(self, clear=None, joystick_tolerance=0.25):
         pygame.mouse.set_visible(True)
         self.controls_menu.fade_in(self.win)
@@ -279,7 +288,7 @@ class Controller:
                         self.pick_from_selector(self.gamepad_layout_picker, clear=self.controls_menu.clear)
                         self.controls_menu.fade_in(self.win)
                     else:
-                        display_text(["No controller connected."], self.win, self, type=False)
+                        display_text("No controller connected.", self.win, self, type=False)
                 case 2:
                     self.controls_menu.fade_out(self.win)
                     return
@@ -288,7 +297,11 @@ class Controller:
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    self.save_profile(self)
+                    if self.level is not None:
+                        self.save(self.level, self.hud)
+                        self.save_player_profile(self, self.level)
+                    else:
+                        self.save_player_profile(self)
                     pygame.quit()
                     sys.exit()
                 elif event.type == pygame.KEYDOWN and event.key in self.keys_pause_unpause:
@@ -346,7 +359,11 @@ class Controller:
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    self.save_profile(self)
+                    if self.level is not None:
+                        self.save(self.level, self.hud)
+                        self.save_player_profile(self, self.level)
+                    else:
+                        self.save_player_profile(self)
                     pygame.quit()
                     sys.exit()
                 elif event.type == pygame.KEYDOWN and event.key in self.keys_pause_unpause:
@@ -389,28 +406,32 @@ class Controller:
                 case 0:
                     paused = False
                 case 1:
-                    if self.objects is not None:
-                        self.save(self.objects, self.hud)
-                case 2:
                     self.goto_load = True
                     pygame.mixer.unpause()
                     pygame.mouse.set_visible(False)
                     return 0
-                case 3:
+                case 2:
                     self.goto_restart = True
                     pygame.mixer.unpause()
                     pygame.mouse.set_visible(False)
                     return 0
-                case 4:
+                case 3:
                     time.sleep(0.01)
                     self.settings(self.pause_menu.clear)
-                case 5:
+                case 4:
+                    if self.level is not None:
+                        self.save(self.level, self.hud)
+                        self.save_player_profile(self, self.level)
                     self.goto_main = True
                     pygame.mixer.unpause()
                     pygame.mouse.set_visible(False)
                     return 0
-                case 6:
-                    self.save_profile(self)
+                case 5:
+                    if self.level is not None:
+                        self.save(self.level, self.hud)
+                        self.save_player_profile(self, self.level)
+                    else:
+                        self.save_player_profile(self)
                     pygame.quit()
                     sys.exit()
                 case _:
@@ -418,7 +439,11 @@ class Controller:
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    self.save_profile(self)
+                    if self.level is not None:
+                        self.save(self.level, self.hud)
+                        self.save_player_profile(self, self.level)
+                    else:
+                        self.save_player_profile(self)
                     pygame.quit()
                     sys.exit()
                 elif event.type == pygame.KEYDOWN and event.key in self.keys_pause_unpause:
@@ -451,7 +476,7 @@ class Controller:
         pygame.mouse.set_visible(False)
         return (time.perf_counter_ns() - start) // 1000000
 
-    def main(self, show_continue=True, joystick_tolerance=0.25):
+    def main(self, joystick_tolerance=0.25):
         pygame.mouse.set_visible(True)
         self.main_menu.fade_in(self.win)
         if self.active_gamepad_layout is not None:
@@ -470,17 +495,15 @@ class Controller:
                     pygame.mouse.set_visible(False)
                     return True
                 case 1:
-                    if show_continue:
-                        self.main_menu.fade_out(self.win)
-                        pygame.mouse.set_visible(False)
-                        return False
-                    else:
-                        display_text(["No game to load."], self.win, self, type=False)
+                    self.main_menu.fade_out(self.win)
+                    self.goto_load = True
+                    pygame.mouse.set_visible(False)
+                    return False
                 case 2:
                     time.sleep(0.01)
                     self.settings(self.main_menu.clear)
                 case 3:
-                    self.save_profile(self)
+                    self.save_player_profile(self)
                     pygame.quit()
                     sys.exit()
                 case _:
@@ -488,7 +511,7 @@ class Controller:
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    self.save_profile(self)
+                    self.save_player_profile(self)
                     pygame.quit()
                     sys.exit()
 
@@ -553,33 +576,32 @@ class Controller:
                     return True
         return False
 
-    def handle_single_input(self, input, player, win):
+    def handle_single_input(self, input, win):
         if input in self.keys_pause_unpause or (self.active_gamepad_layout is not None and self.button_pause_unpause is not None and input == self.button_pause_unpause):
             return self.pause()
         elif input in self.keys_quicksave or (self.active_gamepad_layout is not None and self.button_quicksave is not None and input == self.button_quicksave):
-            self.save(self.objects, self.hud)
+            self.save(self.level, self.hud)
         elif input in self.keys_cycle_layout:
             return self.cycle_keyboard_layout(win)
         elif input in self.keys_fullscreen_toggle:
             pygame.display.toggle_fullscreen()
         elif input in self.keys_crouch_uncrouch or (self.active_gamepad_layout is not None and self.button_crouch_uncrouch is not None and input == self.button_crouch_uncrouch):
-            player.toggle_crouch()
+            self.level.get_player().toggle_crouch()
         elif input in self.keys_jump or (self.active_gamepad_layout is not None and self.button_jump is not None and input == self.button_jump):
-            player.jump()
+            self.level.get_player().jump()
         elif input in self.keys_teleport_dash or (self.active_gamepad_layout is not None and self.button_teleport_dash is not None and input == self.button_teleport_dash):
-            player.teleport()
-        elif input in self.keys_attack or (self.active_gamepad_layout is not None and self.axis_attack is not None and input == self.axis_attack):
-            player.attack()
+            self.level.get_player().teleport()
         elif input in self.keys_bullet_time or (self.active_gamepad_layout is not None and self.button_bullet_time is not None and input == self.button_bullet_time):
-            player.bullet_time()
+            self.level.get_player().bullet_time()
         elif input in self.keys_grow or (self.active_gamepad_layout is not None and self.button_grow is not None and input == self.button_grow):
-            player.grow()
+            self.level.get_player().grow()
         elif input in self.keys_shrink or (self.active_gamepad_layout is not None and self.button_shrink is not None and input == self.button_shrink):
-            player.shrink()
+            self.level.get_player().shrink()
         return 0
 
-    def handle_continuous_input(self, player, joystick_tolerance=0.1):
+    def handle_continuous_input(self, joystick_tolerance=0.1):
         player_is_moving = False
+        player_is_attacking = False
 
         if self.active_gamepad_layout is not None:
             stick = self.gamepad.get_axis(self.axis_horiz)
@@ -587,49 +609,62 @@ class Controller:
             if not player_is_moving and stick is not None:
                 if stick > joystick_tolerance:
                     player_is_moving = True
-                    player.move_right()
+                    self.level.get_player().move_right()
                 elif stick < -joystick_tolerance:
                     player_is_moving = True
-                    player.move_left()
+                    self.level.get_player().move_left()
 
             if not player_is_moving and hat is not None:
                 if hat[0] > 0:
                     player_is_moving = True
-                    player.move_right()
+                    self.level.get_player().move_right()
                 elif hat[0] < 0:
                     player_is_moving = True
-                    player.move_left()
+                    self.level.get_player().move_left()
 
             if not player_is_moving and self.button_right is not None and self.button_left is not None:
                 if self.gamepad.get_button(self.button_right) > 0:
                     player_is_moving = True
-                    player.move_right()
+                    self.level.get_player().move_right()
                 elif self.gamepad.get_button(self.button_left) > 0:
                     player_is_moving = True
-                    player.move_left()
+                    self.level.get_player().move_left()
+
+            stick = self.gamepad.get_axis(self.axis_attack)
+            if not player_is_attacking and stick is not None and stick > joystick_tolerance:
+                player_is_attacking = True
+                self.level.get_player().attack()
 
         keys = pygame.key.get_pressed()
         if not player_is_moving:
             for input_key in self.keys_right:
                 if keys[input_key]:
                     player_is_moving = True
-                    player.move_right()
+                    self.level.get_player().move_right()
                     break
         if not player_is_moving:
             for input_key in self.keys_left:
                 if keys[input_key]:
                     player_is_moving = True
-                    player.move_left()
+                    self.level.get_player().move_left()
                     break
+        if not player_is_attacking:
+            for input_key in self.keys_attack:
+                if keys[input_key]:
+                    player_is_attacking = True
+                    self.level.get_player().attack()
+
+        if not player_is_attacking:
+            self.level.get_player().is_attacking = False
 
         if not player_is_moving:
-            player.stop()
+            self.level.get_player().stop()
 
         if self.active_gamepad_layout is not None:
             stick = self.gamepad.get_axis(int(self.axis_block[1:]))
             if stick is not None and stick > joystick_tolerance:
-                player.block()
+                self.level.get_player().block()
         for input_key in self.keys_block:
             if keys[input_key]:
-                player.block()
+                self.level.get_player().block()
                 break

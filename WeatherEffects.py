@@ -3,8 +3,10 @@ import random
 
 
 class ParticleEffect:
-    def __init__(self, width, height, amount, color, level_bounds, x_vel=0.0, y_vel=0.0):
-        self.image = self.generate(width, height, amount, color, level_bounds)
+    def __init__(self, level, width, height, amount, color, x_vel=0.0, y_vel=0.0):
+        self.image = self.generate(width, height, amount, color, level.level_bounds)
+        if level.grayscale:
+            pygame.transform.grayscale(self.image)
         self.rect = pygame.rect.Rect(0, 0, self.image.get_width(), self.image.get_height())
         self.x_vel = x_vel
         self.y_vel = y_vel
@@ -62,20 +64,14 @@ class ParticleEffect:
 
 
 class Rain(ParticleEffect):
-    def __init__(self, level_bounds, greyscale=False, angled=False):
-        if greyscale:
-            color = (255, 255, 255, 200)
-        else:
-            color = (208, 244, 255, 200)
-        amount = level_bounds[1][0] * level_bounds[1][1] // 600
-        super().__init__(1, 8, amount, color, level_bounds, x_vel=(0.0 if not angled else -0.05), y_vel=0.2)
+    def __init__(self, level, angled=False):
+        color = (208, 244, 255, 200)
+        amount = level.level_bounds[1][0] * level.level_bounds[1][1] // 600
+        super().__init__(level, 1, 8, amount, color, x_vel=(0.0 if not angled else -0.05), y_vel=0.2)
 
 
 class Snow(ParticleEffect):
-    def __init__(self, level_bounds, greyscale=False, angled=False):
-        if greyscale:
-            color = (220, 220, 220, 200)
-        else:
-            color = (235, 245, 245, 200)
-        amount = level_bounds[1][0] * level_bounds[1][1] // 1000
-        super().__init__(3, 3, amount, color, level_bounds, x_vel=(0.0 if not angled else -0.05), y_vel=0.15)
+    def __init__(self, level, angled=False):
+        color = (235, 245, 245, 200)
+        amount = level.level_bounds[1][0] * level.level_bounds[1][1] // 1000
+        super().__init__(level, 3, 3, amount, color, x_vel=(0.0 if not angled else -0.05), y_vel=0.15)

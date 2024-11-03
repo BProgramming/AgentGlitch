@@ -7,8 +7,8 @@ class Projectile(Object):
     MAX_SPEED = 100
     STOCK_PROJECTILE_SIZE = 16
 
-    def __init__(self, x, y, target, max_dist, attack_damage, difficulty, speed=MAX_SPEED, stock_size=STOCK_PROJECTILE_SIZE, sprite=None, name=None):
-        super().__init__(x, y, sprite.get_width(), sprite.get_height(), name=name)
+    def __init__(self, level, x, y, target, max_dist, attack_damage, difficulty, speed=MAX_SPEED, stock_size=STOCK_PROJECTILE_SIZE, sprite=None, name=None):
+        super().__init__(level, x, y, sprite.get_width(), sprite.get_height(), name=name)
         self.speed = (0.75 * speed * (stock_size / sprite.get_width())) + (0.25 * speed * difficulty * (stock_size / sprite.get_width()))
         self.max_dist = max_dist
         if target is None:
@@ -18,6 +18,7 @@ class Projectile(Object):
         self.sprite = sprite
         self.angle = math.degrees(math.atan2(self.dest[1] - self.rect.centery, self.dest[0] - self.rect.centerx))
         self.sprite = pygame.transform.rotate(self.sprite, self.angle)
+        self.mask = pygame.mask.from_surface(self.sprite)
         self.attack_damage = attack_damage
 
     def save(self):
@@ -31,14 +32,16 @@ class Projectile(Object):
         self.dest = obj["dest"]
         self.angle = obj["angle"]
 
-    def move(self, speed, objects):
-        for obj in objects:
+    def move(self, speed):
+        if self.rect.colliderect(self.level.get_player()) and pygame.sprite.collide_mask(self, self.level.get_player()):
+            self.collide(None)
+            self.level.get_player().get_hit(self)
+            return
+        for obj in self.level.blocks:
             if self.rect.colliderect(obj.rect):
-                if obj.rect.collidepoint(self.rect.center):
+                if pygame.sprite.collide_mask(self, obj):
                     self.rect.center = obj.rect.center
-                    self.collide(obj)
-                    if obj.name == "Player":
-                        obj.get_hit(self)
+                    self.collide(None)
                     return
         dist = math.dist(self.rect.center, self.dest)
         if dist < speed:
@@ -48,12 +51,11 @@ class Projectile(Object):
             delta = speed / dist
             self.rect.center = [((1 - delta) * self.rect.centerx) + (delta * self.dest[0]), ((1 - delta) * self.rect.centery) + (delta * self.dest[1])]
 
-    def loop(self, fps, dtime, objects):
-        self.move(self.speed * (dtime / fps) * (0.5 if self.player is not None and self.player.is_slow_time else 1), objects)
+    def loop(self, fps, dtime):
+        self.move(self.speed * (dtime / fps) * (0.5 if self.level.get_player() is not None and self.level.get_player().is_slow_time else 1))
 
     def collide(self, obj):
         self.hp = 0
-        obj.get_hit(self)
         return True
 
     def set_difficulty(self, scale):

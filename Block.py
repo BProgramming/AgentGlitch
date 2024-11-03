@@ -6,9 +6,9 @@ from Helpers import handle_exception, MovementDirection
 
 
 class Block(Object):
-    def __init__(self, x, y, width, height, image_master, is_stacked, coord_x=0, coord_y=0, name="Block"):
-        super().__init__(x, y, width, height, name)
-        self.sprite.blit(load_image(join("Assets", "Terrain", "Terrain.png"), width, height, image_master, coord_x, coord_y), (0, 0))
+    def __init__(self, level, x, y, width, height, image_master, is_stacked, coord_x=0, coord_y=0, name="Block"):
+        super().__init__(level, x, y, width, height, name)
+        self.sprite.blit(load_image(join("Assets", "Terrain", "Terrain.png"), width, height, image_master, coord_x, coord_y, grayscale=self.level.grayscale), (0, 0))
         self.mask = pygame.mask.from_surface(self.sprite)
         self.is_stacked = is_stacked
 
@@ -19,8 +19,8 @@ class Block(Object):
             return None
 
 class BreakableBlock(Block):
-    def __init__(self, x, y, width, height, image_master, is_stacked, coord_x=0, coord_y=0, name="BreakableBlock"):
-        super().__init__(x, y, width, height, image_master, is_stacked, coord_x=coord_x, coord_y=coord_y, name=name)
+    def __init__(self, level, x, y, width, height, image_master, is_stacked, coord_x=0, coord_y=0, name="BreakableBlock"):
+        super().__init__(level, x, y, width, height, image_master, is_stacked, coord_x=coord_x, coord_y=coord_y, name=name)
 
     def get_hit(self, obj):
         self.hp = 0
@@ -29,8 +29,8 @@ class BreakableBlock(Block):
 class MovingBlock(Block):
     VELOCITY_TARGET = 0.5
 
-    def __init__(self, x, y, level_bounds, width, height, image_master, is_stacked, speed=VELOCITY_TARGET, path=None, coord_x=0, coord_y=0, name="MovingBlock"):
-        super().__init__(x, y, width, height, image_master, is_stacked, coord_x=coord_x, coord_y=coord_y, name=name)
+    def __init__(self, level, x, y, width, height, image_master, is_stacked, speed=VELOCITY_TARGET, path=None, coord_x=0, coord_y=0, name="MovingBlock"):
+        super().__init__(level, x, y, width, height, image_master, is_stacked, coord_x=coord_x, coord_y=coord_y, name=name)
         self.speed = speed
         self.patrol_path = path
         self.patrol_path_index = 0
@@ -41,9 +41,7 @@ class MovingBlock(Block):
                 if dist < min_dist:
                     self.patrol_path_index = i
             self.direction = self.facing = MovementDirection(math.copysign(1, self.patrol_path[self.patrol_path_index][0] - self.rect.x))
-        self.objects = []
-        self.level_bounds = level_bounds
-        self.x_vel = self.y_vel = 0
+        self.x_vel = self.y_vel = 0.0
         self.should_move_horiz = self.should_move_vert = True
 
     def increment_patrol_index(self):
@@ -63,12 +61,16 @@ class MovingBlock(Block):
             if self.patrol_path_index >= 0 and self.direction == MovementDirection.LEFT:
                 if self.rect.x > self.patrol_path[self.patrol_path_index][0]:
                     self.x_vel = self.direction * self.speed
+                    if self.level.get_player().is_slow_time:
+                        self.x_vel /= 2
                     self.should_move_horiz = True
                 else:
                     should_increment = True
             elif self.patrol_path_index < 0 and self.direction == MovementDirection.RIGHT:
                 if self.rect.x < self.patrol_path[self.patrol_path_index][0]:
                     self.x_vel = self.direction * self.speed
+                    if self.level.get_player().is_slow_time:
+                        self.x_vel /= 2
                     self.should_move_horiz = True
                 else:
                     should_increment = True
@@ -77,9 +79,13 @@ class MovingBlock(Block):
 
             if self.rect.y > self.patrol_path[self.patrol_path_index][1]:
                 self.y_vel = -self.speed
+                if self.level.get_player().is_slow_time:
+                    self.y_vel /= 2
                 self.should_move_vert = True
             elif self.rect.y < self.patrol_path[self.patrol_path_index][1]:
                 self.y_vel = self.speed
+                if self.level.get_player().is_slow_time:
+                    self.y_vel /= 2
                 self.should_move_vert = True
             elif should_increment:
                 self.increment_patrol_index()
@@ -94,20 +100,20 @@ class MovingBlock(Block):
 
     def move(self, dx, dy):
         if dx != 0:
-            if self.rect.left + dx < self.level_bounds[0][0]:
+            if self.rect.left + dx < self.level.level_bounds[0][0]:
                 self.rect.left = self.rect.width
-                self.x_vel = 0
-            elif self.rect.right + dx > self.level_bounds[1][0]:
-                self.rect.right = self.level_bounds[1][0] - self.rect.width
-                self.x_vel = 0
+                self.x_vel = 0.0
+            elif self.rect.right + dx > self.level.level_bounds[1][0]:
+                self.rect.right = self.level.level_bounds[1][0] - self.rect.width
+                self.x_vel = 0.0
             else:
                 self.rect.x += dx
 
         if dy != 0:
-            if self.rect.top + dy < self.level_bounds[0][1]:
+            if self.rect.top + dy < self.level.level_bounds[0][1]:
                 self.y_vel *= -0.5
-            elif self.rect.top + dy > self.level_bounds[1][1]:
-                self.x_vel = 0
+            elif self.rect.top + dy > self.level.level_bounds[1][1]:
+                self.x_vel = 0.0
             else:
                 target = self.rect.y + dy
                 if self.y_vel > 0 and target > self.patrol_path[self.patrol_path_index][1]:
@@ -117,14 +123,16 @@ class MovingBlock(Block):
                 else:
                     self.rect.y = target
 
-    def loop(self, dtime):
+    def loop(self, fps, dtime):
+        super().loop(fps, dtime)
+
         if self.should_move_horiz:
             self.x_vel *= dtime
         else:
-            self.x_vel = 0
+            self.x_vel = 0.0
 
         if not self.should_move_vert:
-            self.y_vel = 0
+            self.y_vel = 0.0
 
         if self.x_vel != 0 or self.y_vel != 0:
             self.move(self.x_vel, self.y_vel * dtime)
@@ -133,12 +141,10 @@ class MovingBlock(Block):
 class MovableBlock(Block):
     GRAVITY = 0.04
 
-    def __init__(self, x, y, level_bounds, width, height, image_master, is_stacked, coord_x=0, coord_y=0, name="MovableBlock"):
-        super().__init__(x, y, width, height, image_master, is_stacked, coord_x=coord_x, coord_y=coord_y, name=name)
+    def __init__(self, level, x, y, width, height, image_master, is_stacked, coord_x=0, coord_y=0, name="MovableBlock"):
+        super().__init__(level, x, y, width, height, image_master, is_stacked, coord_x=coord_x, coord_y=coord_y, name=name)
         self.start_x, self.start_y = x, y
-        self.objects = []
-        self.level_bounds = level_bounds
-        self.x_vel = self.y_vel = self.push_x = self.push_y = 0
+        self.x_vel = self.y_vel = self.push_x = self.push_y = 0.0
         self.should_move_horiz = self.should_move_vert = True
 
     def collide(self, obj):
@@ -150,7 +156,7 @@ class MovableBlock(Block):
 
     def get_collisions(self):
         self.should_move_horiz = self.should_move_vert = True
-        for obj in self.objects:
+        for obj in self.level.get_objects():
             if isinstance(obj, Block) and obj != self and pygame.sprite.collide_rect(self, obj):
                 if pygame.sprite.collide_mask(self, obj) and obj.collide(self):
                     self.collide(obj)
@@ -176,36 +182,37 @@ class MovableBlock(Block):
 
     def move(self, dx, dy):
         if dx != 0:
-            if self.rect.left + dx < self.level_bounds[0][0]:
+            if self.rect.left + dx < self.level.level_bounds[0][0]:
                 self.rect.left = self.rect.width
-                self.x_vel = 0
-            elif self.rect.right + dx > self.level_bounds[1][0]:
-                self.rect.right = self.level_bounds[1][0] - self.rect.width
-                self.x_vel = 0
+                self.x_vel = 0.0
+            elif self.rect.right + dx > self.level.level_bounds[1][0]:
+                self.rect.right = self.level.level_bounds[1][0] - self.rect.width
+                self.x_vel = 0.0
             else:
                 self.rect.x += dx
 
         if dy != 0:
-            if self.rect.top + dy < self.level_bounds[0][1]:
+            if self.rect.top + dy < self.level.level_bounds[0][1]:
                 self.y_vel *= -0.5
-            elif self.rect.top + dy > self.level_bounds[1][1]:
+            elif self.rect.top + dy > self.level.level_bounds[1][1]:
                 self.rect.x = self.start_x
                 self.rect.y = self.start_y
-                self.x_vel = 0
+                self.x_vel = 0.0
             else:
                 self.rect.y += dy
 
-    def loop(self, dtime, objects, grav=GRAVITY):
-        self.objects = objects
-        self.push_x = self.push_y = 0
+    def loop(self, fps, dtime, grav=GRAVITY):
+        super().loop(fps, dtime)
+
+        self.push_x = self.push_y = 0.0
         self.get_collisions()
         if not self.should_move_horiz:
-            self.x_vel = 0
+            self.x_vel = 0.0
 
         if self.should_move_vert:
             self.y_vel += dtime * grav
         else:
-            self.y_vel = 0
+            self.y_vel = 0.0
 
         if self.x_vel + self.push_x != 0 or self.y_vel + self.push_y != 0:
             self.move(self.x_vel + self.push_x, self.y_vel + (self.push_y * dtime))
@@ -214,8 +221,8 @@ class MovableBlock(Block):
 class Hazard(Block):
     ATTACK_DAMAGE = 99
 
-    def __init__(self, x, y, width, height, image_master, difficulty, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="Hazard"):
-        super().__init__(x, (y + width - height), width, height, image_master, False, coord_x=coord_x, coord_y=coord_y, name=name)
+    def __init__(self, level, x, y, width, height, image_master, difficulty, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="Hazard"):
+        super().__init__(level, x, (y + width - height), width, height, image_master, False, coord_x=coord_x, coord_y=coord_y, name=name)
         self.attack_damage = attack_damage * difficulty
 
     def set_difficulty(self, scale):
@@ -227,18 +234,20 @@ class MovingHazard(MovingBlock, Hazard):
     VELOCITY_TARGET = 0.5
     ATTACK_DAMAGE = 99
 
-    def __init__(self, x, y, level_bounds, width, height, image_master, difficulty, is_stacked, speed=VELOCITY_TARGET, path=None, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="MovingHazard"):
-        MovingBlock.__init__(self, x, y, level_bounds, width, height, image_master, is_stacked, speed=speed, path=path, coord_x=coord_x, coord_y=coord_y, name=name)
+    def __init__(self, level, x, y, width, height, image_master, difficulty, is_stacked, speed=VELOCITY_TARGET, path=None, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="MovingHazard"):
+        MovingBlock.__init__(self, level, x, y, width, height, image_master, is_stacked, speed=speed, path=path, coord_x=coord_x, coord_y=coord_y, name=name)
         self.attack_damage = attack_damage * difficulty
 
 
-def load_image(path, width, height, image_master, coord_x, coord_y):
+def load_image(path, width, height, image_master, coord_x, coord_y, grayscale=False):
     if isfile(path):
         if image_master.get(path) is None:
             image_master[path] = pygame.image.load(path).convert_alpha()
         surface = pygame.Surface((width, height), pygame.SRCALPHA, 32)
         rect = pygame.Rect(coord_x, coord_y, width, height)
         surface.blit(image_master[path], (0, 0), rect)
+        if grayscale:
+            surface = pygame.transform.grayscale(surface)
         return pygame.transform.scale2x(surface)
     else:
         handle_exception(FileNotFoundError(path))

@@ -6,15 +6,13 @@ import pickle
 import traceback
 from os.path import join, isfile
 from Controls import Controller
-from Helpers import load_json_dict, load_levels, load_audios, display_text, glitch, DifficultyScale, handle_exception
-from LevelBuilder import build_level
+from Helpers import load_json_dict, load_levels, load_audios, display_text, glitch, DifficultyScale, handle_exception, load_text_from_file
+from Level import Level
 from HUD import HUD
-from Block import MovableBlock, MovingBlock
-from WeatherEffects import Rain, Snow
 
 pygame.init()
 
-WIDTH, HEIGHT = 1280, 960
+WIDTH, HEIGHT = 1920, 1080
 FPS_TARGET = 60
 
 icon = join("Assets", "Icons", "icon.png")
@@ -27,42 +25,33 @@ WINDOW = pygame.display.set_mode((WIDTH, HEIGHT), flags=pygame.SCALED)
 pygame.display.set_caption("AGENT GLITCH")
 
 
-def get_background(name, level_bounds):
-    file = join("Assets", "Background", name)
-    if isfile(file):
-        image = pygame.image.load(file).convert_alpha()
-        _, _, width, height = image.get_rect()
+def get_background(level):
+    file = join("Assets", "Background", level.background)
+    if not isfile(file):
+        file = join("Assets", "Background", "Blue.png")
+    image = pygame.image.load(file).convert_alpha()
+    if level.grayscale:
+        image = pygame.transform.grayscale(image)
+    _, _, width, height = image.get_rect()
 
-        tiles = []
-        for i in range(max((level_bounds[1][0] // width), 1)):
-            for j in range(max((level_bounds[1][1] // height), 1)):
-                tiles.append((i * width, j * height))
+    tiles = []
+    for i in range(max((level.level_bounds[1][0] // width), 1)):
+        for j in range(max((level.level_bounds[1][1] // height), 1)):
+            tiles.append((i * width, j * height))
 
-        return tiles, image
-    else:
-        handle_exception(FileNotFoundError(file))
+    return tiles, image
 
 
-def get_foreground(name):
-    if name is None:
+def get_foreground(level):
+    if level.foreground is None:
         return None
     else:
-        file = join("Assets", "Foreground", name)
+        file = join("Assets", "Foreground", level.foreground)
         if isfile(file):
-            return pygame.image.load(file).convert_alpha()
-        else:
-            return None
-
-
-#NOTE: having weather with lots of particles + lots of enemies + bullets will decrease the frame rate
-def get_weather(name, level_bounds, greyscale=False):
-    if name is None:
-        return None
-    else:
-        if name.upper() == "RAIN":
-            return Rain(level_bounds, greyscale=greyscale)
-        elif name.upper() == "SNOW":
-            return Snow(level_bounds, greyscale=greyscale)
+            image = pygame.image.load(file).convert_alpha()
+            if level.grayscale:
+                image = pygame.transform.grayscale(image)
+            return image
         else:
             return None
 
@@ -82,7 +71,7 @@ def play_slide(slide, controller, text=None, should_glitch=False, win=WINDOW):
         pygame.display.update()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                controller.save_profile(controller)
+                controller.save_player_profile(controller)
                 pygame.quit()
                 sys.exit()
         time.sleep(0.01)
@@ -96,7 +85,7 @@ def play_slide(slide, controller, text=None, should_glitch=False, win=WINDOW):
         pygame.display.update()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                controller.save_profile(controller)
+                controller.save_player_profile(controller)
                 pygame.quit()
                 sys.exit()
         if controller.handle_anykey():
@@ -114,17 +103,17 @@ def play_slide(slide, controller, text=None, should_glitch=False, win=WINDOW):
         pygame.display.update()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                controller.save_profile(controller)
+                controller.save_player_profile(controller)
                 pygame.quit()
                 sys.exit()
         time.sleep(0.01)
 
 
-def fade(background, bg_image, fg_image, player, objects, hud, weather, offset_x, offset_y, controller, direction="in", win=WINDOW):
+def fade(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller, direction="in", win=WINDOW):
     black = pygame.Surface((win.get_width(), win.get_height()), pygame.SRCALPHA)
     black.fill((0, 0, 0))
     for i in range(64):
-        draw(background, bg_image, fg_image, player, objects, hud, weather, offset_x, offset_y, controller.master_volume, win=win)
+        draw(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller.master_volume, win=win)
         if direction == "in":
             black.set_alpha(255 - (4 * i))
             volume = (i + 1) / 64
@@ -137,7 +126,7 @@ def fade(background, bg_image, fg_image, player, objects, hud, weather, offset_x
         pygame.display.update()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                controller.save_profile(controller)
+                controller.save_player_profile(controller)
                 pygame.quit()
                 sys.exit()
         if pygame.mixer.music.get_busy():
@@ -145,15 +134,15 @@ def fade(background, bg_image, fg_image, player, objects, hud, weather, offset_x
         time.sleep(0.01)
 
 
-def fade_in(background, bg_image, fg_image, player, objects, hud, weather, offset_x, offset_y, controller, win=WINDOW):
-    fade(background, bg_image, fg_image, player, objects, hud, weather, offset_x, offset_y, controller, direction="in", win=win)
+def fade_in(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller, win=WINDOW):
+    fade(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller, direction="in", win=win)
 
 
-def fade_out(background, bg_image, fg_image, player, objects, hud, weather, offset_x, offset_y, controller, win=WINDOW):
-    fade(background, bg_image, fg_image, player, objects, hud, weather, offset_x, offset_y, controller, direction="out", win=win)
+def fade_out(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller, win=WINDOW):
+    fade(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller, direction="out", win=win)
 
 
-def draw(background, bg_image, fg_image, player, objects, hud, weather, offset_x, offset_y, master_volume, glitches=None, win=WINDOW):
+def draw(background, bg_image, fg_image, level, hud, offset_x, offset_y, master_volume, glitches=None, win=WINDOW):
     screen = pygame.rect.Rect(offset_x, offset_y, win.get_width(), win.get_height())
 
     if len(background) == 1:
@@ -162,16 +151,16 @@ def draw(background, bg_image, fg_image, player, objects, hud, weather, offset_x
         for tile in background:
             win.blit(bg_image, (tile[0] - offset_x, tile[1] - offset_y))
 
-    for obj in objects:
-        obj.output(win, offset_x, offset_y, player, master_volume)
+    for obj in level.get_objects():
+        obj.output(win, offset_x, offset_y, master_volume)
 
-    player.output(win, offset_x, offset_y, player, master_volume)
+    level.get_player().output(win, offset_x, offset_y, master_volume)
+
+    if level.weather is not None:
+        level.weather.draw(win, offset_x, offset_y)
 
     if fg_image is not None:
         win.blit(fg_image.subsurface(screen), (0, 0))
-
-    if weather is not None:
-        weather.draw(win, offset_x, offset_y)
 
     hud.output()
 
@@ -186,21 +175,15 @@ def save_player_profile(controller, level=None):
     else:
         data = None
 
-    if data is None:
-        levels = []
-    else:
-        levels = data.get("levels completed")
-        if level is None:
-            pass
-        elif level not in levels:
-            levels.append(level)
+    if level is None:
+        if data is not None and data.get("level") is not None:
+            cur_level = data["level"]
         else:
-            for i in range(len(levels)):
-                if levels[i] == level:
-                    levels = levels[:i]
-                    break
+            cur_level = "__START__"
+    else:
+        cur_level = level.name
 
-    data = {"levels completed": levels, "master volume": controller.master_volume, "keyboard layout": controller.active_keyboard_layout, "gamepad layout": controller.active_gamepad_layout, "is fullscreen": pygame.display.is_fullscreen(), "difficulty": controller.difficulty, "selected sprite": controller.player_sprite_selected, "player abilities": controller.player_abilities}
+    data = {"level": cur_level, "master volume": controller.master_volume, "keyboard layout": controller.active_keyboard_layout, "gamepad layout": controller.active_gamepad_layout, "is fullscreen": pygame.display.is_fullscreen(), "difficulty": controller.difficulty, "selected sprite": controller.player_sprite_selected, "player abilities": controller.player_abilities}
     pickle.dump(data, open("GameData/profile.p", "wb"))
 
 
@@ -212,19 +195,19 @@ def load_player_profile(controller):
         controller.difficulty = data["difficulty"]
         controller.player_sprite_selected = data["selected sprite"]
         controller.player_abilities = data["player abilities"]
-        if data["is fullscreen"]:
+        if not data["is fullscreen"]:
             pygame.display.toggle_fullscreen()
-        return data["levels completed"]
+        return data["level"]
     else:
         return []
 
 
-def save(objects, hud):
+def save(level, hud):
     if hud is not None:
         hud.save_icon_timer = 1.0
 
-    data = {"level": objects[0]}
-    for obj in objects[1]:
+    data = {"level": level.name}
+    for obj in [level.get_player()] + level.get_objects():
         obj_data = obj.save()
         if obj_data is not None:
             data.update(obj_data)
@@ -242,11 +225,11 @@ def load_part1():
             return data
 
 
-def load_part2(data, objects):
-    if data is None or len(objects) < 2:
+def load_part2(data, level):
+    if data is None or level is None:
         return False
     else:
-        for obj in objects[1]:
+        for obj in [level.get_player()] + level.get_objects():
             obj_data = data.get(obj.name)
             if obj_data is not None:
                 obj.load(obj_data)
@@ -263,13 +246,14 @@ def main(win):
     sprite_master = {}
     image_master = {}
 
-    controller = Controller(win, save, save_player_profile)
+    controller = Controller(None, win, save, save_player_profile)
     controller.get_gamepad(notify=False)
     joystick_tolerance = 0.1
 
     while True:
-        load_player_profile(controller)
-        if isfile(join("Assets", "Screens", "credit.png")):
+        if len(load_player_profile(controller)) == 0:
+            pygame.display.toggle_fullscreen()
+        if not controller.goto_main and isfile(join("Assets", "Screens", "credit.png")):
             play_slide(pygame.image.load(join("Assets", "Screens", "credit.png")), controller, should_glitch=True)
         pygame.mixer.music.set_volume(controller.master_volume["background"] / 100)
         new_game = False
@@ -278,21 +262,21 @@ def main(win):
             overlay = pygame.image.load(join("Assets", "Screens", "title_overlay.png"))
             black = pygame.Surface((win.get_width(), win.get_height()), pygame.SRCALPHA)
             black.fill((0, 0, 0))
-            for i in range(64):
-                win.blit(slide, ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
-                win.blit(overlay, ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
-                black.set_alpha(255 - (4 * i))
-                win.blit(black, (0, 0))
-                pygame.display.update()
-                time.sleep(0.01)
-            has_save = isfile("GameData/save.p")
-            if has_save:
-                controller.main_menu.buttons[0][1].set_alpha(255)
-                controller.main_menu.buttons[0][2].set_alpha(255)
+            if not controller.goto_main:
+                for i in range(64):
+                    win.blit(slide, ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
+                    win.blit(overlay, ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
+                    black.set_alpha(255 - (4 * i))
+                    win.blit(black, (0, 0))
+                    pygame.display.update()
+                    time.sleep(0.01)
+            if isfile("GameData/save.p"):
+                controller.main_menu.buttons[1][1].set_alpha(255)
+                controller.main_menu.buttons[1][2].set_alpha(255)
             else:
-                controller.main_menu.buttons[0][1].set_alpha(128)
-                controller.main_menu.buttons[0][2].set_alpha(128)
-            new_game = controller.main(show_continue=has_save)
+                controller.main_menu.buttons[1][1].set_alpha(128)
+                controller.main_menu.buttons[1][2].set_alpha(128)
+            new_game = controller.main()
             for i in range(64):
                 win.blit(slide, ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
                 win.blit(overlay, ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
@@ -302,103 +286,79 @@ def main(win):
                 time.sleep(0.01)
         else:
             handle_exception(FileNotFoundError(join("Assets", "Screens", "title.png")))
+        controller.goto_main = False
         load_data = None
-        level = None
+        cur_level = None
         while True:
-            should_load = controller.goto_load = False
+            should_load = False
             if new_game:
-                level = sorted(levels)[0]
-                save_player_profile(controller, level=level)
+                cur_level = "__START__"
+                save_player_profile(controller)
                 new_game = False
+            elif controller.goto_load:
+                load_data = load_part1()
+                cur_level = load_player_profile(controller)
+                if cur_level == load_data["level"]:
+                    should_load = True
             elif controller.goto_restart:
                 controller.goto_restart = False
-            else:
-                load_data = load_part1()
-                levels_completed = len(load_player_profile(controller))
-                if load_data is None:
-                    if levels_completed < len(levels):
-                        level = sorted(levels)[levels_completed]
-                    else:
-                        break
-                elif levels_completed < len(levels):
-                    level = sorted(levels)[levels_completed]
-                    if level == load_data["level"]:
-                        should_load = True
-                else:
-                    break
+            controller.goto_load = False
 
-            if meta_dict.get(level) is not None and meta_dict[level].get("music") is not None:
-                file = join("Assets", "LevelMusic", meta_dict[level]["music"])
+            level = controller.level = Level(cur_level, levels, meta_dict, objects_dict, sprite_master, image_master, load_audios("PlayerAudio"), load_audios("EnemyAudio"), win, controller)
+
+            if level.music is not None:
+                file = join("Assets", "LevelMusic", level.music)
                 if isfile(file):
                     pygame.mixer.music.load(file)
                     pygame.mixer.music.set_volume(controller.master_volume["background"] / 100)
                     pygame.mixer.music.play(loops=-1)
 
-            if meta_dict.get(level) is not None and meta_dict[level].get("start") is not None:
-                if isfile(join("Assets", "Screens", meta_dict[level]["start"])):
-                    play_slide(pygame.image.load(join("Assets", "Screens", meta_dict[level]["start"])), controller)
-                elif isinstance(meta_dict[level]["start"], list):
-                    for item in meta_dict[level]["start"]:
+            if level.start_screen is not None:
+                if isfile(join("Assets", "Screens", level.start_screen)):
+                    play_slide(pygame.image.load(join("Assets", "Screens", level.start_screen)), controller)
+                elif isinstance(level.start_screen, list):
+                    for item in level.start_screen:
                         if isfile(join("Assets", "Screens", item)):
                             play_slide(pygame.image.load(join("Assets", "Screens", item)), controller)
                 else:
-                    print("Starting level " + level)
-
-            if meta_dict.get(level) is not None and meta_dict[level].get("can_glitch") is not None and meta_dict[level]["can_glitch"].upper() == "FALSE":
-                can_glitch = False
-            else:
-                can_glitch = True
-
-            controller.objects = [level]
-            level_bounds, player, blocks, triggers, hazards, enemies = build_level(levels[level], sprite_master, image_master, objects_dict, load_audios("PlayerAudio"), load_audios("EnemyAudio"), win, controller, player_sprite=(None if meta_dict.get("level") is None or meta_dict[level].get("player_sprite") is None or meta_dict[level]["player_sprite"].upper() == "NONE" else meta_dict[level]["player_sprite"]))
-            controller.objects.append([player] + blocks + triggers + hazards + enemies)
+                    print("Starting level " + level.name)
 
             if controller.player_abilities is not None:
                 for key in controller.player_abilities:
-                    setattr(player, key, controller.player_abilities[key])
+                    setattr(level.get_player(), key, controller.player_abilities[key])
             else:
-                controller.player_abilities = {"can_wall_jump": player.can_wall_jump, "can_teleport": player.can_teleport, "can_bullet_time": player.can_bullet_time, "can_resize": player.can_resize, "can_heal": player.can_heal, "max_jumps": player.max_jumps}
+                controller.player_abilities = {"can_wall_jump": level.get_player().can_wall_jump, "can_teleport": level.get_player().can_teleport, "can_bullet_time": level.get_player().can_bullet_time, "can_resize": level.get_player().can_resize, "can_heal": level.get_player().can_heal, "max_jumps": level.get_player().max_jumps}
 
-            hud = HUD(player, win)
+            hud = HUD(level.get_player(), win, grayscale=level.grayscale)
             controller.hud = hud
 
             if should_load:
-                load_part2(load_data, controller.objects)
+                load_part2(load_data, controller.level)
 
-            save(controller.objects, None)
+            save(controller.level, None)
 
             controller.get_gamepad()
 
-            background, bg_image = get_background(("Blue.png" if meta_dict.get(level) is None or meta_dict[level].get("background") is None or not isfile(join("Assets", "Background", meta_dict[level]["background"])) else meta_dict[level]["background"]), level_bounds)
-            fg_image = get_foreground(None if meta_dict.get(level) is None or meta_dict[level].get("foreground") is None else meta_dict[level]["foreground"])
-
-            if meta_dict.get(level) is not None and meta_dict[level].get("weather") is not None:
-                if meta_dict[level].get("greyscale") is not None:
-                    weather = get_weather(meta_dict[level]["weather"], level_bounds, greyscale=meta_dict[level]["greyscale"])
-                else:
-                    weather = get_weather(meta_dict[level]["weather"], level_bounds)
-            else:
-                weather = None
+            background, bg_image = get_background(level)
+            fg_image = get_foreground(level)
 
             offset_x = offset_y = 0
             scroll_area_width = WIDTH * 0.375
             scroll_area_height = HEIGHT * 0.125
-    
-            for enemy in enemies:
-                enemy.player = player
 
-            fade_in(background, bg_image, fg_image, player, blocks + hazards + enemies, hud, weather, offset_x, offset_y, controller)
-            display_text(["Arriving at mission " + controller.objects[0].replace("_", " ") + "."], win, controller)
+            fade_in(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller)
+            if level.start_message is not None:
+                display_text(load_text_from_file(level.start_message), win, controller)
     
             dtime_offset = 0
-            level_time = 0
+            level.time = 0
             glitch_timer = 0
             glitches = None
-            level_completed = False
+            next_level = None
             clock.tick(FPS_TARGET)
             while True:
                 dtime = clock.tick(FPS_TARGET) - dtime_offset
-                level_time += dtime
+                level.time += dtime
                 if hud.save_icon_timer > 0:
                     hud.save_icon_timer -= dtime / 250
                 if glitch_timer > 0:
@@ -412,105 +372,102 @@ def main(win):
     
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
-                        save_player_profile(controller)
+                        save_player_profile(controller, level)
+                        if controller.level is not None:
+                            controller.save(controller.level, controller.hud)
                         pygame.quit()
                         sys.exit()
                     elif event.type == pygame.KEYDOWN:
-                        dtime_offset += controller.handle_single_input(event.key, player, win)
+                        dtime_offset += controller.handle_single_input(event.key, win)
                     elif event.type == pygame.KEYUP:
-                        player.stop()
+                        level.get_player().stop()
                     elif event.type == pygame.JOYBUTTONDOWN:
-                        dtime_offset += controller.handle_single_input(event.button, player, win)
+                        dtime_offset += controller.handle_single_input(event.button, win)
                     elif event.type == pygame.JOYBUTTONUP:
-                        player.stop()
+                        level.get_player().stop()
                     elif event.type == pygame.JOYAXISMOTION and event.value > joystick_tolerance:
-                        dtime_offset += controller.handle_single_input("a" + str(event.axis), player, win)
-                controller.handle_continuous_input(player)
+                        dtime_offset += controller.handle_single_input("a" + str(event.axis), win)
+                controller.handle_continuous_input()
                 if (controller.goto_load and isfile("GameData/save.p")) or controller.goto_main or controller.goto_restart:
                     break
 
-                result = player.loop(FPS_TARGET, dtime, blocks + hazards + enemies, triggers, None)
-                if result[1]:
-                    level_completed = True
+                result = level.get_player().loop(FPS_TARGET, dtime)
+                if result[1] is not None:
+                    next_level = result[1]
                     break
                 dtime_offset += result[0]
-                if player.hp <= 0:
+                if level.get_player().hp <= 0:
                     if controller.difficulty >= DifficultyScale.HARDEST:
                         controller.goto_restart = True
                         break
                     else:
-                        player.revert()
+                        level.get_player().revert()
     
-                for block in (blocks + hazards):
-                    if block.hp <= 0:
-                        blocks.remove(block)
-                    elif isinstance(block, MovingBlock):
-                        block.patrol()
-                        block.loop(dtime)
-                    elif isinstance(block, MovableBlock):
-                        block.loop(dtime, blocks)
-    
-                for enemy in enemies:
-                    if enemy.hp <= 0:
-                        enemies.remove(enemy)
-                    else:
-                        enemy.loop(FPS_TARGET, dtime, blocks, None, player)
-                        enemy.patrol()
+                for obj in level.get_objects():
+                    if hasattr(obj, "patrol") and callable(obj.patrol):
+                        obj.patrol()
+                    obj.loop(FPS_TARGET, dtime)
 
-                if weather is not None:
-                    weather.move(dtime)
+                level.purge()
 
-                if can_glitch and glitch_timer <= 0 and random.randint(0, 100) / 100 > player.hp / player.max_hp:
-                    glitches = glitch((1 - max(player.hp / player.max_hp, 0)) * 0.75, win)
+                if level.weather is not None:
+                    level.weather.move(dtime)
+
+                if level.can_glitch and glitch_timer <= 0 and random.randint(0, 100) / 100 > level.get_player().hp / level.get_player().max_hp:
+                    glitches = glitch((1 - max(level.get_player().hp / level.get_player().max_hp, 0)) * 0.75, win)
                     glitch_timer = 0.5
-                draw(background, bg_image, fg_image, player, blocks + hazards + enemies, hud, weather, offset_x, offset_y, controller.master_volume, glitches=glitches)
+                draw(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller.master_volume, glitches=glitches)
                 pygame.display.update()
 
-                if player.rect.right - scroll_area_width < offset_x:
-                    offset_x = player.rect.right - scroll_area_width
-                elif player.rect.left + scroll_area_width > offset_x + WIDTH:
-                    offset_x = player.rect.left - (WIDTH - scroll_area_width)
-                if offset_x < level_bounds[0][0]:
-                    offset_x = level_bounds[0][0]
-                elif offset_x > level_bounds[1][0] - WIDTH:
-                    offset_x = level_bounds[1][0] - WIDTH
+                if level.get_player().rect.right - scroll_area_width < offset_x:
+                    offset_x = level.get_player().rect.right - scroll_area_width
+                elif level.get_player().rect.left + scroll_area_width > offset_x + WIDTH:
+                    offset_x = level.get_player().rect.left - (WIDTH - scroll_area_width)
+                if offset_x < level.level_bounds[0][0]:
+                    offset_x = level.level_bounds[0][0]
+                elif offset_x > level.level_bounds[1][0] - WIDTH:
+                    offset_x = level.level_bounds[1][0] - WIDTH
 
-                if player.rect.bottom - (2 * scroll_area_height) < offset_y:
-                    offset_y = player.rect.bottom - (2 * scroll_area_height)
-                elif player.rect.top - (HEIGHT - scroll_area_height) > offset_y:
-                    offset_y = player.rect.top - (HEIGHT - scroll_area_height)
-                if offset_y < level_bounds[0][1]:
-                    offset_y = level_bounds[0][1]
-                elif offset_y > level_bounds[1][1] - HEIGHT:
-                    offset_y = level_bounds[1][1] - HEIGHT
+                if level.get_player().rect.bottom - (2 * scroll_area_height) < offset_y:
+                    offset_y = level.get_player().rect.bottom - (2 * scroll_area_height)
+                elif level.get_player().rect.top - (HEIGHT - scroll_area_height) > offset_y:
+                    offset_y = level.get_player().rect.top - (HEIGHT - scroll_area_height)
+                if offset_y < level.level_bounds[0][1]:
+                    offset_y = level.level_bounds[0][1]
+                elif offset_y > level.level_bounds[1][1] - HEIGHT:
+                    offset_y = level.level_bounds[1][1] - HEIGHT
 
-            if meta_dict.get(level) is not None and meta_dict[level].get("music") is not None and isfile(join("Assets", "LevelMusic", meta_dict[level]["music"])):
+            if level.music is not None:
                 pygame.mixer.music.unload()
 
             if controller.goto_main:
                 break
-            elif level_completed:
+            elif next_level is not None:
+                if level.end_message is not None:
+                    display_text(load_text_from_file(level.end_message), win, controller)
                 save_player_profile(controller, level)
-                fade_out(background, bg_image, fg_image, player, blocks + hazards + enemies, hud, weather, offset_x, offset_y, controller)
-                if meta_dict.get(level) is not None and meta_dict[level].get("end") is not None:
-                    if isfile(join("Assets", "Screens", meta_dict[level]["end"])):
-                        play_slide(pygame.image.load(join("Assets", "Screens", meta_dict[level]["end"])), controller)
-                    elif isinstance(meta_dict[level]["end"], list):
-                        for item in meta_dict[level]["end"]:
+                fade_out(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller)
+                if level.end_screen is not None:
+                    if isfile(join("Assets", "Screens", level.end_screen)):
+                        play_slide(pygame.image.load(join("Assets", "Screens", level.end_screen)), controller)
+                    elif isinstance(level.end_screen, list):
+                        for item in level.end_screen:
                             if isfile(join("Assets", "Screens", item)):
                                 play_slide(pygame.image.load(join("Assets", "Screens", item)), controller)
                     if isfile(join("Assets", "Screens", "recap.png")):
-                        minutes = level_time // 60000
-                        seconds = (level_time - (minutes * 60000)) // 1000
-                        milliseconds = level_time - ((minutes * 60000) + (seconds * 1000))
+                        minutes = level.time // 60000
+                        seconds = (level.time - (minutes * 60000)) // 1000
+                        milliseconds = level.time - ((minutes * 60000) + (seconds * 1000))
                         formatted_time = ("0" if minutes < 10 else "") + str(minutes) + ":" + ("0" if seconds < 10 else "") + str(seconds) + "." + ("0" if milliseconds < 100 else "") + ("0" if milliseconds < 10 else "") + str(milliseconds)
                         play_slide(pygame.image.load(join("Assets", "Screens", "recap.png")), controller, text=["Mission successful.", "Mission time: " + formatted_time + "."])
+                if level.grayscale:
+                    sprite_master.clear()
+                    image_master.clear()
+                cur_level = next_level
 
         if not controller.goto_main:
             if isfile(join("Assets", "Screens", "all_done.png")):
                 play_slide(pygame.image.load(join("Assets", "Screens", "all_done.png")), controller)
-        else:
-            controller.goto_main = False
 
 
 if __name__ == "__main__":
@@ -519,7 +476,7 @@ if __name__ == "__main__":
     except Exception as e:
         print(traceback.print_exception(e))
 
-# test switch pro and ps5 controllers
+# test ps5 controllers
 # bugs: get sight ranges to display properly in the first spawn
 # assets:   levels
 #           music
