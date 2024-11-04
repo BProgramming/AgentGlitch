@@ -90,7 +90,6 @@ class MovingBlock(Block):
             elif should_increment:
                 self.increment_patrol_index()
 
-
     def collide(self, obj):
         if hasattr(obj, "push_x"):
             obj.push_x = self.x_vel
@@ -138,6 +137,51 @@ class MovingBlock(Block):
             self.move(self.x_vel, self.y_vel * dtime)
 
 
+class Door(MovingBlock):
+    VELOCITY_TARGET = 0.5
+
+    def __init__(self, level, x, y, width, height, image_master, is_stacked, speed=VELOCITY_TARGET, direction=-1, is_locked=False, coord_x=0, coord_y=0, name="Door"):
+        super().__init__(level, x, y, width, height, image_master, is_stacked, speed=speed, coord_x=coord_x, coord_y=coord_y, name=name)
+        self.patrol_path_open = [(x, y + (height * direction))]
+        self.patrol_path_closed = [(x, y)]
+        self.is_locked = is_locked
+        self.is_open = False
+        self.direction = self.facing = MovementDirection.LEFT
+
+    def open(self):
+        if not self.is_locked:
+            self.patrol_path = self.patrol_path_open
+            self.is_open = True
+
+    def close(self):
+        self.patrol_path = self.patrol_path_closed
+        self.is_open = False
+
+    def toggle_open(self):
+        if self.is_open:
+            self.close()
+        elif not self.is_locked:
+            self.open()
+
+    def unlock(self):
+        self.is_locked = False
+
+    def lock(self):
+        self.is_locked = True
+
+    def toggle_lock(self):
+        self.is_locked = not self.is_locked
+
+    def collide(self, obj):
+        if hasattr(obj, "can_open_doors") and obj.can_open_doors and obj.rect.bottom > self.rect.top:
+            self.open()
+        return True
+
+    def loop(self, fps, dtime):
+        if self.is_open and math.dist((self.level.get_player().rect.centerx, self.level.get_player().rect.centery), (self.rect.centerx, self.rect.centery)) > math.sqrt(self.rect.height**2 + (1.5 * self.rect.width)**2):
+            self.close()
+        super().loop(fps, dtime)
+
 class MovableBlock(Block):
     GRAVITY = 0.04
 
@@ -150,7 +194,7 @@ class MovableBlock(Block):
     def collide(self, obj):
         if hasattr(obj, "push_x"):
             obj.push_x = self.x_vel
-        if hasattr(obj, "push_y"):
+        if hasattr(obj, "push_y") and self.rect.top >= obj.rect.bottom:
             obj.push_y = self.y_vel
         return True
 

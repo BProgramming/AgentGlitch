@@ -2,7 +2,7 @@ from os.path import join
 
 import pygame
 
-from Block import Block, BreakableBlock, MovingBlock, MovableBlock, Hazard, MovingHazard
+from Block import Block, BreakableBlock, MovingBlock, MovableBlock, Hazard, MovingHazard, Door
 from Player import Player
 from Enemy import Enemy
 from Trigger import Trigger, TriggerType
@@ -118,6 +118,9 @@ def build_level(level, layout, sprite_master, image_master, objects_dict, player
                                 path.append(((path_in[k] + j) * block_size, (path_in[k + 1] + i) * block_size))
                         is_stacked = False
                         blocks.append(MovingBlock(level, j * block_size, i * block_size, block_size, block_size, image_master, is_stacked, speed=data["speed"], path=path, coord_x=data["coord_x"], coord_y=data["coord_y"]))
+                    case "DOOR":
+                        is_stacked = False
+                        blocks.append(Door(level, j * block_size, i * block_size, block_size, block_size, image_master, is_stacked, speed=data["speed"], direction=data["direction"], is_locked=bool(data["is_locked"].upper() == "TRUE"), coord_x=data["coord_x"], coord_y=data["coord_y"]))
                     case "MOVABLEBLOCK":
                         is_stacked = False
                         blocks.append(MovableBlock(level, j * block_size, i * block_size, block_size, block_size, image_master, is_stacked, coord_x=data["coord_x"], coord_y=data["coord_y"]))

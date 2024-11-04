@@ -4,7 +4,7 @@ from enum import Enum
 from os.path import join, isfile
 from Helpers import display_text, load_text_from_file
 from Object import Object
-from Block import Block, BreakableBlock, MovableBlock, Hazard, MovingBlock, MovingHazard
+from Block import Block, BreakableBlock, MovableBlock, Hazard, MovingBlock, MovingHazard, Door
 from Enemy import Enemy
 
 
@@ -73,6 +73,9 @@ class Trigger(Object):
                                 path.append(((path_in[k] + j) * block_size, (path_in[k + 1] + i) * block_size))
                         is_stacked = False
                         return MovingBlock(self.level, j * block_size, i * block_size, block_size, block_size, image_master, is_stacked, speed=data["speed"], path=path, coord_x=data["coord_x"], coord_y=data["coord_y"])
+                    case "DOOR":
+                        is_stacked = False
+                        return Door(self.level, j * block_size, i * block_size, block_size, block_size, image_master, is_stacked, speed=data["speed"], direction=data["direction"], is_locked=bool(data["is_locked"].upper() == "TRUE"), coord_x=data["coord_x"], coord_y=data["coord_y"])
                     case "MOVABLEBLOCK":
                         is_stacked = False
                         return MovableBlock(self.level, j * block_size, i * block_size, block_size, block_size, image_master, is_stacked, coord_x=data["coord_x"], coord_y=data["coord_y"])

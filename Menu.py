@@ -179,8 +179,9 @@ class Selector(Menu):
         self.buttons = self.make_buttons(pygame.transform.smoothscale_by(button_assets["HALF_BUTTON_NORMAL"], 0.5), pygame.transform.smoothscale_by(button_assets["HALF_BUTTON_MOUSEOVER"], 0.5), pygame.transform.smoothscale_by(button_assets["BUTTON_NORMAL"], 0.5), pygame.transform.smoothscale_by(button_assets["BUTTON_MOUSEOVER"], 0.5), accept_only=accept_only)
         self.header = pygame.font.SysFont("courier", 32).render(header, True, (255, 255, 255))
         self.note = []
-        for line in note:
-            self.note.append(pygame.font.SysFont("courier", 16).render(line, True, (255, 255, 255)))
+        if note is not None:
+            for line in note:
+                self.note.append(pygame.font.SysFont("courier", 16).render(line, True, (255, 255, 255)))
         image_width = 0
         image_height = 0
         self.images = []
@@ -191,7 +192,7 @@ class Selector(Menu):
         self.image_index = index
         self.image_selected = self.images[self.image_index]
         self.values = values
-        self.screen = pygame.Surface((min(2 * win.get_width() // 3, max(image_width, self.buttons[0][0].width * 2, self.header.get_width())), self.header.get_height() + image_height + (self.note[0].get_height() * len(self.note)) + (self.buttons[0][0].height * 2) + 20), pygame.SRCALPHA)
+        self.screen = pygame.Surface((min(2 * win.get_width() // 3, max(image_width, self.buttons[0][0].width * 2, self.header.get_width())), self.header.get_height() + image_height + (self.note[0].get_height() * len(self.note) if len(self.note) > 0 else 0) + (self.buttons[0][0].height * 2) + 20), pygame.SRCALPHA)
         self.screen.fill((0, 0, 0, 128))
         self.screen.blit(self.header, ((self.screen.get_width() - self.header.get_width()) // 2, 5))
         for i in range(len(self.note)):

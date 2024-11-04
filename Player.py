@@ -23,6 +23,7 @@ class Player(Actor):
         super().__init__(x, y, level_bounds, sprite_master, audios, difficulty, can_shoot=can_shoot, sprite=sprite, proj_sprite=proj_sprite, name="Player")
         self.cooldowns.update({"teleport": 0, "teleport_delay": 0, "block": 0, "block_attempt": 0, "bullet_time": 0, "bullet_time_active": 0})
         self.cached_cooldowns = self.cooldowns.copy()
+        self.can_open_doors = True
         self.can_move_blocks = True
         self.is_blocking = False
         self.can_wall_jump = True
@@ -112,10 +113,10 @@ class Player(Actor):
         if self.state in [MovementState.IDLE, MovementState.CROUCH, MovementState.RUN, MovementState.FALL, MovementState.JUMP, MovementState.DOUBLE_JUMP, MovementState.IDLE_ATTACK, MovementState.CROUCH_ATTACK, MovementState.RUN_ATTACK, MovementState.FALL_ATTACK, MovementState.JUMP_ATTACK, MovementState.DOUBLE_JUMP_ATTACK]:
             self.is_attacking = True
             for obj in self.level.get_objects():
-                if isinstance(obj, Enemy) and pygame.sprite.collide_rect(self, obj) and pygame.sprite.collide_mask(self, obj):
+                if isinstance(obj, Enemy) and pygame.sprite.collide_rect(self, obj):
                     obj.get_hit(self)
                     obj.rect.x -= self.direction * push
-                elif isinstance(obj, BreakableBlock) and pygame.sprite.collide_rect(self, obj) and pygame.sprite.collide_mask(self, obj):
+                elif isinstance(obj, BreakableBlock) and pygame.sprite.collide_rect(self, obj):
                     obj.get_hit(self)
 
     def bullet_time(self, active_time=BULLET_TIME_ACTIVE, cd=BULLET_TIME_COOLDOWN):

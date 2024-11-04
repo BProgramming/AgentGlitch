@@ -72,18 +72,20 @@ class Enemy(Actor):
                     if self.can_shoot:
                         self.direction = MovementDirection(math.copysign(1, self.rect.centerx - self.level.get_player().rect.centerx))
                         self.facing = self.direction.swap()
-                        if dist < self.spot_range // 2:
-                            self.x_vel = self.direction * vel
-                        else:
+                        if dist >= self.spot_range // 2:
                             self.is_attacking = True
                             self.x_vel = 0.0
+                        else:
+                            self.is_attacking = False
+                            self.x_vel = self.direction * vel
                     else:
                         self.direction = self.facing = MovementDirection(math.copysign(1, self.level.get_player().rect.centerx - self.rect.centerx))
-                        if dist > self.rect.width:
-                            self.x_vel = self.direction * min(vel, dist - (3 * self.rect.width / 4))
-                        else:
+                        if pygame.sprite.collide_mask(self, self.level.get_player()):
                             self.is_attacking = True
                             self.x_vel = 0.0
+                        else:
+                            self.is_attacking = False
+                            self.x_vel = self.direction * min(vel, dist)
                     self.should_move_horiz = self.find_floor(self.x_vel)
                 else:
                     self.is_attacking = False

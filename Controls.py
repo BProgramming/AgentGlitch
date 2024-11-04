@@ -1,9 +1,10 @@
 import math
+import random
 import time
 import pygame
 import sys
 from Menu import Menu, Selector, ButtonType
-from Helpers import display_text, DifficultyScale, load_images, load_picker_sprites, make_image_from_text
+from Helpers import display_text, DifficultyScale, load_images, load_level_images, load_picker_sprites, make_image_from_text
 
 
 class Controller:
@@ -32,7 +33,7 @@ class Controller:
         vol_bg = {"label": "Music", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["background"], "range": (0, 100)}
         vol_pc = {"label": "Player", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["player"], "range": (0, 100)}
         vol_fx = {"label": "Effects", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["non-player"], "range": (0, 100)}
-        self.main_menu = Menu(win, "MAIN MENU", [{"label": "New game", "type": ButtonType.CLICK}, {"label": "Continue", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}])
+        self.main_menu = Menu(win, "MAIN MENU", [{"label": "New game", "type": ButtonType.CLICK}, {"label": "Continue", "type": ButtonType.CLICK}, {"label": "Select a level", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}])
         self.pause_menu = Menu(win, "PAUSED", [{"label": "Resume", "type": ButtonType.CLICK}, {"label": "Load last save", "type": ButtonType.CLICK}, {"label": "Restart level", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Quit to menu", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}])
         self.settings_menu = Menu(win, "SETTINGS", [dif, {"label": "Controls", "type": ButtonType.CLICK}, {"label": "Volume", "type": ButtonType.CLICK}, {"label": "Toggle fullscreen", "type": ButtonType.CLICK}, {"label": "Back", "type": ButtonType.CLICK}])
         self.volume_menu = Menu(win, "VOLUME", [vol_bg, vol_pc, vol_fx, {"label": "Back", "type": ButtonType.CLICK}])
@@ -40,7 +41,10 @@ class Controller:
         difficulty_images = [make_image_from_text(256, 128, "EASIEST", ["Agent is much stronger", "Enemies are much weaker", "Enemy sight ranges are visible"], border=5), make_image_from_text(256, 128, "EASY", ["Agent is stronger", "Enemies are weaker", "Enemy sight ranges are visible"], border=5), make_image_from_text(256, 128, "MEDIUM", ["Agent is normal strength", "Enemies are normal strength", "Enemy sight ranges are not visible"], border=5), make_image_from_text(256, 128, "HARD", ["Agent is weaker", "Enemies are stronger", "Enemy sight ranges are not visible"], border=5), make_image_from_text(256, 128, "HARDEST", ["Agent is much weaker", "Enemies are much stronger", "Enemy sight ranges are not visible"], border=5)]
         self.difficulty_picker = Selector(win, "CHOOSE DIFFICULTY", ["You can change this at any time."], difficulty_images, [DifficultyScale.EASIEST, DifficultyScale.EASY, DifficultyScale.MEDIUM, DifficultyScale.HARD, DifficultyScale.HARDEST], index=2)
         sprite_images, sprite_values = load_picker_sprites("Sprites")
-        self.sprite_picker = Selector(win, "CHOOSE PLAYER", ["This is a visual choice only.", "Anyone can be an Agent."], sprite_images, sprite_values)
+        self.sprite_picker = Selector(win, "CHOOSE PLAYER", ["This is a visual choice only.", "Anyone can be an Agent."], sprite_images, sprite_values, index=random.randrange(0, len(sprite_images)))
+        self.level_selected = None
+        level_images, level_values = load_level_images("LevelImages")
+        self.level_picker = Selector(win, "CHOOSE LEVEL", None, level_images, level_values)
         if layout is None:
             self.set_keyboard_layout("ARROW_MOVE")
         else:
@@ -482,6 +486,7 @@ class Controller:
         if self.active_gamepad_layout is not None:
             self.main_menu.set_mouse_pos(self.win)
         joystick_movement = 0
+        self.level_selected = None
         while True:
             time.sleep(0.01)
 
@@ -500,9 +505,15 @@ class Controller:
                     pygame.mouse.set_visible(False)
                     return False
                 case 2:
+                    self.main_menu.fade_out(self.win)
+                    self.pick_from_selector(self.level_picker, clear=self.main_menu.clear)
+                    self.level_selected = self.level_picker.values[self.level_picker.image_index]
+                    pygame.mouse.set_visible(False)
+                    return bool(self.level_picker.image_index == 0)
+                case 3:
                     time.sleep(0.01)
                     self.settings(self.main_menu.clear)
-                case 3:
+                case 4:
                     self.save_player_profile(self)
                     pygame.quit()
                     sys.exit()

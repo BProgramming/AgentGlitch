@@ -5,6 +5,8 @@ import sys
 import pickle
 import traceback
 from os.path import join, isfile
+from Actor import Actor
+from Block import BreakableBlock
 from Controls import Controller
 from Helpers import load_json_dict, load_levels, load_audios, display_text, glitch, DifficultyScale, handle_exception, load_text_from_file
 from Level import Level
@@ -24,6 +26,29 @@ else:
 WINDOW = pygame.display.set_mode((WIDTH, HEIGHT), flags=pygame.SCALED)
 pygame.display.set_caption("AGENT GLITCH")
 
+
+def get_offset(level, offset_x, offset_y, width, height):
+    scroll_area_width = width * 0.375
+    scroll_area_height = height * 0.125
+
+    if level.get_player().rect.right - scroll_area_width < offset_x:
+        offset_x = level.get_player().rect.right - scroll_area_width
+    elif level.get_player().rect.left + scroll_area_width > offset_x + width:
+        offset_x = level.get_player().rect.left - (width - scroll_area_width)
+    if offset_x < level.level_bounds[0][0]:
+        offset_x = level.level_bounds[0][0]
+    elif offset_x > level.level_bounds[1][0] - width:
+        offset_x = level.level_bounds[1][0] - width
+
+    if level.get_player().rect.bottom - (2 * scroll_area_height) < offset_y:
+        offset_y = level.get_player().rect.bottom - (2 * scroll_area_height)
+    elif level.get_player().rect.top - (height - scroll_area_height) > offset_y:
+        offset_y = level.get_player().rect.top - (height - scroll_area_height)
+    if offset_y < level.level_bounds[0][1]:
+        offset_y = level.level_bounds[0][1]
+    elif offset_y > level.level_bounds[1][1] - height:
+        offset_y = level.level_bounds[1][1] - height
+    return offset_x, offset_y
 
 def get_background(level):
     file = join("Assets", "Background", level.background)
@@ -232,7 +257,13 @@ def load_part2(data, level):
         for obj in [level.get_player()] + level.get_objects():
             obj_data = data.get(obj.name)
             if obj_data is not None:
-                obj.load(obj_data)
+                if hasattr(obj, "has_fired") and obj.has_fired:
+                    level.queue_purge(obj)
+                else:
+                    obj.load(obj_data)
+            elif isinstance(obj, Actor) or isinstance(obj, BreakableBlock):
+                level.queue_purge(obj)
+        level.purge()
         return True
 
 
@@ -302,6 +333,9 @@ def main(win):
                     should_load = True
             elif controller.goto_restart:
                 controller.goto_restart = False
+            elif controller.level_selected is not None:
+                cur_level = controller.level_selected
+                controller.level_selected = None
             controller.goto_load = False
 
             level = controller.level = Level(cur_level, levels, meta_dict, objects_dict, sprite_master, image_master, load_audios("PlayerAudio"), load_audios("EnemyAudio"), win, controller)
@@ -343,8 +377,7 @@ def main(win):
             fg_image = get_foreground(level)
 
             offset_x = offset_y = 0
-            scroll_area_width = WIDTH * 0.375
-            scroll_area_height = HEIGHT * 0.125
+            offset_x, offset_y = get_offset(level, offset_x, offset_y, win.get_width(), win.get_height())
 
             fade_in(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller)
             if level.start_message is not None:
@@ -419,23 +452,7 @@ def main(win):
                 draw(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller.master_volume, glitches=glitches)
                 pygame.display.update()
 
-                if level.get_player().rect.right - scroll_area_width < offset_x:
-                    offset_x = level.get_player().rect.right - scroll_area_width
-                elif level.get_player().rect.left + scroll_area_width > offset_x + WIDTH:
-                    offset_x = level.get_player().rect.left - (WIDTH - scroll_area_width)
-                if offset_x < level.level_bounds[0][0]:
-                    offset_x = level.level_bounds[0][0]
-                elif offset_x > level.level_bounds[1][0] - WIDTH:
-                    offset_x = level.level_bounds[1][0] - WIDTH
-
-                if level.get_player().rect.bottom - (2 * scroll_area_height) < offset_y:
-                    offset_y = level.get_player().rect.bottom - (2 * scroll_area_height)
-                elif level.get_player().rect.top - (HEIGHT - scroll_area_height) > offset_y:
-                    offset_y = level.get_player().rect.top - (HEIGHT - scroll_area_height)
-                if offset_y < level.level_bounds[0][1]:
-                    offset_y = level.level_bounds[0][1]
-                elif offset_y > level.level_bounds[1][1] - HEIGHT:
-                    offset_y = level.level_bounds[1][1] - HEIGHT
+                offset_x, offset_y = get_offset(level, offset_x, offset_y, win.get_width(), win.get_height())
 
             if level.music is not None:
                 pygame.mixer.music.unload()

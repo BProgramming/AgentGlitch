@@ -2,10 +2,9 @@ import math
 import pygame
 import random
 from enum import Enum
-
 from Object import Object
 from Projectile import Projectile
-from Block import Block, Hazard, MovableBlock, MovingBlock
+from Block import Hazard, MovableBlock, MovingBlock
 from Helpers import load_sprite_sheets, MovementDirection
 
 
@@ -55,6 +54,7 @@ class Actor(Object):
         self.should_move_vert = True
         self.teleport_distance = 0
         self.is_crouching = False
+        self.can_open_doors = False
         self.can_move_blocks = False
         self.can_wall_jump = False
         self.is_wall_jumping = False
@@ -175,6 +175,8 @@ class Actor(Object):
         self.is_crouching = False
 
     def land(self):
+        if self.y_vel > 20:
+            self.hp -= 2 * self.y_vel
         self.y_vel = 0.0
         self.jump_count = 0
         self.should_move_vert = False

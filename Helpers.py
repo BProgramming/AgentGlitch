@@ -62,6 +62,26 @@ def load_picker_sprites(dir):
         handle_exception(FileNotFoundError(path))
 
 
+def load_level_images(dir):
+    images = []
+    values = []
+    path = join("Assets", dir)
+    if isdir(path):
+        files = [f for f in listdir(path) if isfile(join(path, f)) and f[-4:].lower()==".png"]
+        for file in sorted(files):
+            asset = pygame.transform.smoothscale_by(pygame.image.load(join(path, file)).convert_alpha(), 4)
+            surface = pygame.Surface((asset.get_width(), asset.get_height()), pygame.SRCALPHA)
+            rect = pygame.Rect(0, 0, asset.get_width(), asset.get_height())
+            surface.blit(asset, (0, 0), rect)
+            images.append(surface)
+            values.append(file.replace(".png", "").upper())
+        if len(images) == 0:
+            handle_exception(FileNotFoundError("No level images found in " + path))
+        return images, values
+    else:
+        handle_exception(FileNotFoundError(path))
+
+
 def make_image_from_text(width, height, header, body, border=5):
     text_header = pygame.font.SysFont("courier", 32).render(header, True, (255, 255, 255))
     box_header = pygame.Surface((text_header.get_width() + (border * 2), text_header.get_height() + (border * 2)), pygame.SRCALPHA)
@@ -87,7 +107,7 @@ def make_image_from_text(width, height, header, body, border=5):
 def load_images(dir1, dir2):
     path = join("Assets", dir1, dir2)
     if isdir(path):
-        images = [f for f in listdir(path) if isfile(join(path, f))]
+        images = [f for f in listdir(path) if isfile(join(path, f)) and f[-4:].lower()==".png"]
 
         all_images = {}
         for image in images:
@@ -172,7 +192,7 @@ def load_levels(dir):
         for f in files:
             with open(join(path, f)) as level:
                 reader = csv.reader(level, delimiter=",", quotechar='"')
-                levels[str.upper(f.replace(".txt", ""))] = [row for row in reader]
+                levels[str.upper(f.replace(".csv", "").replace(".txt", ""))] = [row for row in reader]
 
         return levels
     else:
@@ -292,8 +312,8 @@ def glitch(odds, screen):
     screen = screen.copy()
     glitches = []
     for i in range(random.randint(0, round(odds * screen.get_height() / 10))):
-        width = random.randint(10, 200)
-        height = random.randint(1, 50)
+        width = random.randint(10, min(200, screen.get_width()))
+        height = random.randint(1, min(50, screen.get_height()))
         x = random.randint(0, screen.get_width() - width)
         y = random.randint(0, screen.get_height() - height)
         copy = screen.subsurface(pygame.rect.Rect(min(max(x + random.randint(-2, 2), 0), screen.get_width() - width), min(max(y + random.randint(-2, 2), 0), screen.get_height() - height), width, height))
