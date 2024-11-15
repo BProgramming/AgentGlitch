@@ -2,7 +2,7 @@ import math
 import pygame
 from os.path import join, isfile
 from Object import Object
-from Helpers import handle_exception, MovementDirection
+from Helpers import handle_exception, MovementDirection, load_sprite_sheets
 
 
 class Block(Object):
@@ -19,15 +19,27 @@ class Block(Object):
             return None
 
 class BreakableBlock(Block):
-    def __init__(self, level, x, y, width, height, image_master, is_stacked, coord_x=0, coord_y=0, name="BreakableBlock"):
-        super().__init__(level, x, y, width, height, image_master, is_stacked, coord_x=coord_x, coord_y=coord_y, name=name)
+    GET_HIT_COOLDOWN = 1
 
-    def get_hit(self, obj):
-        self.hp = 0
+    def __init__(self, level, x, y, width, height, image_master, is_stacked, coord_x=0, coord_y=0, coord_x2=0, coord_y2=0, name="BreakableBlock"):
+        super().__init__(level, x, y, width, height, image_master, is_stacked, coord_x=coord_x, coord_y=coord_y, name=name)
+        self.sprite_damaged = load_image(join("Assets", "Terrain", "Terrain.png"), width, height, image_master, coord_x2, coord_y2, grayscale=self.level.grayscale)
+        self.cooldowns = {"get_hit": 0}
+
+    def get_hit(self, obj, cd=GET_HIT_COOLDOWN):
+        if self.cooldowns["get_hit"] <= 0:
+            if self.hp == self.max_hp:
+                self.hp = self.max_hp // 2
+                self.sprite.blit(self.sprite_damaged, (0, 0))
+                self.mask = pygame.mask.from_surface(self.sprite)
+                self.cooldowns["get_hit"] += cd
+            else:
+                self.hp = 0
 
 
 class MovingBlock(Block):
     VELOCITY_TARGET = 0.5
+    PATH_STOP_TIME = 0.5
 
     def __init__(self, level, x, y, width, height, image_master, is_stacked, speed=VELOCITY_TARGET, path=None, coord_x=0, coord_y=0, name="MovingBlock"):
         super().__init__(level, x, y, width, height, image_master, is_stacked, coord_x=coord_x, coord_y=coord_y, name=name)
@@ -35,59 +47,43 @@ class MovingBlock(Block):
         self.patrol_path = path
         self.patrol_path_index = 0
         if self.patrol_path is not None:
-            min_dist = math.dist((self.rect.x, self.rect.y), self.patrol_path[0])
+            min_dist = math.dist((self.rect.x, self.rect.y), (self.patrol_path[0][0], self.patrol_path[0][1]))
             for i in range(len(self.patrol_path)):
-                dist = math.dist((self.rect.x, self.rect.y), self.patrol_path[i])
+                dist = math.dist((self.rect.x, self.rect.y), (self.patrol_path[i][0], self.patrol_path[i][1]))
                 if dist < min_dist:
                     self.patrol_path_index = i
-            self.direction = self.facing = MovementDirection(math.copysign(1, self.patrol_path[self.patrol_path_index][0] - self.rect.x))
+            self.direction = self.facing = (MovementDirection.RIGHT if self.patrol_path[self.patrol_path_index][0] - self.rect.x > 0 else MovementDirection.LEFT)
         self.x_vel = self.y_vel = 0.0
         self.should_move_horiz = self.should_move_vert = True
+        self.cooldowns = {"wait": 0.0}
 
     def increment_patrol_index(self):
         if self.patrol_path_index < 0:
             self.patrol_path_index -= 1
         elif self.patrol_path_index >= 0:
             self.patrol_path_index += 1
-        if self.patrol_path_index == len(self.patrol_path):
+        if self.patrol_path_index >= len(self.patrol_path) - 1:
             self.patrol_path_index = -1
-        elif self.patrol_path_index == -(len(self.patrol_path) + 1):
+        elif self.patrol_path_index <= -len(self.patrol_path):
             self.patrol_path_index = 0
 
-    def patrol(self):
+    def patrol(self, dtime, path_stop_time=PATH_STOP_TIME):
         self.should_move_horiz = self.should_move_vert = False
-        if self.patrol_path is not None:
-            should_increment = False
-            if self.patrol_path_index >= 0 and self.direction == MovementDirection.LEFT:
-                if self.rect.x > self.patrol_path[self.patrol_path_index][0]:
-                    self.x_vel = self.direction * self.speed
-                    if self.level.get_player().is_slow_time:
-                        self.x_vel /= 2
-                    self.should_move_horiz = True
-                else:
-                    should_increment = True
-            elif self.patrol_path_index < 0 and self.direction == MovementDirection.RIGHT:
-                if self.rect.x < self.patrol_path[self.patrol_path_index][0]:
-                    self.x_vel = self.direction * self.speed
-                    if self.level.get_player().is_slow_time:
-                        self.x_vel /= 2
-                    self.should_move_horiz = True
-                else:
-                    should_increment = True
-            else:
-                self.direction = self.direction.swap()
+        if self.patrol_path is not None and self.cooldowns["wait"] <= 0:
+            target_x = self.patrol_path[self.patrol_path_index][0] - self.rect.x
+            if target_x != 0:
+                self.direction = (MovementDirection.RIGHT if target_x >= 0 else MovementDirection.LEFT)
+                self.x_vel = min(abs(target_x / dtime), abs(self.speed)) * self.direction
+                self.should_move_horiz = True
 
-            if self.rect.y > self.patrol_path[self.patrol_path_index][1]:
-                self.y_vel = -self.speed
-                if self.level.get_player().is_slow_time:
-                    self.y_vel /= 2
+            target_y = self.patrol_path[self.patrol_path_index][1] - self.rect.y
+            if target_y != 0:
+                self.y_vel = min(abs(target_y / dtime), abs(self.speed)) * (1 if target_y >= 0 else -1)
                 self.should_move_vert = True
-            elif self.rect.y < self.patrol_path[self.patrol_path_index][1]:
-                self.y_vel = self.speed
-                if self.level.get_player().is_slow_time:
-                    self.y_vel /= 2
-                self.should_move_vert = True
-            elif should_increment:
+
+            if not self.should_move_horiz and not self.should_move_vert:
+                if len(self.patrol_path[self.patrol_path_index]) > 2 and self.patrol_path[self.patrol_path_index][2]:
+                    self.cooldowns["wait"] = path_stop_time
                 self.increment_patrol_index()
 
     def collide(self, obj):
@@ -134,6 +130,10 @@ class MovingBlock(Block):
             self.y_vel = 0.0
 
         if self.x_vel != 0 or self.y_vel != 0:
+            if self.level.get_player().is_slow_time:
+                self.x_vel /= 2
+                self.y_vel /= 2
+
             self.move(self.x_vel, self.y_vel * dtime)
 
 
@@ -200,8 +200,8 @@ class MovableBlock(Block):
 
     def get_collisions(self):
         self.should_move_horiz = self.should_move_vert = True
-        for obj in self.level.get_objects():
-            if isinstance(obj, Block) and obj != self and pygame.sprite.collide_rect(self, obj):
+        for obj in self.level.get_objects_in_range((self.rect.x, self.rect.y), blocks_only=True):
+            if obj != self and pygame.sprite.collide_rect(self, obj):
                 if pygame.sprite.collide_mask(self, obj) and obj.collide(self):
                     self.collide(obj)
 
@@ -248,7 +248,10 @@ class MovableBlock(Block):
     def loop(self, fps, dtime, grav=GRAVITY):
         super().loop(fps, dtime)
 
-        self.push_x = self.push_y = 0.0
+        self.push_x *= 0.9
+        if abs(self.push_x) < 0.01:
+            self.push_x = 0
+        self.push_y = 0
         self.get_collisions()
         if not self.should_move_horiz:
             self.x_vel = 0.0
@@ -264,23 +267,113 @@ class MovableBlock(Block):
 
 class Hazard(Block):
     ATTACK_DAMAGE = 99
+    ANIMATION_DELAY = 0.3
 
-    def __init__(self, level, x, y, width, height, image_master, difficulty, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="Hazard"):
+    def __init__(self, level, x, y, width, height, image_master, sprite_master, difficulty, sprite=None, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="Hazard"):
         super().__init__(level, x, (y + width - height), width, height, image_master, False, coord_x=coord_x, coord_y=coord_y, name=name)
         self.attack_damage = attack_damage * difficulty
+        self.is_attacking = True
+        if sprite is not None:
+            self.sprites = load_sprite_sheets("Sprites", sprite, sprite_master, direction=False, grayscale=self.level.grayscale)
+        else:
+            self.sprites = {"ANIMATE": self.sprite}
+        self.animation_count = 0
+        self.sprite = None
+        self.update_sprite(1, 0)
+        self.update_geo()
 
     def set_difficulty(self, scale):
         self.difficulty = scale
         self.attack_damage *= scale
+
+    def update_sprite(self, fps, dtime, delay=ANIMATION_DELAY):
+        active_index = math.floor((self.animation_count // (1000 // (fps * delay))) % len(self.sprites["ANIMATE"]))
+        if active_index >= len(self.sprites["ANIMATE"]):
+            active_index = 0
+            self.animation_count = 0
+        self.sprite = self.sprites["ANIMATE"][active_index]
+        self.animation_count += dtime
+
+    def update_geo(self):
+        self.rect = self.sprite.get_rect(topleft=(self.rect.x, self.rect.y))
+        self.mask = pygame.mask.from_surface(self.sprite)
+
+    def loop(self, fps, dtime):
+        super().loop(fps, dtime)
+
+        self.update_sprite(fps, dtime)
+        self.update_geo()
 
 
 class MovingHazard(MovingBlock, Hazard):
     VELOCITY_TARGET = 0.5
     ATTACK_DAMAGE = 99
 
-    def __init__(self, level, x, y, width, height, image_master, difficulty, is_stacked, speed=VELOCITY_TARGET, path=None, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="MovingHazard"):
+    def __init__(self, level, x, y, width, height, image_master, sprite_master, difficulty, is_stacked, speed=VELOCITY_TARGET, path=None, sprite=None, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="MovingHazard"):
         MovingBlock.__init__(self, level, x, y, width, height, image_master, is_stacked, speed=speed, path=path, coord_x=coord_x, coord_y=coord_y, name=name)
         self.attack_damage = attack_damage * difficulty
+        self.is_attacking = True
+        if sprite is not None:
+            self.sprites = load_sprite_sheets("Sprites", sprite, sprite_master, direction=False, grayscale=self.level.grayscale)
+        else:
+            self.sprites = {"ANIMATE": self.sprite}
+        self.animation_count = 0
+        self.sprite = None
+        self.update_sprite(1, 0)
+        self.update_geo()
+
+
+class FallingHazard(Hazard):
+    GRAVITY = 0.02
+    ATTACK_DAMAGE = 99
+    RESET_DELAY = 1
+
+    def __init__(self, level, x, y, width, height, image_master, sprite_master, difficulty, drop_x=0, drop_y=0, fire_once=True, sprite=None, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="FallingHazard"):
+        super().__init__(level, x, y, width, height, image_master, sprite_master, difficulty, sprite=sprite, coord_x=coord_x, coord_y=coord_y, attack_damage=attack_damage, name=name)
+        self.start_x = self.rect.x
+        self.start_y = self.rect.y
+        self.drop_x = drop_x
+        self.drop_y = drop_y
+        self.fire_once = fire_once
+        self.has_fired = False
+        self.y_vel = 0
+        self.cooldowns = {"reset_time": 0}
+
+    def loop(self, fps, dtime, grav=GRAVITY, cd=RESET_DELAY):
+        should_reset = bool(self.cooldowns["reset_time"] > 0)
+        super().loop(fps, dtime)
+        should_reset = should_reset and bool(self.cooldowns["reset_time"] <= 0)
+
+        if should_reset:
+            if self.fire_once:
+                self.hp = 0
+                return True
+            else:
+                self.rect.x = self.start_x
+                self.rect.y = self.start_y
+                self.has_fired = False
+                self.y_vel = 0
+
+        if not self.has_fired and abs(self.level.get_player().rect.x - self.rect.x) <= self.drop_x and abs(self.level.get_player().rect.y - self.rect.y) <= self.drop_y:
+            self.has_fired = True
+
+        collided = False
+        if self.has_fired and self.cooldowns["reset_time"] <= 0:
+            self.y_vel += dtime * grav
+            for obj in self.level.get_objects_in_range((self.rect.x, self.rect.y + self.y_vel), blocks_only=True):
+                if self.rect.centery <= obj.rect.centery and pygame.sprite.collide_rect(self, obj) and pygame.sprite.collide_mask(self, obj):
+                    self.rect.bottom = obj.rect.top
+                    self.y_vel = 0
+                    self.cooldowns["reset_time"] += cd
+                    collided = True
+                    break
+
+            self.rect.y += self.y_vel
+            if self.rect.y > self.level.level_bounds[1][1]:
+                self.cooldowns["reset_time"] += cd
+                collided = True
+
+        return collided
 
 
 def load_image(path, width, height, image_master, coord_x, coord_y, grayscale=False):

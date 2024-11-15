@@ -13,6 +13,7 @@ class Object(pygame.sprite.Sprite):
         self.name = name + " (" + str(x) + ", " + str(y) + ")"
         self.max_hp = self.hp = 100
         self.is_stacked = False # this property is only used by blocks, but needed here for generic checks
+        self.cooldowns = None
 
     def save(self):
         return {self.name: {"hp": self.hp}}
@@ -24,7 +25,16 @@ class Object(pygame.sprite.Sprite):
         if obj.get(attribute):
             setattr(self, attribute, obj[attribute])
 
+    def update_cooldowns(self, dtime):
+        for key in self.cooldowns:
+            if self.cooldowns[key] > 0:
+                self.cooldowns[key] -= (dtime / 1000)
+            elif self.cooldowns[key] < 0:
+                self.cooldowns[key] = 0
+
     def loop(self, fps, dtime):
+        if self.cooldowns is not None:
+            self.update_cooldowns(dtime)
         if self.hp <= 0:
             self.level.queue_purge(self)
 

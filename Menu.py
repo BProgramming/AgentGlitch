@@ -86,9 +86,9 @@ class Menu():
             self.buttons[i][0].y = dest_y + ((win.get_height() - screen.get_height()) // 2)
 
             if self.buttons[i][3] == ButtonType.BAR:
-                bar = pygame.surface.Surface((self.buttons[i][0].width - 50, self.buttons[i][0].height // 10), pygame.SRCALPHA)
+                bar = pygame.Surface((self.buttons[i][0].width - 50, self.buttons[i][0].height // 10), pygame.SRCALPHA)
                 bar_rect = bar.get_rect()
-                notch = pygame.surface.Surface((self.buttons[i][0].height // 10, self.buttons[i][0].height // 5), pygame.SRCALPHA)
+                notch = pygame.Surface((self.buttons[i][0].height // 10, self.buttons[i][0].height // 5), pygame.SRCALPHA)
                 notch_rect = notch.get_rect()
                 bar_rect.x = dest_x + ((self.buttons[i][0].width - bar.get_width()) // 2)
                 bar_rect.y = dest_y + (3 * (self.buttons[i][0].height - bar.get_height()) // 4)
@@ -131,10 +131,10 @@ class Menu():
                                         self.notch_val[i] = adj_notch_val_down
                         elif event.type == pygame.JOYAXISMOTION and event.axis == 0 and abs(event.value) > joystick_tolerance:
                             if len(self.buttons[i]) > 4:
-                                self.notch_val[i] = (self.buttons[i][4][min(len(self.buttons[i][4]) - 1, max(0, (self.buttons[i][4].index((self.notch_val[i] * (self.buttons[i][4][-1] - self.buttons[i][4][0])) + self.buttons[i][4][0]) + int(math.copysign(1, event.value)))))] - self.buttons[i][4][0]) / (self.buttons[i][4][-1] - self.buttons[i][4][0])
+                                self.notch_val[i] = (self.buttons[i][4][min(len(self.buttons[i][4]) - 1, max(0, (self.buttons[i][4].index((self.notch_val[i] * (self.buttons[i][4][-1] - self.buttons[i][4][0])) + self.buttons[i][4][0]) + int(1 if event.value >= 0 else -1))))] - self.buttons[i][4][0]) / (self.buttons[i][4][-1] - self.buttons[i][4][0])
                                 time.sleep(0.25)
                             else:
-                                self.notch_val[i] = min(1, max(0, self.notch_val[i] + math.copysign(0.01, event.value)))
+                                self.notch_val[i] = min(1, max(0, self.notch_val[i] + (0.01 if event.value >= 0 else -0.01)))
             else:
                 button_type = 1
 
@@ -251,6 +251,10 @@ class Selector(Menu):
             win.blit(self.clear, (0, 0))
 
         screen = self.screen.copy()
+        if self.image_selected[1].get_width() > screen.get_width():
+            self.image_selected[1] = pygame.transform.scale_by(self.image_selected[1], screen.get_width() / self.image_selected[1].get_width())
+            self.image_selected[0].width = self.image_selected[1].get_width()
+            self.image_selected[0].height = self.image_selected[1].get_height()
         dest_x = (screen.get_width() - self.image_selected[0].width) // 2
         dest_y = self.header.get_height() + 10
         self.image_selected[0].x = dest_x + ((win.get_width() - screen.get_width()) // 2)

@@ -29,7 +29,7 @@ pygame.display.set_caption("AGENT GLITCH")
 
 def get_offset(level, offset_x, offset_y, width, height):
     scroll_area_width = width * 0.375
-    scroll_area_height = height * 0.125
+    scroll_area_height = height * 0.25
 
     if level.get_player().rect.right - scroll_area_width < offset_x:
         offset_x = level.get_player().rect.right - scroll_area_width
@@ -168,7 +168,7 @@ def fade_out(background, bg_image, fg_image, level, hud, offset_x, offset_y, con
 
 
 def draw(background, bg_image, fg_image, level, hud, offset_x, offset_y, master_volume, glitches=None, win=WINDOW):
-    screen = pygame.rect.Rect(offset_x, offset_y, win.get_width(), win.get_height())
+    screen = pygame.Rect(offset_x, offset_y, win.get_width(), win.get_height())
 
     if len(background) == 1:
         win.blit(bg_image.subsurface(screen), (0, 0))
@@ -176,13 +176,7 @@ def draw(background, bg_image, fg_image, level, hud, offset_x, offset_y, master_
         for tile in background:
             win.blit(bg_image, (tile[0] - offset_x, tile[1] - offset_y))
 
-    for obj in level.get_objects():
-        obj.output(win, offset_x, offset_y, master_volume)
-
-    level.get_player().output(win, offset_x, offset_y, master_volume)
-
-    if level.weather is not None:
-        level.weather.draw(win, offset_x, offset_y)
+    level.output(win, offset_x, offset_y, master_volume)
 
     if fg_image is not None:
         win.blit(fg_image.subsurface(screen), (0, 0))
@@ -418,8 +412,6 @@ def main(win):
                         dtime_offset += controller.handle_single_input(event.button, win)
                     elif event.type == pygame.JOYBUTTONUP:
                         level.get_player().stop()
-                    elif event.type == pygame.JOYAXISMOTION and event.value > joystick_tolerance:
-                        dtime_offset += controller.handle_single_input("a" + str(event.axis), win)
                 controller.handle_continuous_input()
                 if (controller.goto_load and isfile("GameData/save.p")) or controller.goto_main or controller.goto_restart:
                     break
@@ -437,9 +429,10 @@ def main(win):
                         level.get_player().revert()
     
                 for obj in level.get_objects():
-                    if hasattr(obj, "patrol") and callable(obj.patrol):
-                        obj.patrol()
-                    obj.loop(FPS_TARGET, dtime)
+                    if type(obj).__name__.upper() != "BLOCK":
+                        if hasattr(obj, "patrol") and callable(obj.patrol):
+                            obj.patrol(dtime)
+                        obj.loop(FPS_TARGET, dtime)
 
                 level.purge()
 
@@ -447,7 +440,7 @@ def main(win):
                     level.weather.move(dtime)
 
                 if level.can_glitch and glitch_timer <= 0 and random.randint(0, 100) / 100 > level.get_player().hp / level.get_player().max_hp:
-                    glitches = glitch((1 - max(level.get_player().hp / level.get_player().max_hp, 0)) * 0.75, win)
+                    glitches = glitch((1 - max(level.get_player().hp / level.get_player().max_hp, 0)) / 2, win)
                     glitch_timer = 0.5
                 draw(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller.master_volume, glitches=glitches)
                 pygame.display.update()
@@ -494,18 +487,17 @@ if __name__ == "__main__":
         print(traceback.print_exception(e))
 
 # test ps5 controllers
-# bugs: get sight ranges to display properly in the first spawn
 # assets:   levels
 #           music
 #           sounds for typing, speaking, breaking blocks, moving blocks, all empty audio folders
-#           HUD icons
 #           shooting sprites
-#           player sprites
 #           screens
 #           story and dialogue
 # then package with nuitka
 
-# later:    bosses
+# later:    bosses -> added is_animated_attack property to Actor class, which loops through a wind-up, attack, and wind-down animation - to trigger, need to self property to True. can also interrupt by setting property to False at any time.
 #           sprite sheets for moving blocks, hazards, and moving hazards
 #           bouncers, lasers
 #           make missiles explode at end of range
+# enemies are spinning around and being weird, getting stuck at a point along their path and constantly reversing facing direction (and probably real direction) and they just get stuck there for a second
+# probably some change in the patrol function

@@ -3,7 +3,7 @@ from Actor import Actor, MovementState
 from Object import Object
 from Enemy import Enemy
 from Block import BreakableBlock
-from Helpers import MovementDirection
+from Helpers import MovementDirection, load_sprite_sheets
 
 
 class Player(Actor):
@@ -19,12 +19,18 @@ class Player(Actor):
     BULLET_TIME_COOLDOWN = 3
     BULLET_TIME_ACTIVE = 2
 
-    def __init__(self, x, y, level_bounds, sprite_master, audios, difficulty, can_shoot=False, sprite=None, proj_sprite=None):
-        super().__init__(x, y, level_bounds, sprite_master, audios, difficulty, can_shoot=can_shoot, sprite=sprite, proj_sprite=proj_sprite, name="Player")
+    def __init__(self, x, y, level, sprite_master, audios, difficulty, block_size, can_shoot=False, sprite=None, retro_sprite=None, proj_sprite=None):
+        super().__init__(x, y, level, sprite_master, audios, difficulty, block_size, can_shoot=can_shoot, sprite=sprite, proj_sprite=proj_sprite, name="Player")
+        self.sprites_set = (self.sprites.copy(), load_sprite_sheets("Sprites", retro_sprite, sprite_master, direction=True, grayscale=True) if retro_sprite is not None else None)
+        self.is_retro = False
+        if self.level.grayscale:
+            self.toggle_retro()
+            self.update_sprite(1, 0, False)
         self.cooldowns.update({"teleport": 0, "teleport_delay": 0, "block": 0, "block_attempt": 0, "bullet_time": 0, "bullet_time_active": 0})
         self.cached_cooldowns = self.cooldowns.copy()
         self.can_open_doors = True
         self.can_move_blocks = True
+        self.can_block = True
         self.is_blocking = False
         self.can_wall_jump = True
         self.can_teleport = False
@@ -35,6 +41,14 @@ class Player(Actor):
         self.max_jumps = 2
         self.attack_damage *= 2
         self.max_hp = self.hp = self.cached_hp = 100 / self.difficulty
+
+    def toggle_retro(self):
+        if self.is_retro:
+            self.sprites = self.sprites_set[0]
+            self.is_retro = False
+        else:
+            self.sprites = self.sprites_set[1]
+            self.is_retro = True
 
     def save(self):
         data = super().save()
@@ -59,17 +73,18 @@ class Player(Actor):
         self.should_move_horiz = False
 
     def block(self, block_time=BLOCK_TIME_ACTIVE, block_cd=BLOCK_COOLDOWN):
-        if self.cooldowns["block"] > 0:
-            pass
-        elif not self.is_blocking:
-            self.is_blocking = True
-            self.cooldowns["block_attempt"] = block_time
-            self.cooldowns["block"] = block_cd
-        elif self.cooldowns["block_attempt"] <= 0:
-            self.is_blocking = False
-            self.cooldowns["block"] = block_cd
+        if self.can_block:
+            if self.cooldowns["block"] > 0:
+                pass
+            elif not self.is_blocking:
+                self.is_blocking = True
+                self.cooldowns["block_attempt"] = block_time
+                self.cooldowns["block"] = block_cd
+            elif self.cooldowns["block_attempt"] <= 0:
+                self.is_blocking = False
+                self.cooldowns["block"] = block_cd
 
-    def get_hit(self, obj, block_cd=BLOCK_COOLDOWN):
+    def get_hit(self, obj, block_cd=BLOCK_COOLDOWN, _=None):
         if isinstance(obj, Enemy) and self.cooldowns["block"] <= 0 and self.is_blocking:
             self.cooldowns["block"] = block_cd
             self.is_blocking = False
@@ -99,7 +114,7 @@ class Player(Actor):
             for i in range(int(vel) + 1, 0, -1):
                 cast = Object(self.level, self.rect.x + (self.direction * i), self.rect.y, self.rect.width, self.rect.height - 1)
                 collision = False
-                for obj in self.level.get_objects():
+                for obj in self.level.get_objects_in_range((cast.rect.x, cast.rect.y)):
                     if pygame.sprite.collide_rect(cast, obj):
                         collision = True
                         break
@@ -112,10 +127,11 @@ class Player(Actor):
     def attack(self, push=ATTACK_PUSHBACK):
         if self.state in [MovementState.IDLE, MovementState.CROUCH, MovementState.RUN, MovementState.FALL, MovementState.JUMP, MovementState.DOUBLE_JUMP, MovementState.IDLE_ATTACK, MovementState.CROUCH_ATTACK, MovementState.RUN_ATTACK, MovementState.FALL_ATTACK, MovementState.JUMP_ATTACK, MovementState.DOUBLE_JUMP_ATTACK]:
             self.is_attacking = True
-            for obj in self.level.get_objects():
+            for obj in self.level.get_objects_in_range((self.rect.x, self.rect.y)):
                 if isinstance(obj, Enemy) and pygame.sprite.collide_rect(self, obj):
                     obj.get_hit(self)
-                    obj.rect.x -= self.direction * push
+                    if obj.patrol_path is not None:
+                        obj.rect.x -= self.direction * push
                 elif isinstance(obj, BreakableBlock) and pygame.sprite.collide_rect(self, obj):
                     obj.get_hit(self)
 

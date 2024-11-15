@@ -26,6 +26,9 @@ class MovementState(Enum):
     FALL_ATTACK = 14
     JUMP_ATTACK = 15
     DOUBLE_JUMP_ATTACK = 16
+    WIND_UP = 17
+    ATTACK_ANIM = 18
+    WIND_DOWN = 19
 
     def __str__(self):
         return self.name
@@ -46,7 +49,7 @@ class Actor(Object):
     RESIZE_SCALE_LIMIT = 1.5
     HEAL_DELAY = 5
 
-    def __init__(self, level, x, y, sprite_master, audios, difficulty, can_shoot=False, can_resize=False, width=SIZE, height=SIZE, attack_damage=ATTACK_DAMAGE, sprite=None, proj_sprite=None, name=None):
+    def __init__(self, level, x, y, sprite_master, audios, difficulty, block_size, can_shoot=False, can_resize=False, width=SIZE, height=SIZE, attack_damage=ATTACK_DAMAGE, sprite=None, proj_sprite=None, name=None):
         super().__init__(level, x, y, width, height, name)
         self.x_vel = self.y_vel = 0.0
         self.push_x = self.push_y = 0.0
@@ -65,12 +68,17 @@ class Actor(Object):
         self.idle_count = 0
         self.direction = self.facing = MovementDirection.RIGHT
         self.animation_count = 0
+        self.is_final_anim_frame = False
+        self.is_animated_attack = False
         self.size = self.size_target = self.cached_size = self.cached_size_target = 1
         self.sprite_name = ("UnarmedAgent" if sprite is None else sprite)
         self.sprites = load_sprite_sheets("Sprites", ("UnarmedAgent" if sprite is None else sprite), sprite_master, direction=True, grayscale=self.level.grayscale)
         self.sprite = None
         self.audios = audios
         self.update_sprite(1, 0, False)
+        self.update_geo()
+        self.rect.x += (block_size - self.rect.width) // 2
+        self.rect.y += (block_size - self.rect.height)
         self.audio_trigger_frames = {"TELEPORT": [0], "RUN": [4, 10], "JUMP": [0], "DOUBLE_JUMP": [0], "CROUCH": [0], "HIT": [0], "RESIZE": [0], "WALL_JUMP": [0]}
         self.active_audio = None
         self.active_audio_time = 0
@@ -104,8 +112,10 @@ class Actor(Object):
         self.load_attribute(obj, "can_resize")
         self.load_attribute(obj, "max_jumps")
         for proj in obj["projectiles"]:
-            self.active_projectiles.append(Projectile(self.level, self.rect.centerx, self.rect.centery, None, 0, self.attack_damage, self.difficulty, sprite=self.proj_sprite, name=(self.name + "'s projectile #" + str(len(self.active_projectiles) + 1))))
+            self.active_projectiles.append(Projectile(self.level, self.rect.centerx + (self.rect.width * self.facing // 3), self.rect.centery, None, 0, self.attack_damage, self.difficulty, sprite=self.proj_sprite, name=(self.name + "'s projectile #" + str(len(self.active_projectiles) + 1))))
             self.active_projectiles[-1].load(list(proj.values())[0])
+        self.update_sprite(1, 0, False)
+        self.update_geo()
 
     def set_difficulty(self, scale):
         self.difficulty = scale
@@ -188,7 +198,7 @@ class Actor(Object):
     def shoot_at_target(self, target, max_dist=MAX_SHOOT_DISTANCE, proj_cd=LAUNCH_PROJECTILE_COOLDOWN):
         if self.cooldowns["launch_projectile"] <= 0:
             self.is_attacking = True
-            proj = Projectile(self.level, self.rect.centerx, self.rect.centery, (target[0], self.rect.centery), max_dist, self.attack_damage, self.difficulty, sprite=self.proj_sprite, name=(self.name + "'s projectile #" + str(len(self.active_projectiles) + 1)))
+            proj = Projectile(self.level, self.rect.centerx + (self.rect.width * self.facing // 3), self.rect.centery, (target[0], self.rect.centery), max_dist, self.attack_damage, self.difficulty, sprite=self.proj_sprite, name=(self.name + "'s projectile #" + str(len(self.active_projectiles) + 1)))
             self.active_projectiles.append(proj)
             self.cooldowns["launch_projectile"] = proj_cd
 
@@ -199,12 +209,11 @@ class Actor(Object):
 
     def get_collisions(self):
         collided = False
-        obj_list = (self.level.get_objects() if self == self.level.get_player() else [self.level.get_player()] + self.level.blocks)
 
-        for obj in obj_list:
+        for obj in self.level.get_objects_in_range((self.rect.x, self.rect.y)) if self == self.level.get_player() else [self.level.get_player()] + self.level.get_objects_in_range((self.rect.x, self.rect.y), blocks_only=True):
             if pygame.sprite.collide_rect(self, obj):
                 if (isinstance(obj, Actor) and obj != self.level.get_player()) or isinstance(obj, Hazard):
-                    if self.cooldowns["get_hit"] <= 0 and pygame.sprite.collide_mask(self, obj):
+                    if obj.is_attacking and self.cooldowns["get_hit"] <= 0 and pygame.sprite.collide_mask(self, obj):
                         self.get_hit(obj)
 
                 if pygame.sprite.collide_mask(self, obj) and obj.collide(self):
@@ -213,9 +222,9 @@ class Actor(Object):
                         overlap = self.mask.overlap_mask(obj.mask, (0, 0)).get_rect()
                     else:
                         overlap = self.rect.clip(obj.rect)
-                    if overlap.width <= overlap.height and (self.x_vel == 0 or self.direction == MovementDirection(math.copysign(1, self.x_vel))):
-                        if self.can_move_blocks and isinstance(obj, MovableBlock) and obj.should_move_horiz and self.direction == MovementDirection(math.copysign(1, obj.rect.centerx - self.rect.centerx)):
-                            obj.x_vel = self.x_vel * self.size
+                    if overlap.width <= overlap.height and (self.x_vel == 0 or self.direction == (MovementDirection.RIGHT if self.x_vel >= 0 else MovementDirection.LEFT)):
+                        if self.can_move_blocks and isinstance(obj, MovableBlock) and obj.should_move_horiz and self.direction == (MovementDirection.RIGHT if obj.rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT):
+                            obj.push_x = self.x_vel * self.size
                         if self.x_vel <= 0 and self.rect.centerx > obj.rect.centerx:
                             self.rect.left = obj.rect.right - (self.rect.width // 5)
                             self.x_vel = 0.0
@@ -226,14 +235,13 @@ class Actor(Object):
 
                     if overlap.width >= overlap.height:
                         if self.y_vel >= 0 and not obj.is_stacked and self.rect.bottom == overlap.bottom:
-                            if self.y_vel > 1:
-                                self.rect.bottom = obj.rect.top
+                            self.rect.bottom = obj.rect.top
                             self.land()
                         elif self.y_vel < 0 and self.rect.top == overlap.top:
                             self.rect.top = obj.rect.bottom
                             self.hit_head()
 
-                    if collided and self.should_move_vert and not self.is_wall_jumping and self.direction == MovementDirection(math.copysign(1, overlap.centerx - self.rect.centerx)):
+                    if collided and self.should_move_vert and not self.is_wall_jumping and self.direction == (MovementDirection.RIGHT if overlap.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT):
                         self.y_vel = min(self.y_vel, 0.0)
                         self.jump_count = 0
                         self.is_wall_jumping = True
@@ -244,17 +252,13 @@ class Actor(Object):
                 if self.rect.centerx != obj.rect.centerx:
                     if math.degrees(math.atan(abs(self.rect.centery - obj.rect.centery) / abs(self.rect.centerx - obj.rect.centerx))) >= 45:
                         self.should_move_vert = False
+                        if self.rect.bottom != obj.rect.top:
+                            self.rect.bottom = obj.rect.top
 
         if self.x_vel != 0 and not collided and self.is_wall_jumping:
             self.is_wall_jumping = False
         return collided
 
-    def update_cooldowns(self, dtime):
-        for key in self.cooldowns:
-            if self.cooldowns[key] > 0:
-                self.cooldowns[key] -= (dtime / 1000)
-            elif self.cooldowns[key] < 0:
-                self.cooldowns[key] = 0
     def update_state(self):
         old = self.state
         if self.size_target != self.size:
@@ -262,6 +266,21 @@ class Actor(Object):
             if self.state != MovementState.RESIZE:
                 self.state = MovementState.RESIZE
                 self.animation_count = 0
+        # this will be used for bosses, so they can have complex attack animations
+        elif self.is_animated_attack and self.is_attacking:
+            if self.state not in [MovementState.WIND_UP, MovementState.ATTACK_ANIM, MovementState.WIND_DOWN]:
+                self.state = MovementState.WIND_UP
+                self.animation_count = 0
+            elif self.is_final_anim_frame:
+                if self.state == MovementState.WIND_UP:
+                    self.state = MovementState.ATTACK_ANIM
+                    self.animation_count = 0
+                elif self.state == MovementState.ATTACK_ANIM:
+                    self.state = MovementState.WIND_DOWN
+                    self.animation_count = 0
+                else:
+                    self.is_attacking = False
+                    return self.update_state()
         elif self.cooldowns["get_hit"] > 0:
             # this is not combined because, when kept separate, it lets the animation keep playing until the cooldown ends
             if self.state != MovementState.HIT:
@@ -342,9 +361,13 @@ class Actor(Object):
     def update_sprite(self, fps, dtime, state_change, delay=ANIMATION_DELAY):
         active_sprites = self.sprites[str(self.state) + "_" + str(self.facing)]
         active_index = math.floor((self.animation_count // (1000 // (fps * delay))) % len(active_sprites))
-        if active_index >= len(active_sprites):
-            self.active_index = 0
-            self.animation_count = 0
+        if active_index == len(active_sprites) - 1:
+            self.is_final_anim_frame = True
+        else:
+            self.is_final_anim_frame = False
+            if active_index >= len(active_sprites):
+                active_index = 0
+                self.animation_count = 0
         self.sprite = active_sprites[active_index]
         if self.size != 1:
             self.sprite = pygame.transform.smoothscale_by(self.sprite, self.size)
@@ -375,40 +398,45 @@ class Actor(Object):
                 else:
                     proj.loop(fps, dtime)
 
-        self.should_move_vert = True
-        self.push_x = self.push_y = 0
-        collided = self.get_collisions()
+        if bool(not hasattr(self, "patrol_path") or self.patrol_path is not None):
+            self.should_move_vert = True
+            self.push_x *= 0.9
+            if abs(self.push_x) < 0.01:
+                self.push_x = 0
+            self.push_y = 0
+            collided = self.get_collisions()
 
-        if self.cooldowns["resize_delay"] <= 0:
-            if self.size != self.size_target:
-                if self.size > self.size_target:
-                    self.rect.y += self.rect.height // 3
+            if self.cooldowns["resize_delay"] <= 0:
+                if self.size != self.size_target:
+                    if self.size > self.size_target:
+                        self.rect.y += self.rect.height // 3
+                    else:
+                        self.rect.y -= self.rect.height // 2
+                    self.size = self.size_target
+
+                if self.should_move_horiz:
+                    scaled_target = dtime * target
+                    if abs(self.x_vel) < scaled_target:
+                        self.x_vel = self.direction * min(scaled_target, (abs(self.x_vel) * drag) + (scaled_target * float(1 - drag)))
                 else:
-                    self.rect.y -= self.rect.height // 2
-                self.size = self.size_target
+                    self.x_vel = 0.0
 
-            if self.should_move_horiz:
-                scaled_target = dtime * target
-                if abs(self.x_vel) < scaled_target:
-                    self.x_vel = self.direction * min(scaled_target, (abs(self.x_vel) * drag) + (scaled_target * float(1 - drag)))
-            else:
-                self.x_vel = 0.0
+                if self.should_move_vert:
+                    self.y_vel += dtime * grav * self.size / (1 + (3 if self.is_wall_jumping and self.y_vel > 0 else 0))
 
-            if self.should_move_vert:
-                self.y_vel += dtime * grav * self.size / (1 + (3 if self.is_wall_jumping and self.y_vel > 0 else 0))
+                if (self.x_vel + self.push_x != 0 or self.y_vel + self.push_y != 0) and self.hp > 0:
+                    if self.level.get_player().is_slow_time and self != self.level.get_player():
+                        self.x_vel /= 2
+                        self.y_vel /= 2
 
-            if (self.x_vel + self.push_x != 0 or self.y_vel + self.push_y != 0) and self.hp > 0:
-                if self.level.get_player() is not None and self.level.get_player().is_slow_time:
-                    self.x_vel /= 2
-                    self.y_vel /= 2
+                    if self.state == MovementState.CROUCH:
+                        self.x_vel /= 2
 
-                if self.state == MovementState.CROUCH:
-                    self.x_vel /= 2
-
-                self.move(self.x_vel + self.push_x, self.y_vel + (self.push_y * dtime))
+                    self.move(self.x_vel + self.push_x, self.y_vel + (self.push_y * dtime))
+        else:
+            collided = False
 
         self.cache()
-        self.update_cooldowns(dtime)
         self.update_sprite(fps, dtime, self.update_state())
         self.update_geo()
         return collided
@@ -416,8 +444,8 @@ class Actor(Object):
     def output(self, win, offset_x, offset_y, master_volume):
         adj_x_image = self.rect.x - offset_x
         adj_y_image = self.rect.y - offset_y
-        adj_x_audio = self.rect.x - self.level.get_player().rect.x
-        adj_y_audio = self.rect.y - self.level.get_player().rect.y
+        adj_x_audio = self.level.get_player().rect.x - self.rect.x
+        adj_y_audio = self.level.get_player().rect.y - self.rect.y
         window_width = win.get_width()
         window_height = win.get_height()
         if len(self.active_projectiles) > 0:

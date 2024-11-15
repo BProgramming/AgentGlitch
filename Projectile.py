@@ -37,12 +37,14 @@ class Projectile(Object):
             self.collide(None)
             self.level.get_player().get_hit(self)
             return
-        for obj in self.level.blocks:
+
+        for obj in self.level.get_objects_in_range((self.rect.x, self.rect.y), blocks_only=True):
             if self.rect.colliderect(obj.rect):
                 if pygame.sprite.collide_mask(self, obj):
                     self.rect.center = obj.rect.center
                     self.collide(None)
                     return
+
         dist = math.dist(self.rect.center, self.dest)
         if dist < speed:
             self.rect.center = self.dest

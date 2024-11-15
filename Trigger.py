@@ -2,9 +2,9 @@ import time
 import pygame
 from enum import Enum
 from os.path import join, isfile
-from Helpers import display_text, load_text_from_file
+from Helpers import display_text, load_text_from_file, load_path
 from Object import Object
-from Block import Block, BreakableBlock, MovableBlock, Hazard, MovingBlock, MovingHazard, Door
+from Block import Block, BreakableBlock, MovableBlock, Hazard, MovingBlock, MovingHazard, Door, FallingHazard
 from Enemy import Enemy
 
 
@@ -62,15 +62,12 @@ class Trigger(Object):
                         return Block(self.level, j * block_size, i * block_size, block_size, block_size, image_master, is_stacked, coord_x=data["coord_x"], coord_y=data["coord_y"])
                     case "BREAKABLEBLOCK":
                         is_stacked = False
-                        return BreakableBlock(self.level, j * block_size, i * block_size, block_size, block_size, image_master, is_stacked, coord_x=data["coord_x"], coord_y=data["coord_y"])
+                        return BreakableBlock(self.level, j * block_size, i * block_size, block_size, block_size, image_master, is_stacked, coord_x=data["coord_x"], coord_y=data["coord_y"], coord_x2=data["coord_x2"], coord_y2=data["coord_y2"])
                     case "MOVINGBLOCK":
                         if data["path"].upper() == "NONE":
                             path = None
                         else:
-                            path_in = list(map(int, data["path"].split(' ')))
-                            path = []
-                            for k in range(0, len(path_in), 2):
-                                path.append(((path_in[k] + j) * block_size, (path_in[k + 1] + i) * block_size))
+                            path = load_path(list(map(int, data["path"].split(' '))), i, j, block_size)
                         is_stacked = False
                         return MovingBlock(self.level, j * block_size, i * block_size, block_size, block_size, image_master, is_stacked, speed=data["speed"], path=path, coord_x=data["coord_x"], coord_y=data["coord_y"])
                     case "DOOR":
@@ -80,22 +77,21 @@ class Trigger(Object):
                         is_stacked = False
                         return MovableBlock(self.level, j * block_size, i * block_size, block_size, block_size, image_master, is_stacked, coord_x=data["coord_x"], coord_y=data["coord_y"])
                     case "HAZARD":
-                        return Hazard(self.level, j * block_size, i * block_size, block_size, data["height"], image_master, self.controller.difficulty, coord_x=data["coord_x"], coord_y=data["coord_y"])
+                        return Hazard(self.level, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, self.controller.difficulty, sprite=data["sprite"], coord_x=data["coord_x"], coord_y=data["coord_y"])
                     case "MOVINGHAZARD":
                         if data["path"].upper() == "NONE":
                             path = None
                         else:
-                            path_in = list(map(int, data["path"].split(' ')))
-                            path = []
-                            for k in range(0, len(path_in), 2):
-                                path.append(((path_in[k] + j) * block_size, (path_in[k + 1] + i) * block_size))
+                            path = load_path(list(map(int, data["path"].split(' '))), i, j, block_size)
                         is_stacked = False
-                        return MovingHazard(self.level, j * block_size, i * block_size, block_size, data["height"], image_master, self.controller.difficulty, is_stacked, speed=data["speed"], path=path, coord_x=data["coord_x"], coord_y=data["coord_y"])
+                        return MovingHazard(self.level, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, self.controller.difficulty, is_stacked, speed=data["speed"], path=path, sprite=data["sprite"], coord_x=data["coord_x"], coord_y=data["coord_y"])
+                    case "FALLINGHAZARD":
+                        return FallingHazard(self.level, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, self.controller.difficulty, drop_x=data["drop_x"] * block_size, drop_y=data["drop_y"] * block_size, fire_once=bool(data["fire_once"].upper() == "TRUE"), sprite=data["sprite"], coord_x=data["coord_x"], coord_y=data["coord_y"])
                     case "ENEMY":
-                        path_in = list(map(int, data["path"].split(' ')))
-                        path = []
-                        for k in range(0, len(path_in), 2):
-                            path.append(((path_in[k] + j) * block_size, (path_in[k + 1] + i) * block_size))
+                        if data["path"].upper() == "NONE":
+                            path = None
+                        else:
+                            path = load_path(list(map(int, data["path"].split(' '))), i, j, block_size)
                         return Enemy(self.level, j * block_size, i * block_size, sprite_master, enemy_audios, self.controller.difficulty, path=path, hp=data["hp"], can_shoot=bool(data["can_shoot"].upper() == "TRUE"), sprite=data["sprite"], proj_sprite=(None if data["proj_sprite"].upper() == "NONE" else data["proj_sprite"]))
                     case "TRIGGER":
                         return Trigger(self.level, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, self.win, self.controller, objects_dict, sprite_master, enemy_audios, image_master, block_size, fire_once=bool(data["fire_once"].upper() == "TRUE"), type=TriggerType(data["type"]), input=data["input"], name=element)

@@ -7,7 +7,7 @@ class ParticleEffect:
         self.image = self.generate(width, height, amount, color, level.level_bounds)
         if level.grayscale:
             pygame.transform.grayscale(self.image)
-        self.rect = pygame.rect.Rect(0, 0, self.image.get_width(), self.image.get_height())
+        self.rect = pygame.Rect(0, 0, self.image.get_width(), self.image.get_height())
         self.x_vel = x_vel
         self.y_vel = y_vel
 
@@ -16,9 +16,9 @@ class ParticleEffect:
         for i in range(amount):
             points.append((random.randint(0, level_bounds[1][0]), random.randint(0, level_bounds[1][1])))
 
-        image = pygame.surface.Surface(level_bounds[1], pygame.SRCALPHA)
+        image = pygame.Surface(level_bounds[1], pygame.SRCALPHA)
         image.set_colorkey((0, 0, 0))
-        particle = pygame.surface.Surface((width, height), pygame.SRCALPHA)
+        particle = pygame.Surface((width, height), pygame.SRCALPHA)
         particle.fill(color)
         for point in points:
             image.blit(particle, point)

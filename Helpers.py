@@ -54,7 +54,7 @@ def load_picker_sprites(dir):
                     rect = pygame.Rect(0, 0, asset.get_width(), asset.get_height())
                     surface.blit(asset, (0, 0), rect)
                     images.append(surface)
-                    values.append(folder)
+                    values.append([folder, "Retro" + folder if isfile(join(path, "Retro" + folder, "picker.png")) else None])
         if len(images) == 0:
             handle_exception(FileNotFoundError("No sprite images found in " + path))
         return images, values
@@ -150,12 +150,10 @@ def load_sprite_sheets(dir1, dir2, sprite_master, direction=False, grayscale=Fal
             if grayscale:
                 sprite_sheet = pygame.transform.grayscale(sprite_sheet)
             width = height = sprite_sheet.get_height()
-            if width > 32:
-                width = 32 * math.ceil(width / 32)
 
             sprites = []
             for i in range(sprite_sheet.get_width() // width):
-                surface = pygame.surface.Surface((width, height), pygame.SRCALPHA, 32)
+                surface = pygame.Surface((width, height), pygame.SRCALPHA, 32)
                 rect = pygame.Rect(i * width, 0, width, height)
                 surface.blit(sprite_sheet, (0, 0), rect)
                 sprites.append(pygame.transform.scale2x(surface))
@@ -316,10 +314,20 @@ def glitch(odds, screen):
         height = random.randint(1, min(50, screen.get_height()))
         x = random.randint(0, screen.get_width() - width)
         y = random.randint(0, screen.get_height() - height)
-        copy = screen.subsurface(pygame.rect.Rect(min(max(x + random.randint(-2, 2), 0), screen.get_width() - width), min(max(y + random.randint(-2, 2), 0), screen.get_height() - height), width, height))
-        spot = pygame.surface.Surface((width, height), pygame.SRCALPHA)
+        copy = screen.subsurface(pygame.Rect(min(max(x + random.randint(-2, 2), 0), screen.get_width() - width), min(max(y + random.randint(-2, 2), 0), screen.get_height() - height), width, height))
+        spot = pygame.Surface((width, height), pygame.SRCALPHA)
         spot.fill(color[random.randint(0, len(color) - 1)])
         spot.set_alpha(50)
         copy.blit(spot, (0, 0))
         glitches.append([copy, (x, y)])
     return glitches
+
+
+def load_path(path_in, i, j, block_size):
+    path = []
+    for k in range(0, len(path_in), 2):
+        if k >= 2 and path_in[k] == path_in[k - 2] and path_in[k + 1] == path_in[k - 1]:
+            path[-1].append(True)
+        else:
+            path.append([(path_in[k] + j) * block_size, (path_in[k + 1] + i) * block_size])
+    return path

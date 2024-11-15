@@ -12,17 +12,17 @@ class Controller:
         "WASD_MOVE": {"keys_quicksave": [pygame.K_F5], "keys_cycle_layout": [pygame.K_F9], "keys_fullscreen_toggle": [pygame.K_F11], "keys_left": [pygame.K_a], "keys_right": [pygame.K_d], "keys_crouch_uncrouch": [pygame.K_s], "keys_jump": [pygame.K_w], "keys_teleport_dash": [pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_KP_PLUS], "keys_pause_unpause": [pygame.K_ESCAPE], "keys_attack": [pygame.K_LEFT, pygame.K_KP4], "keys_block": [pygame.K_RIGHT, pygame.K_KP6], "keys_bullet_time": [pygame.K_SPACE, pygame.K_KP0], "keys_grow": [pygame.K_UP, pygame.K_KP8], "keys_shrink": [pygame.K_DOWN, pygame.K_KP5]},
         "NUMPAD_MOVE": {"keys_quicksave": [pygame.K_F5], "keys_cycle_layout": [pygame.K_F9], "keys_fullscreen_toggle": [pygame.K_F11], "keys_left": [pygame.K_KP4], "keys_right": [pygame.K_KP6], "keys_crouch_uncrouch": [pygame.K_KP5], "keys_jump": [pygame.K_KP8], "keys_teleport_dash": [pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_KP_PLUS],  "keys_pause_unpause": [pygame.K_ESCAPE], "keys_attack": [pygame.K_d], "keys_block": [pygame.K_a], "keys_bullet_time": [pygame.K_SPACE, pygame.K_KP0], "keys_grow": [pygame.K_w], "keys_shrink": [pygame.K_s]},
         "ALT_NUMPAD_MOVE": {"keys_quicksave": [pygame.K_F5], "keys_cycle_layout": [pygame.K_F9], "keys_fullscreen_toggle": [pygame.K_F11], "keys_left": [pygame.K_KP4], "keys_right": [pygame.K_KP6], "keys_crouch_uncrouch": [pygame.K_KP5], "keys_jump": [pygame.K_KP8], "keys_teleport_dash": [pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_KP_PLUS],  "keys_pause_unpause": [pygame.K_ESCAPE], "keys_attack": [pygame.K_a], "keys_block": [pygame.K_d], "keys_bullet_time": [pygame.K_SPACE, pygame.K_KP0], "keys_grow": [pygame.K_w], "keys_shrink": [pygame.K_s]}}
-    GAMEPAD_LAYOUTS = {"SWITCH PRO": {"button_menu_up": 11, "button_menu_down": 12, "button_quicksave": 15, "button_left": 13, "button_right": 14, "axis_horiz": 0, "hat_horiz": None, "button_crouch_uncrouch": 0, "button_jump": 1, "button_teleport_dash": 3, "button_pause_unpause": 5, "axis_attack": "a5", "axis_block": "a4", "button_bullet_time": 2, "button_grow": 10, "button_shrink": 9},
-        "XBOX": {"button_menu_up": None, "button_menu_down": None, "button_quicksave": 6, "button_left": None, "button_right": None, "axis_horiz": 0, "hat_horiz": 0, "button_crouch_uncrouch": 1, "button_jump": 0, "button_teleport_dash": 2, "button_pause_unpause": 7, "axis_attack": "a5", "axis_block": "a4", "button_bullet_time": 3, "button_grow": 5, "button_shrink": 4},
-        "PS4": {"button_menu_up": 11, "button_menu_down": 12, "button_quicksave": 4, "button_left": 13, "button_right": 14, "axis_horiz": 0, "hat_horiz": None, "button_crouch_uncrouch": 1, "button_jump": 0, "button_teleport_dash": 2, "button_pause_unpause": 6, "axis_attack": "a5", "axis_block": "a4", "button_bullet_time": 3, "button_grow": 10, "button_shrink": 9},
-        "PS5": {"button_menu_up": None, "button_menu_down": None, "button_quicksave": 8, "button_left": None, "button_right": None, "axis_horiz": 0, "hat_horiz": 0, "button_crouch_uncrouch": 1, "button_jump": 0, "button_teleport_dash": 2, "button_pause_unpause": 9, "axis_attack": "a5", "axis_block": "a2", "button_bullet_time": 3, "button_grow": 5, "button_shrink": 4},
+    GAMEPAD_LAYOUTS = {"SWITCH PRO": {"button_menu_up": 11, "button_menu_down": 12, "button_quicksave": 15, "button_left": 13, "button_right": 14, "axis_horiz": 0, "hat_horiz": None, "button_crouch_uncrouch": 0, "button_jump": 1, "button_teleport_dash": 3, "button_pause_unpause": 5, "axis_attack": 5, "axis_block": 4, "button_bullet_time": 2, "button_grow": 10, "button_shrink": 9},
+        "XBOX": {"button_menu_up": None, "button_menu_down": None, "button_quicksave": 6, "button_left": None, "button_right": None, "axis_horiz": 0, "hat_horiz": 0, "button_crouch_uncrouch": 1, "button_jump": 0, "button_teleport_dash": 2, "button_pause_unpause": 7, "axis_attack": 5, "axis_block": 4, "button_bullet_time": 3, "button_grow": 5, "button_shrink": 4},
+        "PS4": {"button_menu_up": 11, "button_menu_down": 12, "button_quicksave": 4, "button_left": 13, "button_right": 14, "axis_horiz": 0, "hat_horiz": None, "button_crouch_uncrouch": 1, "button_jump": 0, "button_teleport_dash": 2, "button_pause_unpause": 6, "axis_attack": 5, "axis_block": 4, "button_bullet_time": 3, "button_grow": 10, "button_shrink": 9},
+        "PS5": {"button_menu_up": None, "button_menu_down": None, "button_quicksave": 8, "button_left": None, "button_right": None, "axis_horiz": 0, "hat_horiz": 0, "button_crouch_uncrouch": 1, "button_jump": 0, "button_teleport_dash": 2, "button_pause_unpause": 9, "axis_attack": 5, "axis_block": 2, "button_bullet_time": 3, "button_grow": 5, "button_shrink": 4},
         "NONE": {"button_menu_up": None, "button_menu_down": None, "button_quicksave": None, "button_left": None, "button_right": None, "axis_horiz": None, "hat_horiz": None, "button_crouch_uncrouch": None, "button_jump": None, "button_teleport_dash": None, "button_pause_unpause": None, "axis_attack": None, "axis_block": None, "button_bullet_time": None, "button_grow": None, "button_shrink": None}}
 
     def __init__(self, level, win, save, save_player_profile, layout=None):
         self.win = win
         self.save = save
         self.save_player_profile = save_player_profile
-        self.player_sprite_selected = None
+        self.player_sprite_selected = [None, None]
         self.player_abilities = None
         self.difficulty = DifficultyScale.MEDIUM
         self.hud = None
@@ -41,7 +41,7 @@ class Controller:
         difficulty_images = [make_image_from_text(256, 128, "EASIEST", ["Agent is much stronger", "Enemies are much weaker", "Enemy sight ranges are visible"], border=5), make_image_from_text(256, 128, "EASY", ["Agent is stronger", "Enemies are weaker", "Enemy sight ranges are visible"], border=5), make_image_from_text(256, 128, "MEDIUM", ["Agent is normal strength", "Enemies are normal strength", "Enemy sight ranges are not visible"], border=5), make_image_from_text(256, 128, "HARD", ["Agent is weaker", "Enemies are stronger", "Enemy sight ranges are not visible"], border=5), make_image_from_text(256, 128, "HARDEST", ["Agent is much weaker", "Enemies are much stronger", "Enemy sight ranges are not visible"], border=5)]
         self.difficulty_picker = Selector(win, "CHOOSE DIFFICULTY", ["You can change this at any time."], difficulty_images, [DifficultyScale.EASIEST, DifficultyScale.EASY, DifficultyScale.MEDIUM, DifficultyScale.HARD, DifficultyScale.HARDEST], index=2)
         sprite_images, sprite_values = load_picker_sprites("Sprites")
-        self.sprite_picker = Selector(win, "CHOOSE PLAYER", ["This is a visual choice only.", "Anyone can be an Agent."], sprite_images, sprite_values, index=random.randrange(0, len(sprite_images)))
+        self.sprite_picker = Selector(win, "CHOOSE PLAYER", ["This is a visual choice only.", "Anyone can be an Agent."], sprite_images, sprite_values, index=2 * random.randrange(0, len(sprite_images) // 2))
         self.level_selected = None
         level_images, level_values = load_level_images("LevelImages")
         self.level_picker = Selector(win, "CHOOSE LEVEL", None, level_images, level_values)
@@ -181,7 +181,7 @@ class Controller:
             if self.active_gamepad_layout is not None:
                 should_process_event = True
                 if abs(self.gamepad.get_axis(0)) > joystick_tolerance and len(selector.buttons) > 1:
-                    selector.move_mouse_sideways(math.copysign(1, self.gamepad.get_axis(0)))
+                    selector.move_mouse_sideways(1 if self.gamepad.get_axis(0) >= 0 else -1)
                     should_process_event = False
                 elif abs(self.gamepad.get_axis(1)) > joystick_tolerance:
                     joystick_movement = self.gamepad.get_axis(1)
@@ -197,7 +197,7 @@ class Controller:
                     should_process_event = False
 
                 if should_process_event and abs(joystick_movement) > joystick_tolerance:
-                    selector.move_mouse_pos(self.win, math.copysign(1, joystick_movement))
+                    selector.move_mouse_pos(self.win, 1 if joystick_movement >= 0 else -1)
                     joystick_movement = 0
 
     def volume(self, clear=None, joystick_tolerance=0.25):
@@ -260,7 +260,7 @@ class Controller:
                     should_process_event = False
 
                 if should_process_event and abs(joystick_movement) > joystick_tolerance:
-                    self.settings_menu.move_mouse_pos(self.win, math.copysign(1, joystick_movement))
+                    self.settings_menu.move_mouse_pos(self.win, 1 if joystick_movement >= 0 else -1)
                     joystick_movement = 0
 
     def controls(self, clear=None, joystick_tolerance=0.25):
@@ -329,7 +329,7 @@ class Controller:
                     should_process_event = False
 
                 if should_process_event and abs(joystick_movement) > joystick_tolerance:
-                    self.controls_menu.move_mouse_pos(self.win, math.copysign(1, joystick_movement))
+                    self.controls_menu.move_mouse_pos(self.win, 1 if joystick_movement >= 0 else -1)
                     joystick_movement = 0
 
     def settings(self, clear=None, joystick_tolerance=0.25):
@@ -391,7 +391,7 @@ class Controller:
                     should_process_event = False
 
                 if should_process_event and abs(joystick_movement) > joystick_tolerance:
-                    self.settings_menu.move_mouse_pos(self.win, math.copysign(1, joystick_movement))
+                    self.settings_menu.move_mouse_pos(self.win, 1 if joystick_movement >= 0 else -1)
                     joystick_movement = 0
 
     def pause(self, joystick_tolerance=0.25):
@@ -472,7 +472,7 @@ class Controller:
                     should_process_event = False
 
                 if should_process_event and abs(joystick_movement) > joystick_tolerance:
-                    self.pause_menu.move_mouse_pos(self.win, math.copysign(1, joystick_movement))
+                    self.pause_menu.move_mouse_pos(self.win, 1 if joystick_movement >= 0 else -1)
                     joystick_movement = 0
 
         self.pause_menu.fade_out(self.win)
@@ -494,7 +494,7 @@ class Controller:
                 case 0:
                     self.main_menu.fade_out(self.win)
                     self.pick_from_selector(self.sprite_picker, clear=self.main_menu.clear)
-                    self.player_sprite_selected = self.sprite_picker.values[self.sprite_picker.image_index]
+                    self.player_sprite_selected = [self.sprite_picker.values[self.sprite_picker.image_index][0], self.sprite_picker.values[self.sprite_picker.image_index][1]]
                     self.pick_from_selector(self.difficulty_picker, clear=self.main_menu.clear)
                     self.difficulty = self.difficulty_picker.values[self.difficulty_picker.image_index]
                     pygame.mouse.set_visible(False)
@@ -543,7 +543,7 @@ class Controller:
                     should_process_event = False
 
                 if should_process_event and abs(joystick_movement) > joystick_tolerance:
-                    self.main_menu.move_mouse_pos(self.win, math.copysign(1, joystick_movement))
+                    self.main_menu.move_mouse_pos(self.win, 1 if joystick_movement >= 0 else -1)
                     joystick_movement = 0
 
     def cycle_keyboard_layout(self, win, layout_options=KEYBOARD_LAYOUTS):
@@ -642,6 +642,7 @@ class Controller:
                     self.level.get_player().move_left()
 
             stick = self.gamepad.get_axis(self.axis_attack)
+            print(stick)
             if not player_is_attacking and stick is not None and stick > joystick_tolerance:
                 player_is_attacking = True
                 self.level.get_player().attack()
@@ -672,7 +673,7 @@ class Controller:
             self.level.get_player().stop()
 
         if self.active_gamepad_layout is not None:
-            stick = self.gamepad.get_axis(int(self.axis_block[1:]))
+            stick = self.gamepad.get_axis(self.axis_block)
             if stick is not None and stick > joystick_tolerance:
                 self.level.get_player().block()
         for input_key in self.keys_block:
