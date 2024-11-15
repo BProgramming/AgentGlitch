@@ -354,7 +354,7 @@ class FallingHazard(Hazard):
                 self.has_fired = False
                 self.y_vel = 0
 
-        if not self.has_fired and abs(self.level.get_player().rect.x - self.rect.x) <= self.drop_x and abs(self.level.get_player().rect.y - self.rect.y) <= self.drop_y:
+        if not self.has_fired and abs(self.level.get_player().rect.x - self.rect.x) <= self.drop_x and self.level.get_player().rect.top >= self.rect.bottom and abs(self.level.get_player().rect.y - self.rect.y) <= self.drop_y:
             self.has_fired = True
 
         collided = False
