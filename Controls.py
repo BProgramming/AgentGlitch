@@ -642,7 +642,6 @@ class Controller:
                     self.level.get_player().move_left()
 
             stick = self.gamepad.get_axis(self.axis_attack)
-            print(stick)
             if not player_is_attacking and stick is not None and stick > joystick_tolerance:
                 player_is_attacking = True
                 self.level.get_player().attack()

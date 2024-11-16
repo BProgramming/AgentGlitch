@@ -51,7 +51,6 @@ class Level:
         return in_range
 
     def queue_purge(self, obj):
-        print(type(obj))
         if isinstance(obj, Trigger):
             self.purge_queue["triggers"].add(obj)
         if isinstance(obj, Hazard):
@@ -177,16 +176,16 @@ def build_level(level, layout, sprite_master, image_master, objects_dict, player
                         blocks.append(block)
                         dynamic_blocks.append(block)
                     case "HAZARD":
-                        hazards.append(Hazard(level, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, controller.difficulty, sprite=data["sprite"], coord_x=data["coord_x"], coord_y=data["coord_y"]))
+                        hazards.append(Hazard(level, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, controller.difficulty, hit_sides=data["hit_sides"].upper(), sprite=data["sprite"], coord_x=data["coord_x"], coord_y=data["coord_y"]))
                     case "MOVINGHAZARD":
                         if data["path"].upper() == "NONE":
                             path = None
                         else:
                             path = load_path(list(map(int, data["path"].split(' '))), i, j, block_size)
                         is_stacked = False
-                        hazards.append(MovingHazard(level, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, controller.difficulty, is_stacked, speed=data["speed"], path=path, sprite=data["sprite"], coord_x=data["coord_x"], coord_y=data["coord_y"]))
+                        hazards.append(MovingHazard(level, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, controller.difficulty, is_stacked, speed=data["speed"], path=path, hit_sides=data["hit_sides"].upper(), sprite=data["sprite"], coord_x=data["coord_x"], coord_y=data["coord_y"]))
                     case "FALLINGHAZARD":
-                        hazards.append(FallingHazard(level, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, controller.difficulty, drop_x=data["drop_x"] * block_size, drop_y=data["drop_y"] * block_size, fire_once=bool(data["fire_once"].upper() == "TRUE"), sprite=data["sprite"], coord_x=data["coord_x"], coord_y=data["coord_y"]))
+                        hazards.append(FallingHazard(level, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, controller.difficulty, drop_x=data["drop_x"] * block_size, drop_y=data["drop_y"] * block_size, fire_once=bool(data["fire_once"].upper() == "TRUE"), hit_sides=data["hit_sides"].upper(), sprite=data["sprite"], coord_x=data["coord_x"], coord_y=data["coord_y"]))
                     case "ENEMY":
                         if data["path"].upper() == "NONE":
                             path = None

@@ -1,0 +1,36 @@
+To create a level:
+
+Using a spreadsheet program (or notepad, if you're a glutton for punishment), create a CSV file with up to one object in a given cell. You can do this by writing the name of the object in each cell. I recommend using something simple, since you might be repeating this many times (e.g. w rather than wall). Once the level is completed, save the file as a CSV and drop it in the Levels subfolder in the Assets directory.
+
+In the ReferenceDicts subfolder of the Assets directory, add a new line for each new object in the "objects_dict.txt" file. The format for the lines is as follows:
+"[object name in csv]": {"type": "[object type]", "data": {[object data]}
+Different objects require different data (see the reference doc).
+
+There are four general types of objects: Actors, Blocks, Triggers, and Hazards.
+
+All Actor-type objects need sprite sheets stored in the Sprites subfolder, and given the "sprite" data value of their folder name within that subfolder. Note that if you want to randomize the appearance of some enemies, such as having different skin tones, you can add suffixes like numbers to the folder names and the engine will select one randomly at level creation. All Block- and Hazard-type objects instead use an image from the Terrain.png file in the Terrain subfolder, with the coord_x and coord_y data values giving the x and y coordinates of the top right corner of the block in that image to use. Each block in the image is 48x48 pixels, although that can include some empty space.
+
+Moving objects follow a path as defined by their "path" data value. The path value is specified in pairs of x and y coordinates for a given point along the path, like "1 0" (x=1, y=0). These points are relative to the spawn position of the object, so for example "path": "0 0 1 0" would make the object move from its spawn point (0, 0), to one block to the right (1, 0), and back again in a loop. If you want the object to only move a single time and then stop, specify only one path point. The object will move along all points to the end of the path, and then back in a reversed direction along all points to the start of the path, regardless of what coordinates are actually on the path (i.e. the coordinates are not sorted based on their actual position, just on their order in the path list).
+
+The Enemy Actor-type object will follow different behaviour based on the "can_shoot" parameter, where enemies with a ranged attack will prefer to keep their distance from the player whereas enemies with a melee attack will move toward the player.
+
+There are many Block-type objects:
+Blocks, the basic object which serves as an obstacle for Actors.
+MovingBlocks, which are blocks that move along a specified path and will push Actors that touch them (including moving the Actors along with them, if they are standing on top).
+MovableBlocks, which can be pushed by the player and will revert to their starting position if the de-spawn from falling off the map.
+Doors, which can be locked (you'll need to set a trigger to unlock) or unlocked, which will move up or down based on the "direction" parameter when the player collides with them.
+MovingHazards, which are both MovingBlock- and Hazard-type objects, so they move along a specified path but also damage the player when touched.
+
+The Hazard object will damage the player when touched. By default, it will deal 99 damage to the player (leaving them at 1 health).
+
+The Trigger object is an invisible object that will do something when the player collides with it. It is placed in a single cell in the level CSV, but the "width" and "height" parameters allow you to make the actual collision area larger. The "fire_once" parameter specifies whether the trigger will be deleted once it's fired, or if it should stay and trigger every time the player collides with it. There are 7 types of triggers, as specified by the "type" parameter, each of which require different inputs:
+1: Text, which will display the text from the specified text file on screen. Each line in the text file will be output individually, in the "typewriter" style.
+2: Sound, which will play the specified sound file.
+3: Spawn, which will spawn the specified object at the specified coordinates (real map coordinates, map blocks at 96x96 pixels for reference), provided that that object is also in the objects_dict file.
+4: Revert, which will revert the player to their last checkpoint.
+5: Save, which will save the player at their current location. Because of how checkpoints autosave in this game, this trigger is not recommended. But I implemented it, so I'll leave it anyway.
+6: Change Level, which will end the current level and transition to the specified level (which requires its own CSV file and entry in the meta_dict).
+7: Set Property, which will set the property of the named object to the specified value. Note that object names are "Type at (coordinate x, coordinate y)" where the coordinates are their spawn coordinates, but Set Property will take a substring of the name such that you can still set the property without specifying the full name, e.g. "D_lock_1" will set the property of both "D_lock_1 (0, 0)" and "D_lock_1 (10, 10)". It's important to be aware of this when choosing object names.
+
+Once you've created your level, add an entry in the "meta_dict.txt" file in the ReferenceDicts subfolder under the Assets directory. The line should be formatted as such:
+"[level file without .csv extension]": {"name": "[level name to display], "music": "[a .wav or .mp3 file to loop for background music]", "start_screen": "[a .png file to show at the start of the level]", "end_screen": "[a .png file to show at the end of the level]", "background": "[a .png file to show as the background art of the level, although a default will be used if this file doesn't exist]", "foreground": "[a .png file to overlay above the level as foreground art]", "can_glitch" property specifying whether the "glitch" animation can play on the screen during this level, "player_sprite" property specifying whether a specific sprite should be used - if this is "None" then the player's selected sprite will be used instead, "start_message": "[a .txt text file with a message to print at the start of the level]", "end_message": "[a .txt text file with a message to print at the end of the level]", "grayscale" property specifying whether to apply the black-and-white (grayscale) effect to the player's sprite and art - by default the player will use the "Retro" sprite equivalent for any grayscale levels. Only the "name" property is actually required here - everything else can be excluded if you prefer to the use default values, and any specified files that don't actually exist will be ignored.

@@ -272,10 +272,11 @@ class Hazard(Block):
     ATTACK_DAMAGE = 99
     ANIMATION_DELAY = 0.3
 
-    def __init__(self, level, x, y, width, height, image_master, sprite_master, difficulty, sprite=None, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="Hazard"):
+    def __init__(self, level, x, y, width, height, image_master, sprite_master, difficulty, hit_sides="UDLR", sprite=None, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="Hazard"):
         super().__init__(level, x, (y + width - height), width, height, image_master, False, coord_x=coord_x, coord_y=coord_y, name=name)
         self.attack_damage = attack_damage * difficulty
         self.is_attacking = True
+        self.hit_sides = hit_sides.upper()
         if sprite is not None:
             self.sprites = load_sprite_sheets("Sprites", sprite, sprite_master, direction=False, grayscale=self.level.grayscale)["ANIMATE"]
         else:
@@ -317,10 +318,11 @@ class MovingHazard(MovingBlock, Hazard):
     VELOCITY_TARGET = 0.5
     ATTACK_DAMAGE = 99
 
-    def __init__(self, level, x, y, width, height, image_master, sprite_master, difficulty, is_stacked, speed=VELOCITY_TARGET, path=None, sprite=None, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="MovingHazard"):
+    def __init__(self, level, x, y, width, height, image_master, sprite_master, difficulty, is_stacked, speed=VELOCITY_TARGET, path=None, hit_sides="UDLR", sprite=None, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="MovingHazard"):
         MovingBlock.__init__(self, level, x, y, width, height, image_master, is_stacked, speed=speed, path=path, coord_x=coord_x, coord_y=coord_y, name=name)
         self.attack_damage = attack_damage * difficulty
         self.is_attacking = True
+        self.hit_sides = hit_sides.upper()
         if sprite is not None:
             self.sprites = load_sprite_sheets("Sprites", sprite, sprite_master, direction=False, grayscale=self.level.grayscale)
         else:
@@ -330,7 +332,7 @@ class MovingHazard(MovingBlock, Hazard):
         self.update_sprite(1)
 
     def loop(self, fps, dtime):
-        MovingBlock.loop(fps, dtime)
+        MovingBlock.loop(self, fps, dtime)
 
 
 class FallingHazard(Hazard):
@@ -338,8 +340,8 @@ class FallingHazard(Hazard):
     ATTACK_DAMAGE = 99
     RESET_DELAY = 1
 
-    def __init__(self, level, x, y, width, height, image_master, sprite_master, difficulty, drop_x=0, drop_y=0, fire_once=True, sprite=None, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="FallingHazard"):
-        super().__init__(level, x, y, width, height, image_master, sprite_master, difficulty, sprite=sprite, coord_x=coord_x, coord_y=coord_y, attack_damage=attack_damage, name=name)
+    def __init__(self, level, x, y, width, height, image_master, sprite_master, difficulty, hit_sides="D", drop_x=0, drop_y=0, fire_once=True, sprite=None, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="FallingHazard"):
+        super().__init__(level, x, y, width, height, image_master, sprite_master, difficulty, hit_sides=hit_sides, sprite=sprite, coord_x=coord_x, coord_y=coord_y, attack_damage=attack_damage, name=name)
         self.start_x = self.rect.x
         self.start_y = self.rect.y
         self.drop_x = drop_x
@@ -351,7 +353,10 @@ class FallingHazard(Hazard):
 
     def loop(self, fps, dtime, grav=GRAVITY, cd=RESET_DELAY):
         if not self.has_fired:
-            return False
+            if abs(self.level.get_player().rect.x - self.rect.x) <= self.drop_x and self.level.get_player().rect.top >= self.rect.bottom and abs(self.level.get_player().rect.y - self.rect.y) <= self.drop_y:
+                self.has_fired = True
+            else:
+                return False
 
         should_reset = bool(self.cooldowns["reset_time"] > 0)
         super().loop(fps, dtime)
@@ -366,9 +371,6 @@ class FallingHazard(Hazard):
                 self.rect.y = self.start_y
                 self.has_fired = False
                 self.y_vel = 0
-
-        if not self.has_fired and abs(self.level.get_player().rect.x - self.rect.x) <= self.drop_x and self.level.get_player().rect.top >= self.rect.bottom and abs(self.level.get_player().rect.y - self.rect.y) <= self.drop_y:
-            self.has_fired = True
 
         collided = False
         if self.has_fired and self.cooldowns["reset_time"] <= 0:

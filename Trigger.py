@@ -77,16 +77,16 @@ class Trigger(Object):
                         is_stacked = False
                         return MovableBlock(self.level, j * block_size, i * block_size, block_size, block_size, image_master, is_stacked, coord_x=data["coord_x"], coord_y=data["coord_y"])
                     case "HAZARD":
-                        return Hazard(self.level, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, self.controller.difficulty, sprite=data["sprite"], coord_x=data["coord_x"], coord_y=data["coord_y"])
+                        return Hazard(self.level, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, self.controller.difficulty, hit_sides=data["hit_sides"].upper(), sprite=data["sprite"], coord_x=data["coord_x"], coord_y=data["coord_y"])
                     case "MOVINGHAZARD":
                         if data["path"].upper() == "NONE":
                             path = None
                         else:
                             path = load_path(list(map(int, data["path"].split(' '))), i, j, block_size)
                         is_stacked = False
-                        return MovingHazard(self.level, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, self.controller.difficulty, is_stacked, speed=data["speed"], path=path, sprite=data["sprite"], coord_x=data["coord_x"], coord_y=data["coord_y"])
+                        return MovingHazard(self.level, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, self.controller.difficulty, is_stacked, speed=data["speed"], path=path, hit_sides=data["hit_sides"].upper(), sprite=data["sprite"], coord_x=data["coord_x"], coord_y=data["coord_y"])
                     case "FALLINGHAZARD":
-                        return FallingHazard(self.level, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, self.controller.difficulty, drop_x=data["drop_x"] * block_size, drop_y=data["drop_y"] * block_size, fire_once=bool(data["fire_once"].upper() == "TRUE"), sprite=data["sprite"], coord_x=data["coord_x"], coord_y=data["coord_y"])
+                        return FallingHazard(self.level, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, self.controller.difficulty, drop_x=data["drop_x"] * block_size, drop_y=data["drop_y"] * block_size, fire_once=bool(data["fire_once"].upper() == "TRUE"), hit_sides=data["hit_sides"].upper(), sprite=data["sprite"], coord_x=data["coord_x"], coord_y=data["coord_y"])
                     case "ENEMY":
                         if data["path"].upper() == "NONE":
                             path = None

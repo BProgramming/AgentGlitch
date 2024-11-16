@@ -213,16 +213,21 @@ class Actor(Object):
 
         for obj in self.level.get_objects_in_range((self.rect.x, self.rect.y)) if self == self.level.get_player() else [self.level.get_player()] + self.level.get_objects_in_range((self.rect.x, self.rect.y), blocks_only=True):
             if pygame.sprite.collide_rect(self, obj):
-                if (isinstance(obj, Actor) and obj != self.level.get_player()) or isinstance(obj, Hazard):
-                    if obj.is_attacking and self.cooldowns["get_hit"] <= 0 and pygame.sprite.collide_mask(self, obj):
-                        self.get_hit(obj)
-
                 if pygame.sprite.collide_mask(self, obj) and obj.collide(self):
                     self.collide(obj)
                     if isinstance(obj, Actor):
                         overlap = self.mask.overlap_mask(obj.mask, (0, 0)).get_rect()
                     else:
                         overlap = self.rect.clip(obj.rect)
+                    if (isinstance(obj, Actor) and obj != self.level.get_player()):
+                        if obj.is_attacking and self.cooldowns["get_hit"] <= 0:
+                            self.get_hit(obj)
+                    elif isinstance(obj, Hazard):
+                        if obj.is_attacking and self.cooldowns["get_hit"] <= 0:
+                            if overlap.width <= overlap.height and ((self.rect.x <= obj.rect.x and "L" in obj.hit_sides) or (self.rect.x >= obj.rect.x and "R" in obj.hit_sides)):
+                                self.get_hit(obj)
+                            if overlap.width >= overlap.height and ((self.rect.y <= obj.rect.y and "U" in obj.hit_sides) or (self.rect.y >= obj.rect.y and "D" in obj.hit_sides)):
+                                self.get_hit(obj)
                     if overlap.width <= overlap.height and (self.x_vel == 0 or self.direction == (MovementDirection.RIGHT if self.x_vel >= 0 else MovementDirection.LEFT)):
                         if self.can_move_blocks and isinstance(obj, MovableBlock) and obj.should_move_horiz and self.direction == (MovementDirection.RIGHT if obj.rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT):
                             obj.push_x = self.x_vel * self.size
