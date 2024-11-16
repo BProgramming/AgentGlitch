@@ -178,9 +178,12 @@ class Door(MovingBlock):
         return True
 
     def loop(self, fps, dtime):
-        if self.is_open and math.dist((self.level.get_player().rect.centerx, self.level.get_player().rect.centery), (self.rect.centerx, self.rect.centery)) > math.sqrt(self.rect.height**2 + (1.5 * self.rect.width)**2):
-            self.close()
-        super().loop(fps, dtime)
+        if not self.is_open and self.rect.y == self.patrol_path_closed[0][1]:
+            return
+        else:
+            if math.dist((self.level.get_player().rect.centerx, self.level.get_player().rect.centery), (self.rect.centerx, self.rect.centery)) > math.sqrt(self.rect.height**2 + (1.5 * self.rect.width)**2):
+                self.close()
+            super().loop(fps, dtime)
 
 class MovableBlock(Block):
     GRAVITY = 0.04
@@ -274,36 +277,41 @@ class Hazard(Block):
         self.attack_damage = attack_damage * difficulty
         self.is_attacking = True
         if sprite is not None:
-            self.sprites = load_sprite_sheets("Sprites", sprite, sprite_master, direction=False, grayscale=self.level.grayscale)
+            self.sprites = load_sprite_sheets("Sprites", sprite, sprite_master, direction=False, grayscale=self.level.grayscale)["ANIMATE"]
         else:
-            self.sprites = {"ANIMATE": self.sprite}
+            self.sprites = [self.sprite]
+        self.rects = []
+        self.masks = []
+        for s in self.sprites:
+            self.rects.append(self.sprite.get_rect(topleft=(self.rect.x, self.rect.y)))
+            self.masks.append(pygame.mask.from_surface(s))
         self.animation_count = 0
         self.sprite = None
-        self.update_sprite(1, 0)
-        self.update_geo()
+        self.update_sprite(1)
 
     def set_difficulty(self, scale):
         self.difficulty = scale
         self.attack_damage *= scale
 
-    def update_sprite(self, fps, dtime, delay=ANIMATION_DELAY):
-        active_index = math.floor((self.animation_count // (1000 // (fps * delay))) % len(self.sprites["ANIMATE"]))
-        if active_index >= len(self.sprites["ANIMATE"]):
+    def update_sprite(self, fps, delay=ANIMATION_DELAY):
+        active_index = math.floor((self.animation_count // (1000 // (fps * delay))) % len(self.sprites))
+        if active_index >= len(self.sprites):
             active_index = 0
             self.animation_count = 0
-        self.sprite = self.sprites["ANIMATE"][active_index]
-        self.animation_count += dtime
-
-    def update_geo(self):
-        self.rect = self.sprite.get_rect(topleft=(self.rect.x, self.rect.y))
-        self.mask = pygame.mask.from_surface(self.sprite)
+        self.sprite = self.sprites[active_index]
+        self.rect = self.rects[active_index]
+        self.mask = self.masks[active_index]
 
     def loop(self, fps, dtime):
+        self.animation_count += dtime
         super().loop(fps, dtime)
 
-        self.update_sprite(fps, dtime)
-        self.update_geo()
-
+    def output(self, win, offset_x, offset_y, master_volume, fps):
+        adj_x = self.rect.x - offset_x
+        adj_y = self.rect.y - offset_y
+        if -self.rect.width < adj_x <= win.get_width() and -self.rect.height < adj_y <= win.get_height():
+            self.update_sprite(fps)
+            win.blit(self.sprite, (adj_x, adj_y))
 
 class MovingHazard(MovingBlock, Hazard):
     VELOCITY_TARGET = 0.5
@@ -319,8 +327,10 @@ class MovingHazard(MovingBlock, Hazard):
             self.sprites = {"ANIMATE": self.sprite}
         self.animation_count = 0
         self.sprite = None
-        self.update_sprite(1, 0)
-        self.update_geo()
+        self.update_sprite(1)
+
+    def loop(self, fps, dtime):
+        MovingBlock.loop(fps, dtime)
 
 
 class FallingHazard(Hazard):
@@ -340,6 +350,9 @@ class FallingHazard(Hazard):
         self.cooldowns = {"reset_time": 0}
 
     def loop(self, fps, dtime, grav=GRAVITY, cd=RESET_DELAY):
+        if not self.has_fired:
+            return False
+
         should_reset = bool(self.cooldowns["reset_time"] > 0)
         super().loop(fps, dtime)
         should_reset = should_reset and bool(self.cooldowns["reset_time"] <= 0)

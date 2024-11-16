@@ -1,3 +1,4 @@
+import math
 import random
 import time
 import pygame
@@ -138,7 +139,7 @@ def fade(background, bg_image, fg_image, level, hud, offset_x, offset_y, control
     black = pygame.Surface((win.get_width(), win.get_height()), pygame.SRCALPHA)
     black.fill((0, 0, 0))
     for i in range(64):
-        draw(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller.master_volume, win=win)
+        draw(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller.master_volume, 1, win=win)
         if direction == "in":
             black.set_alpha(255 - (4 * i))
             volume = (i + 1) / 64
@@ -167,7 +168,7 @@ def fade_out(background, bg_image, fg_image, level, hud, offset_x, offset_y, con
     fade(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller, direction="out", win=win)
 
 
-def draw(background, bg_image, fg_image, level, hud, offset_x, offset_y, master_volume, glitches=None, win=WINDOW):
+def draw(background, bg_image, fg_image, level, hud, offset_x, offset_y, master_volume, fps, glitches=None, win=WINDOW):
     screen = pygame.Rect(offset_x, offset_y, win.get_width(), win.get_height())
 
     if len(background) == 1:
@@ -176,7 +177,7 @@ def draw(background, bg_image, fg_image, level, hud, offset_x, offset_y, master_
         for tile in background:
             win.blit(bg_image, (tile[0] - offset_x, tile[1] - offset_y))
 
-    level.output(win, offset_x, offset_y, master_volume)
+    level.output(win, offset_x, offset_y, master_volume, fps)
 
     if fg_image is not None:
         win.blit(fg_image.subsurface(screen), (0, 0))
@@ -273,7 +274,6 @@ def main(win):
 
     controller = Controller(None, win, save, save_player_profile)
     controller.get_gamepad(notify=False)
-    joystick_tolerance = 0.1
 
     while True:
         if len(load_player_profile(controller)) == 0:
@@ -386,6 +386,7 @@ def main(win):
             while True:
                 dtime = clock.tick(FPS_TARGET) - dtime_offset
                 level.time += dtime
+                print(dtime)
                 if hud.save_icon_timer > 0:
                     hud.save_icon_timer -= dtime / 250
                 if glitch_timer > 0:
@@ -429,7 +430,7 @@ def main(win):
                         level.get_player().revert()
     
                 for obj in level.get_objects():
-                    if type(obj).__name__.upper() != "BLOCK":
+                    if (not isinstance(obj, Actor) and type(obj).__name__.upper() != "BLOCK") or (isinstance(obj, Actor) and math.dist(obj.rect.topleft, level.get_player().rect.topleft) < win.get_width() * 1.5):
                         if hasattr(obj, "patrol") and callable(obj.patrol):
                             obj.patrol(dtime)
                         obj.loop(FPS_TARGET, dtime)
@@ -442,7 +443,7 @@ def main(win):
                 if level.can_glitch and glitch_timer <= 0 and random.randint(0, 100) / 100 > level.get_player().hp / level.get_player().max_hp:
                     glitches = glitch((1 - max(level.get_player().hp / level.get_player().max_hp, 0)) / 2, win)
                     glitch_timer = 0.5
-                draw(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller.master_volume, glitches=glitches)
+                draw(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller.master_volume, FPS_TARGET, glitches=glitches)
                 pygame.display.update()
 
                 offset_x, offset_y = get_offset(level, offset_x, offset_y, win.get_width(), win.get_height())

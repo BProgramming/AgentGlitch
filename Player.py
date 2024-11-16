@@ -25,7 +25,7 @@ class Player(Actor):
         self.is_retro = False
         if self.level.grayscale:
             self.toggle_retro()
-            self.update_sprite(1, 0, False)
+            self.update_sprite(1)
         self.cooldowns.update({"teleport": 0, "teleport_delay": 0, "block": 0, "block_attempt": 0, "bullet_time": 0, "bullet_time_active": 0})
         self.cached_cooldowns = self.cooldowns.copy()
         self.can_open_doors = True
@@ -160,12 +160,12 @@ class Player(Actor):
 
     def loop(self, fps, dtime, target=VELOCITY_TARGET, drag=VELOCITY_DRAG, grav=GRAVITY):
         if self.teleport_distance != 0:
+            self.animation_count += dtime
             if self.cooldowns["teleport_delay"] <= 0:
                 self.move(self.teleport_distance, 0)
                 self.teleport_distance = 0
             self.update_cooldowns(dtime)
-            self.update_sprite(fps, dtime, self.update_state())
-            self.update_geo()
+            self.update_state()
         else:
             if self.is_slow_time and self.cooldowns["bullet_time_active"] <= 0:
                 self.is_slow_time = False

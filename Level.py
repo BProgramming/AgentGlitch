@@ -15,7 +15,7 @@ class Level:
         self.name = name.upper()
         self.block_size = block_size if meta_dict[name].get("block_size") is None or not meta_dict[name]["block_size"].isnumeric() else int(meta_dict[name]["block_size"])
         self.time = 0
-        self.purge_queue = {"triggers": set(), "hazards": set(), "blocks": set(), "enemies": set()}
+        self.purge_queue = {"triggers": set(), "hazards": set(), "blocks": set(), "doors": set(), "enemies": set()}
         self.grayscale = (False if meta_dict[name].get("grayscale") is None else bool(meta_dict[name]["grayscale"].upper() == "TRUE"))
         self.can_glitch = (False if meta_dict[name].get("can_glitch") is None else bool(meta_dict[name]["can_glitch"].upper() == "TRUE"))
         self.background = (None if meta_dict[name].get("background") is None else meta_dict[name]["background"])
@@ -25,7 +25,7 @@ class Level:
         self.start_message = (None if meta_dict[name].get("start_message") is None else meta_dict[name]["start_message"])
         self.end_message = (None if meta_dict[name].get("end_message") is None else meta_dict[name]["end_message"])
         self.music = (None if meta_dict[name].get("music") is None else meta_dict[name]["music"])
-        self.level_bounds, self.player, self.triggers, self.blocks, self.dynamic_blocks, self.static_blocks, self.hazards, self.enemies = build_level(self, levels[self.name], sprite_master, image_master, objects_dict, player_audios, enemy_audios, win, controller, None if meta_dict[name].get("player_sprite") is None or meta_dict[name]["player_sprite"].upper() == "NONE" else meta_dict[name]["player_sprite"], self.block_size)
+        self.level_bounds, self.player, self.triggers, self.blocks, self.dynamic_blocks, self.doors, self.static_blocks, self.hazards, self.enemies = build_level(self, levels[self.name], sprite_master, image_master, objects_dict, player_audios, enemy_audios, win, controller, None if meta_dict[name].get("player_sprite") is None or meta_dict[name]["player_sprite"].upper() == "NONE" else meta_dict[name]["player_sprite"], self.block_size)
         self.weather = (None if meta_dict[name].get("weather") is None else self.get_weather(meta_dict[name]["weather"].upper()))
 
     def get_player(self):
@@ -34,15 +34,19 @@ class Level:
     def get_objects(self):
         return self.triggers + self.blocks + self.hazards + self.enemies
 
-    def get_objects_in_range(self, point, range=1, blocks_only=False):
+    def get_objects_in_range(self, point, dist=1, blocks_only=False):
         x = int(point[0] / self.block_size)
         y = int(point[1] / self.block_size)
         # this sum thing below is a hack to turn a 2D list into a 1D list since it applies the + operator to the second (optional) [] argument (e.g. an empty list), thereby concatenating all the elements
-        in_range = [block for block in sum([row[max(x - (range - 1), 0):min(x + range + 1, len(row))] for row in self.static_blocks[max(y - (range - 1), 0):min(y + range + 1, len(self.static_blocks))]], []) if block is not None]
+        in_range = [block for block in sum([row[max(x - (dist - 1), 0):min(x + dist + 1, len(row))] for row in self.static_blocks[max(y - (dist - 1), 0):min(y + dist + 1, len(self.static_blocks))]], []) if block is not None]
+        for i in range(dist - 1, dist + 1):
+            if self.doors.get(x + i) is not None:
+                in_range += self.doors[x + i]
 
-        for obj in self.dynamic_blocks + ([] if blocks_only else self.triggers + self.hazards + self.enemies):
-            if obj.rect.x - (self.block_size * range) <= point[0] <= obj.rect.x + (self.block_size * range) and obj.rect.y - (self.block_size * range) <= point[1] <= obj.rect.y + (self.block_size * range):
-                in_range.append(obj)
+        if not blocks_only:
+            for obj in self.triggers + self.dynamic_blocks + self.hazards + self.enemies:
+                if obj.rect.x - (self.block_size * dist) <= point[0] <= obj.rect.x + (self.block_size * dist) and obj.rect.y - (self.block_size * dist) <= point[1] <= obj.rect.y + (self.block_size * dist):
+                    in_range.append(obj)
 
         return in_range
 
@@ -50,7 +54,7 @@ class Level:
         print(type(obj))
         if isinstance(obj, Trigger):
             self.purge_queue["triggers"].add(obj)
-        elif isinstance(obj, Hazard):
+        if isinstance(obj, Hazard):
             self.purge_queue["hazards"].add(obj)
         elif isinstance(obj, Block):
             self.purge_queue["blocks"].add(obj)
@@ -95,16 +99,16 @@ class Level:
     def __get_static_block_slice__(self, win, offset_x, offset_y):
         return [row[int(offset_x // self.block_size):int((offset_x + (1.5 * win.get_width())) // self.block_size)] for row in self.static_blocks[int(offset_y // self.block_size):int((offset_y + (1.5 * win.get_height())) // self.block_size)]]
 
-    def output(self, win, offset_x, offset_y, master_volume):
-        for obj in self.triggers + self.__get_static_block_slice__(win, offset_x, offset_y) + self.dynamic_blocks + self.hazards + self.enemies:
+    def output(self, win, offset_x, offset_y, master_volume, fps):
+        for obj in self.triggers + self.__get_static_block_slice__(win, offset_x, offset_y) + self.dynamic_blocks + list(self.doors.values()) + self.hazards + self.enemies:
             if isinstance(obj, list):
                 for obj_lower in obj:
                     if obj_lower is not None:
-                        obj_lower.output(win, offset_x, offset_y, master_volume)
+                        obj_lower.output(win, offset_x, offset_y, master_volume, fps)
             else:
-                obj.output(win, offset_x, offset_y, master_volume)
+                obj.output(win, offset_x, offset_y, master_volume, fps)
 
-        self.player.output(win, offset_x, offset_y, master_volume)
+        self.player.output(win, offset_x, offset_y, master_volume, fps)
 
         if self.weather is not None:
             self.weather.draw(win, offset_x, offset_y)
@@ -117,6 +121,7 @@ def build_level(level, layout, sprite_master, image_master, objects_dict, player
     player_start = (0, 0)
 
     blocks = []
+    doors = {}
     dynamic_blocks = []
     static_blocks = []
     triggers = []
@@ -162,7 +167,10 @@ def build_level(level, layout, sprite_master, image_master, objects_dict, player
                         is_stacked = False
                         block = Door(level, j * block_size, i * block_size, block_size, block_size, image_master, is_stacked, speed=data["speed"], direction=data["direction"], is_locked=bool(data["is_locked"].upper() == "TRUE"), coord_x=data["coord_x"], coord_y=data["coord_y"])
                         blocks.append(block)
-                        dynamic_blocks.append(block)
+                        if doors.get(j) is None:
+                            doors[j] = [block]
+                        else:
+                            doors[j].append(block)
                     case "MOVABLEBLOCK":
                         is_stacked = False
                         block = MovableBlock(level, j * block_size, i * block_size, block_size, block_size, image_master, is_stacked, coord_x=data["coord_x"], coord_y=data["coord_y"])
@@ -192,4 +200,4 @@ def build_level(level, layout, sprite_master, image_master, objects_dict, player
 
     player = Player(level, player_start[0], player_start[1], sprite_master, player_audios, controller.difficulty, block_size, sprite=(player_sprite if player_sprite is not None else controller.player_sprite_selected[0]), retro_sprite=(player_sprite if player_sprite is not None else controller.player_sprite_selected[1]))
 
-    return level_bounds, player, triggers, blocks, dynamic_blocks, static_blocks, hazards, enemies
+    return level_bounds, player, triggers, blocks, dynamic_blocks, doors, static_blocks, hazards, enemies

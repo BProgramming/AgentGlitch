@@ -38,7 +38,7 @@ class Object(pygame.sprite.Sprite):
         if self.hp <= 0:
             self.level.queue_purge(self)
 
-    def output(self, win, offset_x, offset_y, master_volume):
+    def output(self, win, offset_x, offset_y, master_volume, fps):
         adj_x = self.rect.x - offset_x
         adj_y = self.rect.y - offset_y
         if -self.rect.width < adj_x <= win.get_width() and -self.rect.height < adj_y <= win.get_height():

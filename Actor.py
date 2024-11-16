@@ -65,6 +65,7 @@ class Actor(Object):
         self.max_jumps = 1
         self.can_shoot = False
         self.state = MovementState.IDLE
+        self.state_changed = False
         self.idle_count = 0
         self.direction = self.facing = MovementDirection.RIGHT
         self.animation_count = 0
@@ -75,7 +76,7 @@ class Actor(Object):
         self.sprites = load_sprite_sheets("Sprites", ("UnarmedAgent" if sprite is None else sprite), sprite_master, direction=True, grayscale=self.level.grayscale)
         self.sprite = None
         self.audios = audios
-        self.update_sprite(1, 0, False)
+        self.update_sprite(1)
         self.update_geo()
         self.rect.x += (block_size - self.rect.width) // 2
         self.rect.y += (block_size - self.rect.height)
@@ -114,7 +115,7 @@ class Actor(Object):
         for proj in obj["projectiles"]:
             self.active_projectiles.append(Projectile(self.level, self.rect.centerx + (self.rect.width * self.facing // 3), self.rect.centery, None, 0, self.attack_damage, self.difficulty, sprite=self.proj_sprite, name=(self.name + "'s projectile #" + str(len(self.active_projectiles) + 1))))
             self.active_projectiles[-1].load(list(proj.values())[0])
-        self.update_sprite(1, 0, False)
+        self.update_sprite(1)
         self.update_geo()
 
     def set_difficulty(self, scale):
@@ -356,9 +357,9 @@ class Actor(Object):
                     self.state = MovementState.IDLE
             if str(self.state) + "_" + str(self.facing) not in self.sprites:
                 self.state = old
-        return old != self.state
+        self.state_changed = bool(old != self.state)
 
-    def update_sprite(self, fps, dtime, state_change, delay=ANIMATION_DELAY):
+    def update_sprite(self, fps, delay=ANIMATION_DELAY):
         active_sprites = self.sprites[str(self.state) + "_" + str(self.facing)]
         active_index = math.floor((self.animation_count // (1000 // (fps * delay))) % len(active_sprites))
         if active_index == len(active_sprites) - 1:
@@ -372,20 +373,20 @@ class Actor(Object):
         if self.size != 1:
             self.sprite = pygame.transform.smoothscale_by(self.sprite, self.size)
 
-        if self.audios is not None and (state_change or self.state == MovementState.RUN) and self.audio_trigger_frames.get(str(self.state)) is not None:
+        if self.audios is not None and (self.state_changed or self.state == MovementState.RUN) and self.audio_trigger_frames.get(str(self.state)) is not None:
             if self.audios.get(str(self.state).replace("_ATTACK", "")) is not None and active_index in self.audio_trigger_frames[str(self.state).replace("_ATTACK", "")]:
                 self.active_audio = self.audios[str(self.state).replace("_ATTACK", "")][random.randrange(len(self.audios[str(self.state).replace("_ATTACK", "")]))]
                 if self.active_audio_channel is not None:
                     self.active_audio_channel.stop()
                     self.active_audio_channel = None
 
-        self.animation_count += dtime
-
     def update_geo(self):
         self.rect = self.sprite.get_rect(topleft=(self.rect.x, self.rect.y))
         self.mask = pygame.mask.from_surface(self.sprite)
 
     def loop(self, fps, dtime, target=VELOCITY_TARGET, drag=0, grav=GRAVITY):
+        self.animation_count += dtime
+
         super().loop(fps, dtime)
 
         if self.can_heal and self.hp < self.max_hp and self.cooldowns["heal"] <= 0:
@@ -437,11 +438,10 @@ class Actor(Object):
             collided = False
 
         self.cache()
-        self.update_sprite(fps, dtime, self.update_state())
-        self.update_geo()
+        self.update_state()
         return collided
 
-    def output(self, win, offset_x, offset_y, master_volume):
+    def output(self, win, offset_x, offset_y, master_volume, fps):
         adj_x_image = self.rect.x - offset_x
         adj_y_image = self.rect.y - offset_y
         adj_x_audio = self.level.get_player().rect.x - self.rect.x
@@ -450,8 +450,10 @@ class Actor(Object):
         window_height = win.get_height()
         if len(self.active_projectiles) > 0:
             for proj in self.active_projectiles:
-                proj.output(win, offset_x, offset_y, master_volume)
-        if -self.rect.width < adj_x_image <= window_width and -self.rect.height < adj_y_image <= window_height:
+                proj.output(win, offset_x, offset_y, master_volume, fps)
+        if self == self.level.get_player() or -self.rect.width < adj_x_image <= window_width and -self.rect.height < adj_y_image <= window_height:
+            self.update_sprite(fps)
+            self.update_geo()
             win.blit(self.sprite, (adj_x_image, adj_y_image))
             if self.cooldowns.get("block_attempt") is not None and self.cooldowns["block_attempt"] > 0:
                 radius = math.dist((self.rect.x, self.rect.y), (self.rect.centerx, self.rect.centery))
