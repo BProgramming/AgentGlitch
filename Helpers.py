@@ -39,6 +39,19 @@ def handle_exception(e):
     sys.exit()
 
 
+def validate_file_list(dir, list, ext=None):
+    out = []
+    for name in list:
+        if ext is None or name[-len(ext):].upper() == ext.upper():
+            file = join("Assets", dir, name)
+            if isfile(file):
+                out.append(file)
+    if len(out) > 0:
+        return out
+    else:
+        return None
+
+
 def load_picker_sprites(dir):
     images = []
     values = []

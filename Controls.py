@@ -18,7 +18,7 @@ class Controller:
         "PS5": {"button_menu_up": None, "button_menu_down": None, "button_quicksave": 8, "button_left": None, "button_right": None, "axis_horiz": 0, "hat_horiz": 0, "button_crouch_uncrouch": 1, "button_jump": 0, "button_teleport_dash": 2, "button_pause_unpause": 9, "axis_attack": 5, "axis_block": 2, "button_bullet_time": 3, "button_grow": 5, "button_shrink": 4},
         "NONE": {"button_menu_up": None, "button_menu_down": None, "button_quicksave": None, "button_left": None, "button_right": None, "axis_horiz": None, "hat_horiz": None, "button_crouch_uncrouch": None, "button_jump": None, "button_teleport_dash": None, "button_pause_unpause": None, "axis_attack": None, "axis_block": None, "button_bullet_time": None, "button_grow": None, "button_shrink": None}}
 
-    def __init__(self, level, win, save, save_player_profile, layout=None):
+    def __init__(self, level, win, save, save_player_profile, layout=None, main_menu_music=None):
         self.win = win
         self.save = save
         self.save_player_profile = save_player_profile
@@ -33,7 +33,7 @@ class Controller:
         vol_bg = {"label": "Music", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["background"], "range": (0, 100)}
         vol_pc = {"label": "Player", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["player"], "range": (0, 100)}
         vol_fx = {"label": "Effects", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["non-player"], "range": (0, 100)}
-        self.main_menu = Menu(win, "MAIN MENU", [{"label": "New game", "type": ButtonType.CLICK}, {"label": "Continue", "type": ButtonType.CLICK}, {"label": "Select a level", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}])
+        self.main_menu = Menu(win, "MAIN MENU", [{"label": "New game", "type": ButtonType.CLICK}, {"label": "Continue", "type": ButtonType.CLICK}, {"label": "Select a level", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}], music=main_menu_music)
         self.pause_menu = Menu(win, "PAUSED", [{"label": "Resume", "type": ButtonType.CLICK}, {"label": "Load last save", "type": ButtonType.CLICK}, {"label": "Restart level", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Quit to menu", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}])
         self.settings_menu = Menu(win, "SETTINGS", [dif, {"label": "Controls", "type": ButtonType.CLICK}, {"label": "Volume", "type": ButtonType.CLICK}, {"label": "Toggle fullscreen", "type": ButtonType.CLICK}, {"label": "Back", "type": ButtonType.CLICK}])
         self.volume_menu = Menu(win, "VOLUME", [vol_bg, vol_pc, vol_fx, {"label": "Back", "type": ButtonType.CLICK}])
@@ -413,11 +413,13 @@ class Controller:
                     self.goto_load = True
                     pygame.mixer.unpause()
                     pygame.mouse.set_visible(False)
+                    self.pause_menu.clear = None
                     return 0
                 case 2:
                     self.goto_restart = True
                     pygame.mixer.unpause()
                     pygame.mouse.set_visible(False)
+                    self.pause_menu.clear = None
                     return 0
                 case 3:
                     time.sleep(0.01)
@@ -429,6 +431,7 @@ class Controller:
                     self.goto_main = True
                     pygame.mixer.unpause()
                     pygame.mouse.set_visible(False)
+                    self.pause_menu.clear = None
                     return 0
                 case 5:
                     if self.level is not None:
@@ -436,6 +439,7 @@ class Controller:
                         self.save_player_profile(self, self.level)
                     else:
                         self.save_player_profile(self)
+                    self.pause_menu.clear = None
                     pygame.quit()
                     sys.exit()
                 case _:
@@ -448,6 +452,7 @@ class Controller:
                         self.save_player_profile(self, self.level)
                     else:
                         self.save_player_profile(self)
+                    self.pause_menu.clear = None
                     pygame.quit()
                     sys.exit()
                 elif event.type == pygame.KEYDOWN and event.key in self.keys_pause_unpause:
@@ -476,11 +481,13 @@ class Controller:
                     joystick_movement = 0
 
         self.pause_menu.fade_out(self.win)
+        self.pause_menu.clear = None
         pygame.mixer.unpause()
         pygame.mouse.set_visible(False)
         return (time.perf_counter_ns() - start) // 1000000
 
     def main(self, joystick_tolerance=0.25):
+        self.main_menu.fade_music()
         pygame.mouse.set_visible(True)
         self.main_menu.fade_in(self.win)
         if self.active_gamepad_layout is not None:
@@ -498,17 +505,20 @@ class Controller:
                     self.pick_from_selector(self.difficulty_picker, clear=self.main_menu.clear)
                     self.difficulty = self.difficulty_picker.values[self.difficulty_picker.image_index]
                     pygame.mouse.set_visible(False)
+                    self.main_menu.fade_music()
                     return True
                 case 1:
                     self.main_menu.fade_out(self.win)
                     self.goto_load = True
                     pygame.mouse.set_visible(False)
+                    self.main_menu.fade_music()
                     return False
                 case 2:
                     self.main_menu.fade_out(self.win)
                     self.pick_from_selector(self.level_picker, clear=self.main_menu.clear)
                     self.level_selected = self.level_picker.values[self.level_picker.image_index]
                     pygame.mouse.set_visible(False)
+                    self.main_menu.fade_music()
                     return bool(self.level_picker.image_index == 0)
                 case 3:
                     time.sleep(0.01)
@@ -525,6 +535,14 @@ class Controller:
                     self.save_player_profile(self)
                     pygame.quit()
                     sys.exit()
+                elif event.type == pygame.USEREVENT:
+                    if "LOOP" in self.main_menu.music[self.main_menu.music_index].upper():
+                        pygame.mixer.music.play(-1)
+                        pygame.mixer.music.set_endevent()
+                    else:
+                        pygame.mixer.music.play()
+                        self.main_menu.cycle_music()
+                        pygame.mixer.music.queue(self.main_menu.music[self.main_menu.music_index])
 
             self.get_gamepad()
             if self.active_gamepad_layout is not None:

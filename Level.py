@@ -5,7 +5,7 @@ from Player import Player
 from Enemy import Enemy
 from Trigger import Trigger, TriggerType
 from WeatherEffects import Rain, Snow
-from Helpers import load_path
+from Helpers import load_path, validate_file_list
 
 
 class Level:
@@ -24,9 +24,16 @@ class Level:
         self.end_screen = (None if meta_dict[name].get("end_screen") is None else meta_dict[name]["end_screen"])
         self.start_message = (None if meta_dict[name].get("start_message") is None else meta_dict[name]["start_message"])
         self.end_message = (None if meta_dict[name].get("end_message") is None else meta_dict[name]["end_message"])
-        self.music = (None if meta_dict[name].get("music") is None else meta_dict[name]["music"])
+        self.music = (None if meta_dict[name].get("music") is None else validate_file_list("Music", list(meta_dict[name]["music"].split(' ')), "mp3"))
+        self.music_index = 0
         self.level_bounds, self.player, self.triggers, self.blocks, self.dynamic_blocks, self.doors, self.static_blocks, self.hazards, self.enemies = build_level(self, levels[self.name], sprite_master, image_master, objects_dict, player_audios, enemy_audios, win, controller, None if meta_dict[name].get("player_sprite") is None or meta_dict[name]["player_sprite"].upper() == "NONE" else meta_dict[name]["player_sprite"], self.block_size)
         self.weather = (None if meta_dict[name].get("weather") is None else self.get_weather(meta_dict[name]["weather"].upper()))
+
+    def cycle_music(self):
+        if self.music is not None:
+            self.music_index += 1
+            if self.music_index >= len(self.music):
+                self.music_index = 0
 
     def get_player(self):
         return self.player

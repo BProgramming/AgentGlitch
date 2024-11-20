@@ -156,7 +156,7 @@ def fade(background, bg_image, fg_image, level, hud, offset_x, offset_y, control
                 pygame.quit()
                 sys.exit()
         if pygame.mixer.music.get_busy():
-            pygame.mixer.music.set_volume((controller.master_volume["background"] / 100) * volume)
+            pygame.mixer.music.set_volume((controller.master_volume["background"]) * volume)
         time.sleep(0.01)
 
 
@@ -272,7 +272,7 @@ def main(win):
     sprite_master = {}
     image_master = {}
 
-    controller = Controller(None, win, save, save_player_profile)
+    controller = Controller(None, win, save, save_player_profile, main_menu_music=(None if meta_dict.get("MAIN_MENU") is None or meta_dict["MAIN_MENU"].get("music") is None else list(meta_dict["MAIN_MENU"]["music"].split(' '))))
     controller.get_gamepad(notify=False)
 
     while True:
@@ -280,7 +280,7 @@ def main(win):
             pygame.display.toggle_fullscreen()
         if not controller.goto_main and isfile(join("Assets", "Screens", "credit.png")):
             play_slide(pygame.image.load(join("Assets", "Screens", "credit.png")), controller, should_glitch=True)
-        pygame.mixer.music.set_volume(controller.master_volume["background"] / 100)
+        pygame.mixer.music.set_volume(controller.master_volume["background"])
         new_game = False
         if isfile(join("Assets", "Screens", "title.png")):
             slide = pygame.image.load(join("Assets", "Screens", "title.png"))
@@ -335,11 +335,12 @@ def main(win):
             level = controller.level = Level(cur_level, levels, meta_dict, objects_dict, sprite_master, image_master, load_audios("PlayerAudio"), load_audios("EnemyAudio"), win, controller)
 
             if level.music is not None:
-                file = join("Assets", "LevelMusic", level.music)
-                if isfile(file):
-                    pygame.mixer.music.load(file)
-                    pygame.mixer.music.set_volume(controller.master_volume["background"] / 100)
-                    pygame.mixer.music.play(loops=-1)
+                pygame.mixer.music.load(level.music[level.music_index])
+                pygame.mixer.music.set_volume(controller.master_volume["background"])
+                pygame.mixer.music.set_endevent(pygame.USEREVENT)
+                pygame.mixer.music.play(fade_ms=2000)
+                level.cycle_music()
+                pygame.mixer.music.queue(level.music[level.music_index])
 
             if level.start_screen is not None:
                 if isfile(join("Assets", "Screens", level.start_screen)):
@@ -386,6 +387,8 @@ def main(win):
             while True:
                 dtime = clock.tick(FPS_TARGET) - dtime_offset
                 level.time += dtime
+                #if dtime > 17:
+                #    print(dtime)
                 if hud.save_icon_timer > 0:
                     hud.save_icon_timer -= dtime / 250
                 if glitch_timer > 0:
@@ -412,6 +415,14 @@ def main(win):
                         dtime_offset += controller.handle_single_input(event.button, win)
                     elif event.type == pygame.JOYBUTTONUP:
                         level.get_player().stop()
+                    elif event.type == pygame.USEREVENT:
+                        if "LOOP" in level.music[level.music_index].upper():
+                            pygame.mixer.music.play(-1)
+                            pygame.mixer.music.set_endevent()
+                        else:
+                            pygame.mixer.music.play()
+                            level.cycle_music()
+                            pygame.mixer.music.queue(level.music[level.music_index])
                 controller.handle_continuous_input()
                 if (controller.goto_load and isfile("GameData/save.p")) or controller.goto_main or controller.goto_restart:
                     break
@@ -448,6 +459,7 @@ def main(win):
                 offset_x, offset_y = get_offset(level, offset_x, offset_y, win.get_width(), win.get_height())
 
             if level.music is not None:
+                pygame.mixer.music.fadeout(1000)
                 pygame.mixer.music.unload()
 
             if controller.goto_main:
@@ -485,19 +497,3 @@ if __name__ == "__main__":
         main(WINDOW)
     except Exception as e:
         print(traceback.print_exception(e))
-
-# test ps5 controllers
-# assets:   levels
-#           music
-#           sounds for typing, speaking, breaking blocks, moving blocks, all empty audio folders
-#           shooting sprites
-#           screens
-#           story and dialogue
-# then package with nuitka
-
-# later:    bosses -> added is_animated_attack property to Actor class, which loops through a wind-up, attack, and wind-down animation - to trigger, need to self property to True. can also interrupt by setting property to False at any time.
-#           sprite sheets for moving blocks, hazards, and moving hazards
-#           bouncers, lasers
-#           make missiles explode at end of range
-# enemies are spinning around and being weird, getting stuck at a point along their path and constantly reversing facing direction (and probably real direction) and they just get stuck there for a second
-# probably some change in the patrol function

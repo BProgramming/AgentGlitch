@@ -213,8 +213,7 @@ class Actor(Object):
 
         for obj in self.level.get_objects_in_range((self.rect.x, self.rect.y)) if self == self.level.get_player() else [self.level.get_player()] + self.level.get_objects_in_range((self.rect.x, self.rect.y), blocks_only=True):
             if pygame.sprite.collide_rect(self, obj):
-                if pygame.sprite.collide_mask(self, obj) and obj.collide(self):
-                    self.collide(obj)
+                if pygame.sprite.collide_mask(self, obj):
                     if isinstance(obj, Actor):
                         overlap = self.mask.overlap_mask(obj.mask, (0, 0)).get_rect()
                     else:
@@ -228,29 +227,31 @@ class Actor(Object):
                                 self.get_hit(obj)
                             if overlap.width >= overlap.height and ((self.rect.y <= obj.rect.y and "U" in obj.hit_sides) or (self.rect.y >= obj.rect.y and "D" in obj.hit_sides)):
                                 self.get_hit(obj)
-                    if overlap.width <= overlap.height and (self.x_vel == 0 or self.direction == (MovementDirection.RIGHT if self.x_vel >= 0 else MovementDirection.LEFT)):
-                        if self.can_move_blocks and isinstance(obj, MovableBlock) and obj.should_move_horiz and self.direction == (MovementDirection.RIGHT if obj.rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT):
-                            obj.push_x = self.x_vel * self.size
-                        if self.x_vel <= 0 and self.rect.centerx > obj.rect.centerx:
-                            self.rect.left = obj.rect.right - (self.rect.width // 5)
-                            self.x_vel = 0.0
-                        elif self.x_vel >= 0 and self.rect.centerx <= obj.rect.centerx:
-                            self.rect.right = obj.rect.left + (self.rect.width // 5)
-                            self.x_vel = 0.0
-                        collided = True
+                    if obj.collide(self):
+                        self.collide(obj)
+                        if overlap.width <= overlap.height and (self.x_vel == 0 or self.direction == (MovementDirection.RIGHT if self.x_vel >= 0 else MovementDirection.LEFT)):
+                            if self.can_move_blocks and isinstance(obj, MovableBlock) and obj.should_move_horiz and self.direction == (MovementDirection.RIGHT if obj.rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT):
+                                obj.push_x = self.x_vel * self.size
+                            if self.x_vel <= 0 and self.rect.centerx > obj.rect.centerx:
+                                self.rect.left = obj.rect.right - (self.rect.width // 5)
+                                self.x_vel = 0.0
+                            elif self.x_vel >= 0 and self.rect.centerx <= obj.rect.centerx:
+                                self.rect.right = obj.rect.left + (self.rect.width // 5)
+                                self.x_vel = 0.0
+                            collided = True
 
-                    if overlap.width >= overlap.height:
-                        if self.y_vel >= 0 and not obj.is_stacked and self.rect.bottom == overlap.bottom:
-                            self.rect.bottom = obj.rect.top
-                            self.land()
-                        elif self.y_vel < 0 and self.rect.top == overlap.top:
-                            self.rect.top = obj.rect.bottom
-                            self.hit_head()
+                        if overlap.width >= overlap.height:
+                            if self.y_vel >= 0 and not obj.is_stacked and self.rect.bottom == overlap.bottom:
+                                self.rect.bottom = obj.rect.top
+                                self.land()
+                            elif self.y_vel < 0 and self.rect.top == overlap.top:
+                                self.rect.top = obj.rect.bottom
+                                self.hit_head()
 
-                    if collided and self.should_move_vert and not self.is_wall_jumping and self.direction == (MovementDirection.RIGHT if overlap.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT):
-                        self.y_vel = min(self.y_vel, 0.0)
-                        self.jump_count = 0
-                        self.is_wall_jumping = True
+                        if collided and self.should_move_vert and not self.is_wall_jumping and self.direction == (MovementDirection.RIGHT if overlap.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT):
+                            self.y_vel = min(self.y_vel, 0.0)
+                            self.jump_count = 0
+                            self.is_wall_jumping = True
 
             elif obj.rect.top <= self.rect.bottom <= obj.rect.bottom and self.rect.left + (self.rect.width // 4) <= obj.rect.right and self.rect.right - (self.rect.width // 4) >= obj.rect.left:
                 if isinstance(obj, MovingBlock) or isinstance(obj, MovableBlock):

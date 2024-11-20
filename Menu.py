@@ -2,7 +2,7 @@ import math
 import time
 import pygame
 from enum import Enum
-from Helpers import load_images, glitch, DifficultyScale
+from Helpers import load_images, glitch, DifficultyScale, validate_file_list
 
 
 class ButtonType(Enum):
@@ -11,7 +11,7 @@ class ButtonType(Enum):
 
 
 class Menu():
-    def __init__(self, win, header, button_labels, should_glitch=True):
+    def __init__(self, win, header, button_labels, music=None, should_glitch=True):
         self.clear = None
         button_assets = load_images("Menu", "Buttons")
         self.notch_val = []
@@ -20,9 +20,17 @@ class Menu():
         self.screen = pygame.Surface((min(2 * win.get_width() // 3, max(self.buttons[0][0].width, self.header.get_width())), (self.buttons[0][0].height * len(self.buttons)) + self.header.get_height() + 10), pygame.SRCALPHA)
         self.screen.fill((0, 0, 0, 128))
         self.screen.blit(self.header, ((self.screen.get_width() - self.header.get_width()) // 2, 5))
+        self.music = (None if music is None else validate_file_list("Music", music, "mp3"))
+        self.music_index = 0
         self.should_glitch = should_glitch
         self.glitch_timer = 0
         self.glitches = None
+
+    def cycle_music(self):
+        if self.music is not None:
+            self.music_index += 1
+            if self.music_index >= len(self.music):
+                self.music_index = 0
 
     def make_buttons(self, labels, button_normal, button_mouseover):
         buttons = []
@@ -53,6 +61,18 @@ class Menu():
             self.display(win)
             pygame.display.update()
             time.sleep(0.01)
+
+    def fade_music(self):
+        if self.music is not None:
+            if pygame.mixer.music.get_busy():
+                pygame.mixer.music.fadeout(1000)
+                pygame.mixer.music.unload()
+            else:
+                pygame.mixer.music.load(self.music[self.music_index])
+                pygame.mixer.music.set_endevent(pygame.USEREVENT)
+                pygame.mixer.music.play(fade_ms=2000)
+                self.cycle_music()
+                pygame.mixer.music.queue(self.music[self.music_index])
 
     def fade_out(self, win):
         if self.clear is None:
@@ -171,7 +191,7 @@ class Menu():
 
 
 class Selector(Menu):
-    def __init__(self, win, header, note, images, values, index=0, should_glitch=True, accept_only=False):
+    def __init__(self, win, header, note, images, values, index=0, music=None, should_glitch=True, accept_only=False):
         self.clear = None
         self.notch_val = [None, None, None]
         self.arrow_asset = pygame.transform.smoothscale_by(load_images("Menu", "Arrows")["ARROW_WHITE"], 0.5)
@@ -197,6 +217,8 @@ class Selector(Menu):
         self.screen.blit(self.header, ((self.screen.get_width() - self.header.get_width()) // 2, 5))
         for i in range(len(self.note)):
             self.screen.blit(self.note[i], ((self.screen.get_width() - self.note[i].get_width()) // 2, self.header.get_height() + image_height + (i * self.note[i].get_height()) + 10))
+        self.music = (None if music is None else validate_file_list("Music", music, "mp3"))
+        self.music_index = 0
         self.should_glitch = should_glitch
         self.glitch_timer = 0
         self.glitches = None
