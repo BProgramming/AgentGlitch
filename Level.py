@@ -1,6 +1,7 @@
 from os.path import join
 import pygame
 from Block import Block, BreakableBlock, MovingBlock, MovableBlock, Hazard, MovingHazard, Door, FallingHazard
+from Boss import Boss
 from Player import Player
 from Enemy import Enemy
 from Trigger import Trigger, TriggerType
@@ -25,15 +26,8 @@ class Level:
         self.start_message = (None if meta_dict[name].get("start_message") is None else meta_dict[name]["start_message"])
         self.end_message = (None if meta_dict[name].get("end_message") is None else meta_dict[name]["end_message"])
         self.music = (None if meta_dict[name].get("music") is None else validate_file_list("Music", list(meta_dict[name]["music"].split(' ')), "mp3"))
-        self.music_index = 0
         self.level_bounds, self.player, self.triggers, self.blocks, self.dynamic_blocks, self.doors, self.static_blocks, self.hazards, self.enemies = build_level(self, levels[self.name], sprite_master, image_master, objects_dict, player_audios, enemy_audios, win, controller, None if meta_dict[name].get("player_sprite") is None or meta_dict[name]["player_sprite"].upper() == "NONE" else meta_dict[name]["player_sprite"], self.block_size)
         self.weather = (None if meta_dict[name].get("weather") is None else self.get_weather(meta_dict[name]["weather"].upper()))
-
-    def cycle_music(self):
-        if self.music is not None:
-            self.music_index += 1
-            if self.music_index >= len(self.music):
-                self.music_index = 0
 
     def get_player(self):
         return self.player
@@ -199,6 +193,12 @@ def build_level(level, layout, sprite_master, image_master, objects_dict, player
                         else:
                             path = load_path(list(map(int, data["path"].split(' '))), i, j, block_size)
                         enemies.append(Enemy(level, j * block_size, i * block_size, sprite_master, enemy_audios, controller.difficulty, block_size, path=path, hp=data["hp"], can_shoot=bool(data["can_shoot"].upper() == "TRUE"), sprite=data["sprite"], proj_sprite=(None if data["proj_sprite"].upper() == "NONE" else data["proj_sprite"])))
+                    case "BOSS":
+                        if data["path"].upper() == "NONE":
+                            path = None
+                        else:
+                            path = load_path(list(map(int, data["path"].split(' '))), i, j, block_size)
+                        enemies.append(Boss(level, j * block_size, i * block_size, sprite_master, enemy_audios, controller.difficulty, block_size, music=(None if data.get("music") is None or data["music"].upper() == "NONE" else data["music"]), path=path, hp=data["hp"], can_shoot=bool(data["can_shoot"].upper() == "TRUE"), sprite=data["sprite"], proj_sprite=(None if data["proj_sprite"].upper() == "NONE" else data["proj_sprite"])))
                     case "TRIGGER":
                         triggers.append(Trigger(level, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, win, controller, objects_dict, sprite_master, enemy_audios, image_master, block_size, fire_once=bool(data["fire_once"].upper() == "TRUE"), type=TriggerType(data["type"]), input=data["input"], name=element))
                     case _:

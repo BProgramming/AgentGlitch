@@ -1,5 +1,4 @@
 import math
-
 import pygame
 from Actor import Actor, MovementState
 from Helpers import DifficultyScale, MovementDirection
@@ -73,7 +72,7 @@ class Enemy(Actor):
                     self.spot_player()
                     if math.dist(self.level.get_player().rect.center, self.rect.center) >= self.spot_range // 3:
                         self.is_attacking = True
-                    else:
+                    elif not self.is_animated_attack:
                         self.is_attacking = False
             else:
                 if self.spot_player() or self.cooldowns["spot_player"] > 0:
@@ -83,7 +82,8 @@ class Enemy(Actor):
                             if abs(self.rect.x - self.level.get_player().rect.x) > 5:
                                 self.direction = (MovementDirection.RIGHT if self.rect.centerx - self.level.get_player().rect.centerx >= 0 else MovementDirection.LEFT)
                                 self.facing = self.direction.swap()
-                            self.is_attacking = False
+                            if not self.is_animated_attack:
+                                self.is_attacking = False
                             self.x_vel = self.direction * vel
                             self.should_move_horiz = self.find_floor(self.x_vel * dtime)
                         else:
@@ -101,11 +101,13 @@ class Enemy(Actor):
                         else:
                             if abs(self.rect.x - self.level.get_player().rect.x) > 5:
                                 self.direction = self.facing = (MovementDirection.RIGHT if self.level.get_player().rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT)
-                            self.is_attacking = False
+                            if not self.is_animated_attack:
+                                self.is_attacking = False
                             self.x_vel = self.direction * min(vel, dist / dtime)
                             self.should_move_horiz = self.find_floor(self.x_vel * dtime)
                 else:
-                    self.is_attacking = False
+                    if self.is_attacking and not self.is_animated_attack:
+                        self.is_attacking = False
                     target_x = self.patrol_path[self.patrol_path_index][0] - self.rect.x
                     if abs(target_x) > 5:
                         self.direction = self.facing = (MovementDirection.RIGHT if target_x >= 0 else MovementDirection.LEFT)

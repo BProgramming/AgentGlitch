@@ -2,6 +2,7 @@ import time
 import pygame
 from enum import Enum
 from os.path import join, isfile
+from Boss import Boss
 from Helpers import display_text, load_text_from_file, load_path
 from Object import Object
 from Block import Block, BreakableBlock, MovableBlock, Hazard, MovingBlock, MovingHazard, Door, FallingHazard
@@ -93,6 +94,12 @@ class Trigger(Object):
                         else:
                             path = load_path(list(map(int, data["path"].split(' '))), i, j, block_size)
                         return Enemy(self.level, j * block_size, i * block_size, sprite_master, enemy_audios, self.controller.difficulty, path=path, hp=data["hp"], can_shoot=bool(data["can_shoot"].upper() == "TRUE"), sprite=data["sprite"], proj_sprite=(None if data["proj_sprite"].upper() == "NONE" else data["proj_sprite"]))
+                    case "BOSS":
+                        if data["path"].upper() == "NONE":
+                            path = None
+                        else:
+                            path = load_path(list(map(int, data["path"].split(' '))), i, j, block_size)
+                        return Boss(self.level, j * block_size, i * block_size, sprite_master, enemy_audios, self.controller.difficulty, music=(None if data.get("music") is None or data["music"].upper() == "NONE" else data["music"]), path=path, hp=data["hp"], can_shoot=bool(data["can_shoot"].upper() == "TRUE"), sprite=data["sprite"], proj_sprite=( None if data["proj_sprite"].upper() == "NONE" else data["proj_sprite"]))
                     case "TRIGGER":
                         return Trigger(self.level, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, self.win, self.controller, objects_dict, sprite_master, enemy_audios, image_master, block_size, fire_once=bool(data["fire_once"].upper() == "TRUE"), type=TriggerType(data["type"]), input=data["input"], name=element)
                     case _:

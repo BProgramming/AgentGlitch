@@ -273,7 +273,7 @@ class Actor(Object):
             if self.state != MovementState.RESIZE:
                 self.state = MovementState.RESIZE
                 self.animation_count = 0
-        # this will be used for bosses, so they can have complex attack animations
+        # this is for boss enemies with complex attack animations
         elif self.is_animated_attack and self.is_attacking:
             if self.state not in [MovementState.WIND_UP, MovementState.ATTACK_ANIM, MovementState.WIND_DOWN]:
                 self.state = MovementState.WIND_UP

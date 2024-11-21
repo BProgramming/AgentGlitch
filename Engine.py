@@ -6,6 +6,7 @@ import sys
 import pickle
 import traceback
 from os.path import join, isfile
+from Boss import Boss
 from Actor import Actor
 from Block import BreakableBlock
 from Controls import Controller
@@ -335,12 +336,11 @@ def main(win):
             level = controller.level = Level(cur_level, levels, meta_dict, objects_dict, sprite_master, image_master, load_audios("PlayerAudio"), load_audios("EnemyAudio"), win, controller)
 
             if level.music is not None:
-                pygame.mixer.music.load(level.music[level.music_index])
+                controller.queue_track_list()
                 pygame.mixer.music.set_volume(controller.master_volume["background"])
                 pygame.mixer.music.set_endevent(pygame.USEREVENT)
                 pygame.mixer.music.play(fade_ms=2000)
-                level.cycle_music()
-                pygame.mixer.music.queue(level.music[level.music_index])
+                controller.cycle_music()
 
             if level.start_screen is not None:
                 if isfile(join("Assets", "Screens", level.start_screen)):
@@ -416,13 +416,9 @@ def main(win):
                     elif event.type == pygame.JOYBUTTONUP:
                         level.get_player().stop()
                     elif event.type == pygame.USEREVENT:
-                        if "LOOP" in level.music[level.music_index].upper():
-                            pygame.mixer.music.play(-1)
-                            pygame.mixer.music.set_endevent()
-                        else:
-                            pygame.mixer.music.play()
-                            level.cycle_music()
-                            pygame.mixer.music.queue(level.music[level.music_index])
+                        pygame.mixer.music.play()
+                        if "LOOP" not in controller.music[controller.music_index].upper():
+                            controller.cycle_music()
                 controller.handle_continuous_input()
                 if (controller.goto_load and isfile("GameData/save.p")) or controller.goto_main or controller.goto_restart:
                     break
@@ -443,7 +439,10 @@ def main(win):
                     if (not isinstance(obj, Actor) and type(obj).__name__.upper() != "BLOCK") or (isinstance(obj, Actor) and math.dist(obj.rect.topleft, level.get_player().rect.topleft) < win.get_width() * 1.5):
                         if hasattr(obj, "patrol") and callable(obj.patrol):
                             obj.patrol(dtime)
-                        obj.loop(FPS_TARGET, dtime)
+                        if isinstance(obj, Boss):
+                            obj.loop(FPS_TARGET, dtime, controller)
+                        else:
+                            obj.loop(FPS_TARGET, dtime)
 
                 level.purge()
 
@@ -458,7 +457,7 @@ def main(win):
 
                 offset_x, offset_y = get_offset(level, offset_x, offset_y, win.get_width(), win.get_height())
 
-            if level.music is not None:
+            if controller.music is not None:
                 pygame.mixer.music.fadeout(1000)
                 pygame.mixer.music.unload()
 

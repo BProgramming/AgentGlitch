@@ -53,6 +53,30 @@ class Controller:
         self.active_gamepad_layout = None
         self.keyboard_layout_picker = Selector(win, "KEYBOARD LAYOUT", ["This can be cycled with the F9 key."], load_images("Menu", "Keyboards").values(), list(self.KEYBOARD_LAYOUTS.keys()))
         self.gamepad_layout_picker = Selector(win, "CONTROLLER LAYOUT", ["This is detected when you connect a controller."], load_images("Menu", "Controllers").values(), list(self.GAMEPAD_LAYOUTS.keys()), accept_only=True)
+        self.music = None
+        self.music_index = 0
+
+    def queue_track_list(self, music=None):
+        if music is None:
+            self.music = self.level.music
+        else:
+            self.music = music
+        self.music_index = 0
+        if pygame.mixer.music.get_busy():
+            pygame.mixer.music.queue(self.music[self.music_index])
+        else:
+            pygame.mixer.music.load(self.music[self.music_index])
+
+    def cycle_music(self):
+        if self.music is not None:
+            self.music_index += 1
+            if self.music_index >= len(self.music):
+                self.queue_track_list()
+            else:
+                if pygame.mixer.music.get_busy():
+                    pygame.mixer.music.queue(self.music[self.music_index])
+                else:
+                    pygame.mixer.music.load(self.music[self.music_index])
 
     def set_difficulty(self):
         if self.level is not None:
