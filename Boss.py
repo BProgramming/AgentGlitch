@@ -19,26 +19,21 @@ class Boss(Enemy):
         self.is_animated_attack = True
         self.audio_trigger_frames.update({"WIND_UP": [0], "ATTACK_ANIM": [0], "WIND_DOWN": [0]})
 
-    async def queue_music(self, force_stop=False):
-        if self.music_is_playing and (force_stop or math.dist((self.level.get_player().rect.x, self.level.get_player().rect.y), (self.rect.x, self.rect.y)) >= 2 * self.spot_range):
+    async def queue_music(self):
+        if self.music_is_playing and (self.hp <= 0 or math.dist((self.level.get_player().rect.x, self.level.get_player().rect.y), (self.rect.x, self.rect.y)) >= 2 * self.spot_range):
             if pygame.mixer.music.get_busy():
                 pygame.mixer.music.fadeout(1000)
             self.controller.queue_track_list()
             self.music_is_playing = False
-        elif not self.music_is_playing and math.dist((self.level.get_player().rect.x, self.level.get_player().rect.y), (self.rect.x, self.rect.y)) <= self.spot_range:
+        elif not self.music_is_playing and self.hp > 0 and math.dist((self.level.get_player().rect.x, self.level.get_player().rect.y), (self.rect.x, self.rect.y)) <= self.spot_range:
             if pygame.mixer.music.get_busy():
                 pygame.mixer.music.fadeout(1000)
             self.controller.queue_track_list(music=self.music)
             self.music_is_playing = True
 
-    async def toggle_music(self, force_stop=False):
-        await self.queue_music(force_stop=force_stop)
+    async def toggle_music(self):
+        await self.queue_music()
         pygame.event.Event(pygame.USEREVENT)
-
-    def get_hit(self, obj, hit_cd=0, heal_delay=0):
-        super().get_hit(obj)
-        if self.hp <= 0:
-            asyncio.run(self.toggle_music(force_stop=True))
 
     def update_sprite(self, fps, delay=0):
         active_index = super().update_sprite(fps)
