@@ -6,7 +6,6 @@ import sys
 import pickle
 import traceback
 from os.path import join, isfile
-from Boss import Boss
 from Actor import Actor
 from Block import BreakableBlock
 from Controls import Controller
@@ -333,7 +332,9 @@ def main(win):
                 controller.level_selected = None
             controller.goto_load = False
 
-            level = controller.level = Level(cur_level, levels, meta_dict, objects_dict, sprite_master, image_master, load_audios("PlayerAudio"), load_audios("EnemyAudio"), win, controller)
+            player_audio = enemy_audio = load_audios("Actors")
+            block_audio = load_audios("Blocks")
+            level = controller.level = Level(cur_level, levels, meta_dict, objects_dict, sprite_master, image_master, player_audio, enemy_audio, block_audio, win, controller)
 
             if level.music is not None:
                 controller.queue_track_list()
@@ -387,8 +388,7 @@ def main(win):
             while True:
                 dtime = clock.tick(FPS_TARGET) - dtime_offset
                 level.time += dtime
-                #if dtime > 17:
-                #    print(dtime)
+                print(dtime)
                 if hud.save_icon_timer > 0:
                     hud.save_icon_timer -= dtime / 250
                 if glitch_timer > 0:
@@ -439,10 +439,7 @@ def main(win):
                     if (not isinstance(obj, Actor) and type(obj).__name__.upper() != "BLOCK") or (isinstance(obj, Actor) and math.dist(obj.rect.topleft, level.get_player().rect.topleft) < win.get_width() * 1.5):
                         if hasattr(obj, "patrol") and callable(obj.patrol):
                             obj.patrol(dtime)
-                        if isinstance(obj, Boss):
-                            obj.loop(FPS_TARGET, dtime, controller)
-                        else:
-                            obj.loop(FPS_TARGET, dtime)
+                        obj.loop(FPS_TARGET, dtime)
 
                 level.purge()
 

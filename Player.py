@@ -1,3 +1,4 @@
+import random
 import pygame
 from Actor import Actor, MovementState
 from Object import Object
@@ -19,8 +20,8 @@ class Player(Actor):
     BULLET_TIME_COOLDOWN = 3
     BULLET_TIME_ACTIVE = 2
 
-    def __init__(self, x, y, level, sprite_master, audios, difficulty, block_size, can_shoot=False, sprite=None, retro_sprite=None, proj_sprite=None):
-        super().__init__(x, y, level, sprite_master, audios, difficulty, block_size, can_shoot=can_shoot, sprite=sprite, proj_sprite=proj_sprite, name="Player")
+    def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, can_shoot=False, sprite=None, retro_sprite=None, proj_sprite=None):
+        super().__init__(level, controller, x, y, sprite_master, audios, difficulty, block_size, can_shoot=can_shoot, sprite=sprite, proj_sprite=proj_sprite, name="Player")
         self.sprites_set = (self.sprites.copy(), load_sprite_sheets("Sprites", retro_sprite, sprite_master, direction=True, grayscale=True) if retro_sprite is not None else None)
         self.is_retro = False
         if self.level.grayscale:
@@ -112,7 +113,7 @@ class Player(Actor):
     def teleport(self, vel=(VELOCITY_TARGET * MULTIPLIER_TELEPORT), delay=TELEPORT_DELAY, cd=TELEPORT_COOLDOWN):
         if self.can_teleport and self.cooldowns["teleport"] <= 0:
             for i in range(int(vel) + 1, 0, -1):
-                cast = Object(self.level, self.rect.x + (self.direction * i), self.rect.y, self.rect.width, self.rect.height - 1)
+                cast = Object(self.level, self.controller, self.rect.x + (self.direction * i), self.rect.y, self.rect.width, self.rect.height - 1)
                 collision = False
                 for obj in self.level.get_objects_in_range((cast.rect.x, cast.rect.y)):
                     if pygame.sprite.collide_rect(cast, obj):
@@ -132,8 +133,10 @@ class Player(Actor):
                     obj.get_hit(self)
                     if obj.patrol_path is not None:
                         obj.rect.x -= self.direction * push
+                    self.play_melee_attack_audio()
                 elif isinstance(obj, BreakableBlock) and pygame.sprite.collide_rect(self, obj):
                     obj.get_hit(self)
+                    self.play_melee_attack_audio()
 
     def bullet_time(self, active_time=BULLET_TIME_ACTIVE, cd=BULLET_TIME_COOLDOWN):
         if self.can_bullet_time:
@@ -145,6 +148,11 @@ class Player(Actor):
                 self.is_slow_time = True
                 self.cooldowns["bullet_time_active"] = active_time
                 self.cooldowns["bullet_time"] = cd + active_time
+                if self.audios.get("BULLET_TIME") is not None:
+                    active_audio_channel = pygame.mixer.find_channel()
+                    if active_audio_channel is not None:
+                        active_audio_channel.play(self.audios["BULLET_TIME"][random.randrange(len(self.audios["BULLET_TIME"]))])
+                        active_audio_channel.set_volume(self.controller.master_volume["player"])
 
     def get_triggers(self):
         fired_triggers = 0

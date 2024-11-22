@@ -7,8 +7,8 @@ class Projectile(Object):
     MAX_SPEED = 100
     STOCK_PROJECTILE_SIZE = 16
 
-    def __init__(self, level, x, y, target, max_dist, attack_damage, difficulty, speed=MAX_SPEED, stock_size=STOCK_PROJECTILE_SIZE, sprite=None, name=None):
-        super().__init__(level, x, y, sprite.get_width(), sprite.get_height(), name=name)
+    def __init__(self, level, controller, x, y, target, max_dist, attack_damage, difficulty, speed=MAX_SPEED, stock_size=STOCK_PROJECTILE_SIZE, sprite=None, name=None):
+        super().__init__(level, controller, x, y, sprite.get_width(), sprite.get_height(), name=name)
         self.speed = (0.75 * speed * (stock_size / sprite.get_width())) + (0.25 * speed * difficulty * (stock_size / sprite.get_width()))
         self.max_dist = max_dist
         if target is None:

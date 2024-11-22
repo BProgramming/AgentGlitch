@@ -2,9 +2,10 @@ import pygame
 
 
 class Object(pygame.sprite.Sprite):
-    def __init__(self, level, x, y, width, height, name="Object"):
+    def __init__(self, level, controller, x, y, width, height, name="Object"):
         super().__init__()
         self.level = level
+        self.controller = controller
         self.sprite = pygame.Surface((width, height), pygame.SRCALPHA)
         self.mask = pygame.mask.from_surface(self.sprite)
         self.rect = pygame.Rect(x, y, width, height)

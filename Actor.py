@@ -49,8 +49,8 @@ class Actor(Object):
     RESIZE_SCALE_LIMIT = 1.5
     HEAL_DELAY = 5
 
-    def __init__(self, level, x, y, sprite_master, audios, difficulty, block_size, can_shoot=False, can_resize=False, width=SIZE, height=SIZE, attack_damage=ATTACK_DAMAGE, sprite=None, proj_sprite=None, name=None):
-        super().__init__(level, x, y, width, height, name)
+    def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, can_shoot=False, can_resize=False, width=SIZE, height=SIZE, attack_damage=ATTACK_DAMAGE, sprite=None, proj_sprite=None, name=None):
+        super().__init__(level, controller, x, y, width, height, name)
         self.x_vel = self.y_vel = 0.0
         self.push_x = self.push_y = 0.0
         self.should_move_horiz = False
@@ -80,7 +80,7 @@ class Actor(Object):
         self.update_geo()
         self.rect.x += (block_size - self.rect.width) // 2
         self.rect.y += (block_size - self.rect.height)
-        self.audio_trigger_frames = {"TELEPORT": [0], "RUN": [4, 10], "JUMP": [0], "DOUBLE_JUMP": [0], "CROUCH": [0], "HIT": [0], "RESIZE": [0], "WALL_JUMP": [0]}
+        self.audio_trigger_frames = {"TELEPORT": [0], "RUN": [4, 10], "JUMP": [0], "DOUBLE_JUMP": [0], "CROUCH": [0], "HIT": [0], "RESIZE": [0]}
         self.active_audio = None
         self.active_audio_time = 0
         self.active_audio_channel = None
@@ -113,7 +113,7 @@ class Actor(Object):
         self.load_attribute(obj, "can_resize")
         self.load_attribute(obj, "max_jumps")
         for proj in obj["projectiles"]:
-            self.active_projectiles.append(Projectile(self.level, self.rect.centerx + (self.rect.width * self.facing // 3), self.rect.centery, None, 0, self.attack_damage, self.difficulty, sprite=self.proj_sprite, name=(self.name + "'s projectile #" + str(len(self.active_projectiles) + 1))))
+            self.active_projectiles.append(Projectile(self.level, self.controller, self.rect.centerx + (self.rect.width * self.facing // 3), self.rect.centery, None, 0, self.attack_damage, self.difficulty, sprite=self.proj_sprite, name=(self.name + "'s projectile #" + str(len(self.active_projectiles) + 1))))
             self.active_projectiles[-1].load(list(proj.values())[0])
         self.update_sprite(1)
         self.update_geo()
@@ -196,12 +196,45 @@ class Actor(Object):
     def hit_head(self):
         self.y_vel *= -0.5
 
+    def play_melee_attack_audio(self):
+        if self.is_attacking and not self.can_shoot:
+            attack_type = "ATTACK_MELEE"
+            if attack_type in self.audios:
+                active_audio_channel = pygame.mixer.find_channel()
+                if active_audio_channel is not None:
+                    active_audio_channel.play(self.audios[attack_type][random.randrange(len(self.audios[attack_type]))])
+                    window_width = self.controller.win.get_width()
+                    window_height = self.controller.win.get_height()
+                    adj_x_audio = self.level.get_player().rect.x - self.rect.x
+                    adj_y_audio = self.level.get_player().rect.y - self.rect.y
+                    if self == self.level.get_player():
+                        left_vol = right_vol = 1
+                        volume = self.controller.master_volume["player"]
+                    elif (-0.5 * window_width) <= adj_x_audio <= (1.5 * window_width) and (-0.5 * window_height) <= adj_y_audio <= (1.5 * window_height):
+                        height_vol = max(1 - (abs(adj_y_audio - (window_height // 2)) / window_height), 0)
+                        left_vol = max(1 - (abs(adj_x_audio - (window_width // 2)) / window_width), 0) * height_vol
+                        right_vol = max(1 - (abs(adj_x_audio + (window_width // 2)) / window_width), 0) * height_vol
+                        volume = self.controller.master_volume["non-player"]
+                    else:
+                        left_vol = right_vol = volume = 0
+                    active_audio_channel.set_volume(left_vol * volume, right_vol * volume)
+
     def shoot_at_target(self, target, max_dist=MAX_SHOOT_DISTANCE, proj_cd=LAUNCH_PROJECTILE_COOLDOWN):
         if self.cooldowns["launch_projectile"] <= 0:
             self.is_attacking = True
-            proj = Projectile(self.level, self.rect.centerx + (self.rect.width * self.facing // 3), self.rect.centery, (target[0], self.rect.centery), max_dist, self.attack_damage, self.difficulty, sprite=self.proj_sprite, name=(self.name + "'s projectile #" + str(len(self.active_projectiles) + 1)))
+            proj = Projectile(self.level, self.controller, self.rect.centerx + (self.rect.width * self.facing // 3), self.rect.centery, (target[0], self.rect.centery), max_dist, self.attack_damage, self.difficulty, sprite=self.proj_sprite, name=(self.name + "'s projectile #" + str(len(self.active_projectiles) + 1)))
             self.active_projectiles.append(proj)
             self.cooldowns["launch_projectile"] = proj_cd
+            attack_type = "ATTACK_RANGE"
+            if attack_type in self.audios:
+                active_audio_channel = pygame.mixer.find_channel()
+                if active_audio_channel is not None:
+                    active_audio_channel.play(self.audios[attack_type][random.randrange(len(self.audios[attack_type]))])
+                    if self == self.level.get_player():
+                        volume = self.controller.master_volume["player"]
+                    else:
+                        volume = self.controller.master_volume["non-player"]
+                    active_audio_channel.set_volume(volume)
 
     def get_hit(self, obj, hit_cd=GET_HIT_COOLDOWN, heal_delay=HEAL_DELAY):
         self.cooldowns["get_hit"] = hit_cd
@@ -386,6 +419,8 @@ class Actor(Object):
                     self.active_audio_channel.stop()
                     self.active_audio_channel = None
 
+        return active_index
+
     def update_geo(self):
         self.rect = self.sprite.get_rect(topleft=(self.rect.x, self.rect.y))
         self.mask = pygame.mask.from_surface(self.sprite)
@@ -405,7 +440,7 @@ class Actor(Object):
                 else:
                     proj.loop(fps, dtime)
 
-        if bool(not hasattr(self, "patrol_path") or self.patrol_path is not None):
+        if (not hasattr(self, "patrol_path") or self.patrol_path is not None) and self.state != MovementState.WIND_UP and self.state != MovementState.WIND_DOWN:
             self.should_move_vert = True
             self.push_x *= 0.9
             if abs(self.push_x) < 0.01:
@@ -476,7 +511,7 @@ class Actor(Object):
                     self.active_audio_channel.play(self.active_audio)
             if self.active_audio_channel is not None and self.active_audio_channel.get_busy():
                 if self == self.level.get_player():
-                    right_vol = left_vol = 1
+                    left_vol = right_vol = 1
                     volume = master_volume["player"]
                 elif (-0.5 * window_width) <= adj_x_audio <= (1.5 * window_width) and (-0.5 * window_height) <= adj_y_audio <= (1.5 * window_height):
                     height_vol = max(1 - (abs(adj_y_audio - (window_height // 2)) / window_height), 0)
@@ -489,24 +524,3 @@ class Actor(Object):
             else:
                 self.active_audio = None
                 self.active_audio_channel = None
-
-        if "ATTACK" in str(self.state):
-            if self.can_shoot:
-                attack_type = "ATTACK_RANGE"
-            else:
-                attack_type = "ATTACK_MELEE"
-            if attack_type in self.audios:
-                attack_audio_channel = pygame.mixer.find_channel()
-                if attack_audio_channel is not None:
-                    attack_audio_channel.play(self.audios[attack_type][random.randrange(len(self.audios[attack_type]))])
-                    if self == self.level.get_player():
-                        right_vol = left_vol = 1
-                        volume = master_volume["player"]
-                    elif (-0.5 * window_width) <= adj_x_audio <= (1.5 * window_width) and (-0.5 * window_height) <= adj_y_audio <= (1.5 * window_height):
-                        height_vol = max(1 - (abs(adj_y_audio - (window_height // 2)) / window_height), 0)
-                        left_vol = max(1 - (abs(adj_x_audio - (window_width // 2)) / window_width), 0) * height_vol
-                        right_vol = max(1 - (abs(adj_x_audio + (window_width // 2)) / window_width), 0) * height_vol
-                        volume = master_volume["non-player"]
-                    else:
-                        left_vol = right_vol = volume = 0
-                    attack_audio_channel.set_volume(left_vol * volume, right_vol * volume)

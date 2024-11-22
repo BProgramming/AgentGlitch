@@ -1,4 +1,5 @@
 import math
+import random
 import pygame
 from os.path import join, isfile
 from Object import Object
@@ -6,11 +7,12 @@ from Helpers import handle_exception, MovementDirection, load_sprite_sheets
 
 
 class Block(Object):
-    def __init__(self, level, x, y, width, height, image_master, is_stacked, coord_x=0, coord_y=0, name="Block"):
-        super().__init__(level, x, y, width, height, name)
+    def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=0, coord_y=0, name="Block"):
+        super().__init__(level, controller, x, y, width, height, name)
         self.sprite.blit(load_image(join("Assets", "Terrain", "Terrain.png"), width, height, image_master, coord_x, coord_y, grayscale=self.level.grayscale), (0, 0))
         self.mask = pygame.mask.from_surface(self.sprite)
         self.is_stacked = is_stacked
+        self.audios = audios
 
     def save(self):
         if self.hp != 0:
@@ -18,11 +20,29 @@ class Block(Object):
         else:
             return None
 
+    def play_sound(self, name):
+        if self.audios.get(name.upper()) is not None:
+            active_audio_channel = pygame.mixer.find_channel()
+            if active_audio_channel is not None:
+                active_audio_channel.play(self.audios[name.upper()][random.randrange(len(self.audios[name.upper()]))])
+                window_width = self.controller.win.get_width()
+                window_height = self.controller.win.get_height()
+                adj_x_audio = self.level.get_player().rect.x - self.rect.x
+                adj_y_audio = self.level.get_player().rect.y - self.rect.y
+                if (-0.5 * window_width) <= adj_x_audio <= (1.5 * window_width) and (-0.5 * window_height) <= adj_y_audio <= (1.5 * window_height):
+                    height_vol = max(1 - (abs(adj_y_audio - (window_height // 2)) / window_height), 0)
+                    left_vol = max(1 - (abs(adj_x_audio - (window_width // 2)) / window_width), 0) * height_vol
+                    right_vol = max(1 - (abs(adj_x_audio + (window_width // 2)) / window_width), 0) * height_vol
+                    volume = self.controller.master_volume["non-player"]
+                else:
+                    left_vol = right_vol = volume = 0
+                active_audio_channel.set_volume(left_vol * volume, right_vol * volume)
+
 class BreakableBlock(Block):
     GET_HIT_COOLDOWN = 1
 
-    def __init__(self, level, x, y, width, height, image_master, is_stacked, coord_x=0, coord_y=0, coord_x2=0, coord_y2=0, name="BreakableBlock"):
-        super().__init__(level, x, y, width, height, image_master, is_stacked, coord_x=coord_x, coord_y=coord_y, name=name)
+    def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=0, coord_y=0, coord_x2=0, coord_y2=0, name="BreakableBlock"):
+        super().__init__(level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=coord_x, coord_y=coord_y, name=name)
         self.sprite_damaged = load_image(join("Assets", "Terrain", "Terrain.png"), width, height, image_master, coord_x2, coord_y2, grayscale=self.level.grayscale)
         self.cooldowns = {"get_hit": 0}
 
@@ -35,14 +55,15 @@ class BreakableBlock(Block):
                 self.cooldowns["get_hit"] += cd
             else:
                 self.hp = 0
+            self.play_sound("smash_box")
 
 
 class MovingBlock(Block):
     VELOCITY_TARGET = 0.5
     PATH_STOP_TIME = 0.5
 
-    def __init__(self, level, x, y, width, height, image_master, is_stacked, speed=VELOCITY_TARGET, path=None, coord_x=0, coord_y=0, name="MovingBlock"):
-        super().__init__(level, x, y, width, height, image_master, is_stacked, coord_x=coord_x, coord_y=coord_y, name=name)
+    def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, speed=VELOCITY_TARGET, path=None, coord_x=0, coord_y=0, name="MovingBlock"):
+        super().__init__(level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=coord_x, coord_y=coord_y, name=name)
         self.speed = speed
         self.patrol_path = path
         self.patrol_path_index = 0
@@ -140,8 +161,8 @@ class MovingBlock(Block):
 class Door(MovingBlock):
     VELOCITY_TARGET = 0.5
 
-    def __init__(self, level, x, y, width, height, image_master, is_stacked, speed=VELOCITY_TARGET, direction=-1, is_locked=False, coord_x=0, coord_y=0, name="Door"):
-        super().__init__(level, x, y, width, height, image_master, is_stacked, speed=speed, coord_x=coord_x, coord_y=coord_y, name=name)
+    def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, speed=VELOCITY_TARGET, direction=-1, is_locked=False, coord_x=0, coord_y=0, name="Door"):
+        super().__init__(level, controller, x, y, width, height, image_master, audios, is_stacked, speed=speed, coord_x=coord_x, coord_y=coord_y, name=name)
         self.patrol_path_open = [(x, y + (height * direction))]
         self.patrol_path_closed = [(x, y)]
         self.is_locked = is_locked
@@ -152,10 +173,14 @@ class Door(MovingBlock):
         if not self.is_locked:
             self.patrol_path = self.patrol_path_open
             self.is_open = True
+            self.play_sound("door")
+        else:
+            self.play_sound("door_locked")
 
     def close(self):
         self.patrol_path = self.patrol_path_closed
         self.is_open = False
+        self.play_sound("door")
 
     def toggle_open(self):
         if self.is_open:
@@ -188,8 +213,8 @@ class Door(MovingBlock):
 class MovableBlock(Block):
     GRAVITY = 0.04
 
-    def __init__(self, level, x, y, width, height, image_master, is_stacked, coord_x=0, coord_y=0, name="MovableBlock"):
-        super().__init__(level, x, y, width, height, image_master, is_stacked, coord_x=coord_x, coord_y=coord_y, name=name)
+    def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=0, coord_y=0, name="MovableBlock"):
+        super().__init__(level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=coord_x, coord_y=coord_y, name=name)
         self.start_x, self.start_y = x, y
         self.x_vel = self.y_vel = self.push_x = self.push_y = 0.0
         self.should_move_horiz = self.should_move_vert = True
@@ -207,7 +232,6 @@ class MovableBlock(Block):
             if obj != self and pygame.sprite.collide_rect(self, obj):
                 if pygame.sprite.collide_mask(self, obj) and obj.collide(self):
                     self.collide(obj)
-
                     overlap = self.rect.clip(obj.rect)
                     if overlap.width < overlap.height:
                         if self.x_vel <= 0 and self.rect.centerx > obj.rect.centerx:
@@ -272,8 +296,8 @@ class Hazard(Block):
     ATTACK_DAMAGE = 99
     ANIMATION_DELAY = 0.3
 
-    def __init__(self, level, x, y, width, height, image_master, sprite_master, difficulty, hit_sides="UDLR", sprite=None, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="Hazard"):
-        super().__init__(level, x, (y + width - height), width, height, image_master, False, coord_x=coord_x, coord_y=coord_y, name=name)
+    def __init__(self, level, controller, x, y, width, height, image_master, sprite_master, audios, difficulty, hit_sides="UDLR", sprite=None, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="Hazard"):
+        super().__init__(level, controller, x, (y + width - height), width, height, image_master, audios, False, coord_x=coord_x, coord_y=coord_y, name=name)
         self.attack_damage = attack_damage * difficulty
         self.is_attacking = True
         self.hit_sides = hit_sides.upper()
@@ -281,14 +305,10 @@ class Hazard(Block):
             self.sprites = load_sprite_sheets("Sprites", sprite, sprite_master, direction=False, grayscale=self.level.grayscale)["ANIMATE"]
         else:
             self.sprites = [self.sprite]
-        self.rects = []
-        self.masks = []
-        for s in self.sprites:
-            self.rects.append(self.sprite.get_rect(topleft=(self.rect.x, self.rect.y)))
-            self.masks.append(pygame.mask.from_surface(s))
         self.animation_count = 0
         self.sprite = None
         self.update_sprite(1)
+        self.update_geo()
 
     def set_difficulty(self, scale):
         self.difficulty = scale
@@ -300,8 +320,11 @@ class Hazard(Block):
             active_index = 0
             self.animation_count = 0
         self.sprite = self.sprites[active_index]
-        self.rect = self.rects[active_index]
-        self.mask = self.masks[active_index]
+        return active_index
+
+    def update_geo(self):
+        self.rect = self.sprite.get_rect(topleft=(self.rect.x, self.rect.y))
+        self.mask = pygame.mask.from_surface(self.sprite)
 
     def loop(self, fps, dtime):
         self.animation_count += dtime
@@ -312,14 +335,15 @@ class Hazard(Block):
         adj_y = self.rect.y - offset_y
         if -self.rect.width < adj_x <= win.get_width() and -self.rect.height < adj_y <= win.get_height():
             self.update_sprite(fps)
+            self.update_geo()
             win.blit(self.sprite, (adj_x, adj_y))
 
 class MovingHazard(MovingBlock, Hazard):
     VELOCITY_TARGET = 0.5
     ATTACK_DAMAGE = 99
 
-    def __init__(self, level, x, y, width, height, image_master, sprite_master, difficulty, is_stacked, speed=VELOCITY_TARGET, path=None, hit_sides="UDLR", sprite=None, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="MovingHazard"):
-        MovingBlock.__init__(self, level, x, y, width, height, image_master, is_stacked, speed=speed, path=path, coord_x=coord_x, coord_y=coord_y, name=name)
+    def __init__(self, level, controller, x, y, width, height, image_master, sprite_master, audios, difficulty, is_stacked, speed=VELOCITY_TARGET, path=None, hit_sides="UDLR", sprite=None, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="MovingHazard"):
+        MovingBlock.__init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, speed=speed, path=path, coord_x=coord_x, coord_y=coord_y, name=name)
         self.attack_damage = attack_damage * difficulty
         self.is_attacking = True
         self.hit_sides = hit_sides.upper()
@@ -339,9 +363,10 @@ class FallingHazard(Hazard):
     GRAVITY = 0.02
     ATTACK_DAMAGE = 99
     RESET_DELAY = 1
+    ANIMATION_DELAY = 0.3
 
-    def __init__(self, level, x, y, width, height, image_master, sprite_master, difficulty, hit_sides="D", drop_x=0, drop_y=0, fire_once=True, sprite=None, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="FallingHazard"):
-        super().__init__(level, x, y, width, height, image_master, sprite_master, difficulty, hit_sides=hit_sides, sprite=sprite, coord_x=coord_x, coord_y=coord_y, attack_damage=attack_damage, name=name)
+    def __init__(self, level, controller, x, y, width, height, image_master, sprite_master, audios, difficulty, hit_sides="D", drop_x=0, drop_y=0, fire_once=True, sprite=None, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="FallingHazard"):
+        super().__init__(level, controller, x, y, width, height, image_master, sprite_master, audios, difficulty, hit_sides=hit_sides, sprite=sprite, coord_x=coord_x, coord_y=coord_y, attack_damage=attack_damage, name=name)
         self.start_x = self.rect.x
         self.start_y = self.rect.y
         self.drop_x = drop_x
@@ -351,11 +376,27 @@ class FallingHazard(Hazard):
         self.y_vel = 0
         self.cooldowns = {"reset_time": 0}
 
+    def update_sprite(self, fps, delay=ANIMATION_DELAY):
+        if hasattr(self, "has_fired") and self.has_fired:
+            if self.y_vel != 0:
+                active_index = -2
+            else:
+                active_index = -1
+        else:
+            active_index = math.floor((self.animation_count // (1000 // (fps * delay))) % (len(self.sprites) - 2))
+            if active_index >= len(self.sprites) - 2:
+                active_index = 0
+                self.animation_count = 0
+        self.sprite = self.sprites[active_index]
+        return active_index
+
     def loop(self, fps, dtime, grav=GRAVITY, cd=RESET_DELAY):
         if not self.has_fired:
             if abs(self.level.get_player().rect.x - self.rect.x) <= self.drop_x and self.level.get_player().rect.top >= self.rect.bottom and abs(self.level.get_player().rect.y - self.rect.y) <= self.drop_y:
                 self.has_fired = True
+                self.play_sound("block_drop")
             else:
+                self.animation_count += dtime
                 return False
 
         should_reset = bool(self.cooldowns["reset_time"] > 0)
@@ -376,11 +417,12 @@ class FallingHazard(Hazard):
         if self.has_fired and self.cooldowns["reset_time"] <= 0:
             self.y_vel += dtime * grav
             for obj in self.level.get_objects_in_range((self.rect.x, self.rect.y + self.y_vel), blocks_only=True):
-                if self.rect.centery <= obj.rect.centery and pygame.sprite.collide_rect(self, obj) and pygame.sprite.collide_mask(self, obj):
+                if pygame.sprite.collide_rect(self, obj) and pygame.sprite.collide_mask(self, obj):
                     self.rect.bottom = obj.rect.top
                     self.y_vel = 0
                     self.cooldowns["reset_time"] += cd
                     collided = True
+                    self.play_sound("block_land")
                     break
 
             self.rect.y += self.y_vel

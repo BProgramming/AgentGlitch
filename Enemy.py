@@ -6,13 +6,13 @@ from Helpers import DifficultyScale, MovementDirection
 
 class Enemy(Actor):
     VELOCITY_TARGET = 0.25
-    PLAYER_SPOT_RANGE = 288
+    PLAYER_SPOT_RANGE = 3
     PLAYER_SPOT_COOLDOWN = 2
 
-    def __init__(self, level, x, y, sprite_master, audios, difficulty, block_size, path=None, hp=100, can_shoot=False, spot_range=PLAYER_SPOT_RANGE, sprite=None, proj_sprite=None, name="Enemy"):
-        super().__init__(level, x, y, sprite_master, audios, difficulty, block_size, can_shoot=can_shoot, sprite=sprite, proj_sprite=proj_sprite, name=name)
+    def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, path=None, hp=100, can_shoot=False, spot_range=PLAYER_SPOT_RANGE, sprite=None, proj_sprite=None, name="Enemy"):
+        super().__init__(level, controller, x, y, sprite_master, audios, difficulty, block_size, can_shoot=can_shoot, sprite=sprite, proj_sprite=proj_sprite, name=name)
         self.patrol_path = path
-        self.spot_range = spot_range
+        self.spot_range = spot_range * block_size
         if path is None:
             self.max_jumps = 0
             self.spot_range *= 2
@@ -64,7 +64,7 @@ class Enemy(Actor):
 
     def patrol(self, dtime, vel=VELOCITY_TARGET):
         self.should_move_horiz = False
-        if self.cooldowns["get_hit"] <= 0:
+        if self.cooldowns["get_hit"] <= 0 and self.state != MovementState.WIND_UP and self.state != MovementState.WIND_DOWN:
             if self.patrol_path is None:
                 self.should_move_vert = False
                 self.direction = self.facing = (MovementDirection.RIGHT if self.level.get_player().rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT)
@@ -94,6 +94,8 @@ class Enemy(Actor):
                             self.is_attacking = True
                             if abs(self.rect.x - self.level.get_player().rect.x) <= 5 or pygame.sprite.collide_mask(self, self.level.get_player()):
                                 self.x_vel = 0.0
+                                if not self.is_animated_attack:
+                                    self.play_melee_attack_audio()
                             else:
                                 self.direction = self.facing = (MovementDirection.RIGHT if self.level.get_player().rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT)
                                 self.x_vel = self.direction * min(vel, dist / dtime)

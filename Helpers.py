@@ -211,7 +211,7 @@ def load_levels(dir):
 
 
 def __load_single_audio__(dir1, dir2):
-    path = join("Assets", dir1, dir2)
+    path = join("Assets", "SoundEffects", dir1, dir2)
     if isdir(path):
         sounds = {}
         for file in [f for f in listdir(path) if isfile(join(path, f))]:
@@ -224,7 +224,7 @@ def __load_single_audio__(dir1, dir2):
 
 
 def load_audios(dir):
-    path = join("Assets", dir)
+    path = join("Assets", "SoundEffects", dir)
     if isdir(path):
         sounds = {}
         for sub_dir in [d for d in listdir(path) if isdir(path)]:
