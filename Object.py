@@ -2,7 +2,7 @@ import pygame
 
 
 class Object(pygame.sprite.Sprite):
-    def __init__(self, level, controller, x, y, width, height, name="Object"):
+    def __init__(self, level, controller, x, y, width, height, is_blocking=True, name="Object"):
         super().__init__()
         self.level = level
         self.controller = controller
@@ -11,6 +11,7 @@ class Object(pygame.sprite.Sprite):
         self.rect = pygame.Rect(x, y, width, height)
         self.width = width
         self.height = height
+        self.is_blocking = is_blocking
         self.name = name + " (" + str(x) + ", " + str(y) + ")"
         self.max_hp = self.hp = 100
         self.is_stacked = False # this property is only used by blocks, but needed here for generic checks
@@ -46,7 +47,7 @@ class Object(pygame.sprite.Sprite):
             win.blit(self.sprite, (adj_x, adj_y))
 
     def collide(self, obj):
-        return True
+        return self.is_blocking
 
     def get_hit(self, obj):
         return

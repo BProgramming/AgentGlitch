@@ -82,10 +82,10 @@ class Enemy(Actor):
                             if abs(self.rect.x - self.level.get_player().rect.x) > 5:
                                 self.direction = (MovementDirection.RIGHT if self.rect.centerx - self.level.get_player().rect.centerx >= 0 else MovementDirection.LEFT)
                                 self.facing = self.direction.swap()
+                                self.x_vel = self.direction * vel
+                                self.should_move_horiz = self.find_floor(self.x_vel * dtime)
                             if not self.is_animated_attack:
                                 self.is_attacking = False
-                            self.x_vel = self.direction * vel
-                            self.should_move_horiz = self.find_floor(self.x_vel * dtime)
                         else:
                             self.is_attacking = True
                             self.x_vel = 0.0
@@ -101,7 +101,7 @@ class Enemy(Actor):
                                 self.x_vel = self.direction * min(vel, dist / dtime)
                                 self.should_move_horiz = self.find_floor(self.x_vel * dtime)
                         else:
-                            if abs(self.rect.x - self.level.get_player().rect.x) > 5:
+                            if dist < self.rect.width:
                                 self.direction = self.facing = (MovementDirection.RIGHT if self.level.get_player().rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT)
                             if not self.is_animated_attack:
                                 self.is_attacking = False
@@ -112,7 +112,7 @@ class Enemy(Actor):
                         self.is_attacking = False
                     target_x = self.patrol_path[self.patrol_path_index][0] - self.rect.x
                     if abs(target_x) > 5:
-                        self.direction = self.facing = (MovementDirection.RIGHT if target_x >= 0 else MovementDirection.LEFT)
+                        self.direction = self.facing = (MovementDirection.RIGHT if target_x >= 0 else MovementDirection.LEFT) ##replace probably the cause of glitching left and right
                         self.x_vel = self.direction * min(vel, abs(target_x) / dtime)
                         self.should_move_horiz = self.find_floor(self.x_vel * dtime)
 
@@ -141,8 +141,18 @@ class Enemy(Actor):
         return False
 
     def collide(self, obj):
-        if obj != self.level.get_player() and not obj.is_stacked and self.direction == (MovementDirection.RIGHT if obj.rect.centerx - self.rect.centerx > 0 else MovementDirection.LEFT):
-            self.jump()
+        if obj != self.level.get_player() and self.direction == (MovementDirection.RIGHT if obj.rect.centerx - self.rect.centerx > 0 else MovementDirection.LEFT):
+            if obj.is_stacked:
+                if self.patrol_path is not None:
+                    points_checked = 0
+                    while points_checked < len(self.patrol_path) and self.direction == (MovementDirection.RIGHT if self.patrol_path[self.patrol_path_index][0] - obj.rect.x > 0 else MovementDirection.LEFT):
+                        self.increment_patrol_index()
+                        points_checked += 1 # this is to stop it from looping infinitely, although a properly made patrol path shouldn't allow this
+                    if points_checked >= len(self.patrol_path): # but if it somehow does, this will send the enemy to patrol point 0
+                        self.patrol_path_index = 0
+                        self.rect.x, self.rect.y = self.patrol_path[0][0], self.patrol_path[0][1]
+            else:
+                self.jump()
         elif self.cooldowns["spot_player"] <= 0 and self.patrol_path is not None:
             self.increment_patrol_index()
         return True

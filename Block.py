@@ -7,8 +7,8 @@ from Helpers import handle_exception, MovementDirection, load_sprite_sheets
 
 
 class Block(Object):
-    def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=0, coord_y=0, name="Block"):
-        super().__init__(level, controller, x, y, width, height, name)
+    def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=0, coord_y=0, is_blocking=True, name="Block"):
+        super().__init__(level, controller, x, y, width, height, is_blocking=is_blocking, name=name)
         self.sprite.blit(load_image(join("Assets", "Terrain", "Terrain.png"), width, height, image_master, coord_x, coord_y, grayscale=self.level.grayscale), (0, 0))
         self.mask = pygame.mask.from_surface(self.sprite)
         self.is_stacked = is_stacked
@@ -62,8 +62,8 @@ class MovingBlock(Block):
     VELOCITY_TARGET = 0.5
     PATH_STOP_TIME = 0.5
 
-    def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, speed=VELOCITY_TARGET, path=None, coord_x=0, coord_y=0, name="MovingBlock"):
-        super().__init__(level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=coord_x, coord_y=coord_y, name=name)
+    def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, speed=VELOCITY_TARGET, path=None, coord_x=0, coord_y=0, is_blocking=True, name="MovingBlock"):
+        super().__init__(level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=coord_x, coord_y=coord_y, is_blocking=is_blocking, name=name)
         self.speed = speed
         self.patrol_path = path
         self.patrol_path_index = 0
@@ -112,7 +112,7 @@ class MovingBlock(Block):
             obj.push_x = self.x_vel
         if hasattr(obj, "push_y"):
             obj.push_y = self.y_vel
-        return True
+        return self.is_blocking
 
     def move(self, dx, dy):
         if dx != 0:
@@ -200,6 +200,7 @@ class Door(MovingBlock):
     def collide(self, obj):
         if hasattr(obj, "can_open_doors") and obj.can_open_doors and obj.rect.bottom > self.rect.top:
             self.open()
+            print(self.rect.x, self.rect.y)
         return True
 
     def loop(self, fps, dtime):

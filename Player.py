@@ -159,7 +159,7 @@ class Player(Actor):
         next_level = None
         for trigger in self.level.triggers:
             if pygame.sprite.collide_rect(self, trigger):
-                result = trigger.collide()
+                result = trigger.collide(self)
                 fired_triggers += result[0]
                 next_level = result[1]
                 if trigger.fire_once:

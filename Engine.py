@@ -278,8 +278,11 @@ def main(win):
     while True:
         if len(load_player_profile(controller)) == 0:
             pygame.display.toggle_fullscreen()
-        if not controller.goto_main and isfile(join("Assets", "Screens", "credit.png")):
-            play_slide(pygame.image.load(join("Assets", "Screens", "credit.png")), controller, should_glitch=True)
+        if not controller.goto_main:
+            if isfile(join("Assets", "Screens", "credit1.png")):
+                play_slide(pygame.image.load(join("Assets", "Screens", "credit1.png")), controller, should_glitch=True)
+            if isfile(join("Assets", "Screens", "credit2.png")):
+                play_slide(pygame.image.load(join("Assets", "Screens", "credit2.png")), controller, should_glitch=True)
         pygame.mixer.music.set_volume(controller.master_volume["background"])
         new_game = False
         if isfile(join("Assets", "Screens", "title.png")):
@@ -410,6 +413,8 @@ def main(win):
                     elif event.type == pygame.KEYDOWN:
                         dtime_offset += controller.handle_single_input(event.key, win)
                     elif event.type == pygame.KEYUP:
+                        ##DEV ONLY if event.key == pygame.K_F2:
+                        ##DEV ONLY    level.gen_background()
                         level.get_player().stop()
                     elif event.type == pygame.JOYBUTTONDOWN:
                         dtime_offset += controller.handle_single_input(event.button, win)
