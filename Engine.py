@@ -83,6 +83,7 @@ def get_foreground(level):
 
 
 def play_slide(slide, controller, text=None, should_glitch=False, win=WINDOW):
+    ffwd = False
     if text is not None:
         for i in range(len(text)):
             text_line = pygame.font.SysFont("courier", 32).render(text[i], True, (0, 0, 0))
@@ -100,6 +101,11 @@ def play_slide(slide, controller, text=None, should_glitch=False, win=WINDOW):
                 controller.save_player_profile(controller)
                 pygame.quit()
                 sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
+                ffwd = True
+                break
+        if ffwd:
+            break
         time.sleep(0.01)
 
     pause_dtime = 0
@@ -114,7 +120,10 @@ def play_slide(slide, controller, text=None, should_glitch=False, win=WINDOW):
                 controller.save_player_profile(controller)
                 pygame.quit()
                 sys.exit()
-        if controller.handle_anykey():
+            elif event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
+                ffwd = True
+                break
+        if ffwd:
             break
         time.sleep(0.01)
         pause_dtime += 10
@@ -132,6 +141,11 @@ def play_slide(slide, controller, text=None, should_glitch=False, win=WINDOW):
                 controller.save_player_profile(controller)
                 pygame.quit()
                 sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
+                ffwd = True
+                break
+        if ffwd:
+            break
         time.sleep(0.01)
 
 
@@ -347,8 +361,8 @@ def main(win):
                 controller.cycle_music()
 
             if level.start_screen is not None:
-                if isfile(join("Assets", "Screens", level.start_screen)):
-                    play_slide(pygame.image.load(join("Assets", "Screens", level.start_screen)), controller)
+                if isfile(join("Assets", "Screens", str(level.start_screen))):
+                    play_slide(pygame.image.load(join("Assets", "Screens", str(level.start_screen))), controller)
                 elif isinstance(level.start_screen, list):
                     for item in level.start_screen:
                         if isfile(join("Assets", "Screens", item)):
@@ -413,8 +427,8 @@ def main(win):
                     elif event.type == pygame.KEYDOWN:
                         dtime_offset += controller.handle_single_input(event.key, win)
                     elif event.type == pygame.KEYUP:
-                        ##DEV ONLY if event.key == pygame.K_F2:
-                        ##DEV ONLY    level.gen_background()
+                        # DEV ONLY if event.key == pygame.K_F2:
+                        # DEV ONLY    level.gen_background()
                         level.get_player().stop()
                     elif event.type == pygame.JOYBUTTONDOWN:
                         dtime_offset += controller.handle_single_input(event.button, win)
@@ -471,18 +485,14 @@ def main(win):
                 save_player_profile(controller, level)
                 fade_out(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller)
                 if level.end_screen is not None:
-                    if isfile(join("Assets", "Screens", level.end_screen)):
-                        play_slide(pygame.image.load(join("Assets", "Screens", level.end_screen)), controller)
+                    if isfile(join("Assets", "Screens", str(level.end_screen))):
+                        play_slide(pygame.image.load(join("Assets", "Screens", str(level.end_screen))), controller)
                     elif isinstance(level.end_screen, list):
                         for item in level.end_screen:
                             if isfile(join("Assets", "Screens", item)):
                                 play_slide(pygame.image.load(join("Assets", "Screens", item)), controller)
                     if isfile(join("Assets", "Screens", "recap.png")):
-                        minutes = level.time // 60000
-                        seconds = (level.time - (minutes * 60000)) // 1000
-                        milliseconds = level.time - ((minutes * 60000) + (seconds * 1000))
-                        formatted_time = ("0" if minutes < 10 else "") + str(minutes) + ":" + ("0" if seconds < 10 else "") + str(seconds) + "." + ("0" if milliseconds < 100 else "") + ("0" if milliseconds < 10 else "") + str(milliseconds)
-                        play_slide(pygame.image.load(join("Assets", "Screens", "recap.png")), controller, text=["Mission successful.", "Mission time: " + formatted_time + "."])
+                        play_slide(pygame.image.load(join("Assets", "Screens", "recap.png")), controller, text=["Mission successful.", "Mission time: " + controller.get_formatted_level_time() + "."])
                 if level.grayscale:
                     sprite_master.clear()
                     image_master.clear()

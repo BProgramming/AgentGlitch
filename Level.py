@@ -28,9 +28,29 @@ class Level:
         self.music = (None if meta_dict[name].get("music") is None else validate_file_list("Music", list(meta_dict[name]["music"].split(' ')), "mp3"))
         self.level_bounds, self.player, self.triggers, self.blocks, self.dynamic_blocks, self.doors, self.static_blocks, self.hazards, self.enemies = build_level(self, levels[self.name], sprite_master, image_master, objects_dict, player_audios, enemy_audios, block_audios, win, controller, None if meta_dict[name].get("player_sprite") is None or meta_dict[name]["player_sprite"].upper() == "NONE" else meta_dict[name]["player_sprite"], self.block_size)
         self.weather = (None if meta_dict[name].get("weather") is None else self.get_weather(meta_dict[name]["weather"].upper()))
+        if meta_dict[name].get("abilities") is not None:
+            self.set_player_abilities(meta_dict[name]["abilities"])
 
     def get_player(self):
         return self.player
+
+    def set_player_abilities(self, abilities):
+        if abilities.get("can_open_doors") is not None:
+            self.player.can_open_doors = bool(abilities["can_open_doors"].upper() == "TRUE")
+        if abilities.get("can_move_blocks") is not None:
+            self.player.can_move_blocks = bool(abilities["can_move_blocks"].upper() == "TRUE")
+        if abilities.get("can_block") is not None:
+            self.player.can_block = bool(abilities["can_block"].upper() == "TRUE")
+        if abilities.get("can_wall_jump") is not None:
+            self.player.can_wall_jump = bool(abilities["can_wall_jump"].upper() == "TRUE")
+        if abilities.get("can_teleport") is not None:
+            self.player.can_teleport = bool(abilities["can_teleport"].upper() == "TRUE")
+        if abilities.get("can_bullet_time") is not None:
+            self.player.can_bullet_time = bool(abilities["can_bullet_time"].upper() == "TRUE")
+        if abilities.get("can_resize") is not None:
+            self.player.can_resize = bool(abilities["can_resize"].upper() == "TRUE")
+        if abilities.get("can_heal") is not None:
+            self.player.can_heal = bool(abilities["can_heal"].upper() == "TRUE")
 
     def get_objects(self):
         return self.triggers + self.blocks + self.hazards + self.enemies

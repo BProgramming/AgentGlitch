@@ -475,6 +475,8 @@ class Actor(Object):
                         self.x_vel /= 2
 
                     self.move(self.x_vel + self.push_x, self.y_vel + (self.push_y * dtime))
+            else:
+                self.move(self.push_x, (self.push_y * dtime))
         else:
             collided = False
 

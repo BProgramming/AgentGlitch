@@ -132,7 +132,7 @@ class Player(Actor):
                 if isinstance(obj, Enemy) and pygame.sprite.collide_rect(self, obj):
                     obj.get_hit(self)
                     if obj.patrol_path is not None:
-                        obj.rect.x -= self.direction * push
+                        obj.rect.x -= self.direction * int(push)
                     self.play_melee_attack_audio()
                 elif isinstance(obj, BreakableBlock) and pygame.sprite.collide_rect(self, obj):
                     obj.get_hit(self)

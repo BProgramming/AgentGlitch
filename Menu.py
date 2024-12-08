@@ -1,4 +1,3 @@
-import math
 import time
 import pygame
 from enum import Enum
@@ -10,7 +9,7 @@ class ButtonType(Enum):
     BAR = 2
 
 
-class Menu():
+class Menu:
     def __init__(self, win, header, button_labels, music=None, should_glitch=True):
         self.clear = None
         button_assets = load_images("Menu", "Buttons")
@@ -249,20 +248,23 @@ class Selector(Menu):
 
     def make_buttons(self, half_button_normal, half_button_mouseover, button_normal, button_mouseover, accept_only=False):
         buttons = []
-        loop_range = range(1 if accept_only else 3)
+        loop_range = range(1 if accept_only else 4)
         for i in loop_range:
-            if not accept_only and i == 0:
-                label = pygame.transform.flip(self.arrow_asset, True, False)
-                normal = half_button_normal.copy()
-                mouseover = half_button_mouseover.copy()
-            elif not accept_only and i == 1:
-                label = self.arrow_asset
-                normal = half_button_normal.copy()
-                mouseover = half_button_mouseover.copy()
-            else:
+            if accept_only:
                 label = pygame.font.SysFont("courier", 32).render("Accept", True, (255, 255, 255))
                 normal = button_normal.copy()
                 mouseover = button_mouseover.copy()
+            else:
+                if i == 0:
+                    label = pygame.transform.flip(self.arrow_asset, True, False)
+                elif i == 1:
+                    label = self.arrow_asset
+                elif i == 2:
+                    label = pygame.font.SysFont("courier", 32).render("Back", True, (255, 255, 255))
+                else:
+                    label = pygame.font.SysFont("courier", 32).render("Accept", True, (255, 255, 255))
+                normal = half_button_normal.copy()
+                mouseover = half_button_mouseover.copy()
             normal.blit(label, ((normal.get_width() - label.get_width()) // 2, (normal.get_height() - label.get_height()) // 2))
             mouseover.blit(label, ((mouseover.get_width() - label.get_width()) // 2, (mouseover.get_height() - label.get_height()) // 2))
             buttons.append([pygame.Rect(0, 0, max(normal.get_width(), mouseover.get_width()), max(normal.get_height(), mouseover.get_height())), normal, mouseover, ButtonType.CLICK])
@@ -284,12 +286,19 @@ class Selector(Menu):
         screen.blit(self.image_selected[1], (dest_x, dest_y))
 
         for i in range(len(self.buttons)):
-            if len(self.buttons) > 1 and i == 0:
-                dest_x = (screen.get_width() - (self.buttons[i][0].width * 2)) // 2
-                dest_y = screen.get_height() - ((len(self.buttons) - 1) * self.buttons[i][0].height)
-            elif len(self.buttons) > 1 and i == 1:
-                dest_x = ((screen.get_width() - (self.buttons[i][0].width * 2)) // 2) + self.buttons[i][0].width
-                dest_y = screen.get_height() - ((len(self.buttons) - i) * self.buttons[i][0].height)
+            if len(self.buttons) > 1:
+                if i == 0:
+                    dest_x = (screen.get_width() - (self.buttons[i][0].width * 2)) // 2
+                    dest_y = screen.get_height() - ((len(self.buttons) - 2) * self.buttons[i][0].height)
+                elif i == 1:
+                    dest_x = ((screen.get_width() - (self.buttons[i][0].width * 2)) // 2) + self.buttons[i][0].width
+                    dest_y = screen.get_height() - ((len(self.buttons) - 2) * self.buttons[i][0].height)
+                elif i == 2:
+                    dest_x = (screen.get_width() - (self.buttons[i][0].width * 2)) // 2
+                    dest_y = screen.get_height() - ((len(self.buttons) - 3) * self.buttons[i][0].height)
+                else:
+                    dest_x = ((screen.get_width() - (self.buttons[i][0].width * 2)) // 2) + self.buttons[i][0].width
+                    dest_y = screen.get_height() - ((len(self.buttons) - 3) * self.buttons[i][0].height)
             else:
                 dest_x = (screen.get_width() - self.buttons[i][0].width) // 2
                 dest_y = screen.get_height() - ((len(self.buttons) - i) * self.buttons[i][0].height)

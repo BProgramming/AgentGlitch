@@ -162,4 +162,3 @@ class Trigger(Object):
 
     def output(self, win, offset_x, offset_y, master_volume, fps):
         pass
-

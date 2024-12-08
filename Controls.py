@@ -1,4 +1,3 @@
-import math
 import random
 import time
 import pygame
@@ -9,14 +8,14 @@ from Helpers import display_text, DifficultyScale, load_images, load_level_image
 
 class Controller:
     KEYBOARD_LAYOUTS = {"ARROW_MOVE": {"keys_quicksave": [pygame.K_F5], "keys_cycle_layout": [pygame.K_F9], "keys_fullscreen_toggle": [pygame.K_F11], "keys_left": [pygame.K_LEFT], "keys_right": [pygame.K_RIGHT], "keys_crouch_uncrouch": [pygame.K_DOWN], "keys_jump": [pygame.K_UP], "keys_teleport_dash": [pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_KP_PLUS], "keys_pause_unpause": [pygame.K_ESCAPE], "keys_attack": [pygame.K_d], "keys_block": [pygame.K_a], "keys_bullet_time": [pygame.K_SPACE, pygame.K_KP0], "keys_grow": [pygame.K_w], "keys_shrink": [pygame.K_s]},
-        "WASD_MOVE": {"keys_quicksave": [pygame.K_F5], "keys_cycle_layout": [pygame.K_F9], "keys_fullscreen_toggle": [pygame.K_F11], "keys_left": [pygame.K_a], "keys_right": [pygame.K_d], "keys_crouch_uncrouch": [pygame.K_s], "keys_jump": [pygame.K_w], "keys_teleport_dash": [pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_KP_PLUS], "keys_pause_unpause": [pygame.K_ESCAPE], "keys_attack": [pygame.K_LEFT, pygame.K_KP4], "keys_block": [pygame.K_RIGHT, pygame.K_KP6], "keys_bullet_time": [pygame.K_SPACE, pygame.K_KP0], "keys_grow": [pygame.K_UP, pygame.K_KP8], "keys_shrink": [pygame.K_DOWN, pygame.K_KP5]},
-        "NUMPAD_MOVE": {"keys_quicksave": [pygame.K_F5], "keys_cycle_layout": [pygame.K_F9], "keys_fullscreen_toggle": [pygame.K_F11], "keys_left": [pygame.K_KP4], "keys_right": [pygame.K_KP6], "keys_crouch_uncrouch": [pygame.K_KP5], "keys_jump": [pygame.K_KP8], "keys_teleport_dash": [pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_KP_PLUS],  "keys_pause_unpause": [pygame.K_ESCAPE], "keys_attack": [pygame.K_d], "keys_block": [pygame.K_a], "keys_bullet_time": [pygame.K_SPACE, pygame.K_KP0], "keys_grow": [pygame.K_w], "keys_shrink": [pygame.K_s]},
-        "ALT_NUMPAD_MOVE": {"keys_quicksave": [pygame.K_F5], "keys_cycle_layout": [pygame.K_F9], "keys_fullscreen_toggle": [pygame.K_F11], "keys_left": [pygame.K_KP4], "keys_right": [pygame.K_KP6], "keys_crouch_uncrouch": [pygame.K_KP5], "keys_jump": [pygame.K_KP8], "keys_teleport_dash": [pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_KP_PLUS],  "keys_pause_unpause": [pygame.K_ESCAPE], "keys_attack": [pygame.K_a], "keys_block": [pygame.K_d], "keys_bullet_time": [pygame.K_SPACE, pygame.K_KP0], "keys_grow": [pygame.K_w], "keys_shrink": [pygame.K_s]}}
+                        "WASD_MOVE": {"keys_quicksave": [pygame.K_F5], "keys_cycle_layout": [pygame.K_F9], "keys_fullscreen_toggle": [pygame.K_F11], "keys_left": [pygame.K_a], "keys_right": [pygame.K_d], "keys_crouch_uncrouch": [pygame.K_s], "keys_jump": [pygame.K_w], "keys_teleport_dash": [pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_KP_PLUS], "keys_pause_unpause": [pygame.K_ESCAPE], "keys_attack": [pygame.K_LEFT, pygame.K_KP4], "keys_block": [pygame.K_RIGHT, pygame.K_KP6], "keys_bullet_time": [pygame.K_SPACE, pygame.K_KP0], "keys_grow": [pygame.K_UP, pygame.K_KP8], "keys_shrink": [pygame.K_DOWN, pygame.K_KP5]},
+                        "NUMPAD_MOVE": {"keys_quicksave": [pygame.K_F5], "keys_cycle_layout": [pygame.K_F9], "keys_fullscreen_toggle": [pygame.K_F11], "keys_left": [pygame.K_KP4], "keys_right": [pygame.K_KP6], "keys_crouch_uncrouch": [pygame.K_KP5], "keys_jump": [pygame.K_KP8], "keys_teleport_dash": [pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_KP_PLUS],  "keys_pause_unpause": [pygame.K_ESCAPE], "keys_attack": [pygame.K_d], "keys_block": [pygame.K_a], "keys_bullet_time": [pygame.K_SPACE, pygame.K_KP0], "keys_grow": [pygame.K_w], "keys_shrink": [pygame.K_s]},
+                        "ALT_NUMPAD_MOVE": {"keys_quicksave": [pygame.K_F5], "keys_cycle_layout": [pygame.K_F9], "keys_fullscreen_toggle": [pygame.K_F11], "keys_left": [pygame.K_KP4], "keys_right": [pygame.K_KP6], "keys_crouch_uncrouch": [pygame.K_KP5], "keys_jump": [pygame.K_KP8], "keys_teleport_dash": [pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_KP_PLUS],  "keys_pause_unpause": [pygame.K_ESCAPE], "keys_attack": [pygame.K_a], "keys_block": [pygame.K_d], "keys_bullet_time": [pygame.K_SPACE, pygame.K_KP0], "keys_grow": [pygame.K_w], "keys_shrink": [pygame.K_s]}}
     GAMEPAD_LAYOUTS = {"SWITCH PRO": {"button_menu_up": 11, "button_menu_down": 12, "button_quicksave": 15, "button_left": 13, "button_right": 14, "axis_horiz": 0, "hat_horiz": None, "button_crouch_uncrouch": 0, "button_jump": 1, "button_teleport_dash": 3, "button_pause_unpause": 5, "axis_attack": 5, "axis_block": 4, "button_bullet_time": 2, "button_grow": 10, "button_shrink": 9},
-        "XBOX": {"button_menu_up": None, "button_menu_down": None, "button_quicksave": 6, "button_left": None, "button_right": None, "axis_horiz": 0, "hat_horiz": 0, "button_crouch_uncrouch": 1, "button_jump": 0, "button_teleport_dash": 2, "button_pause_unpause": 7, "axis_attack": 5, "axis_block": 4, "button_bullet_time": 3, "button_grow": 5, "button_shrink": 4},
-        "PS4": {"button_menu_up": 11, "button_menu_down": 12, "button_quicksave": 4, "button_left": 13, "button_right": 14, "axis_horiz": 0, "hat_horiz": None, "button_crouch_uncrouch": 1, "button_jump": 0, "button_teleport_dash": 2, "button_pause_unpause": 6, "axis_attack": 5, "axis_block": 4, "button_bullet_time": 3, "button_grow": 10, "button_shrink": 9},
-        "PS5": {"button_menu_up": None, "button_menu_down": None, "button_quicksave": 8, "button_left": None, "button_right": None, "axis_horiz": 0, "hat_horiz": 0, "button_crouch_uncrouch": 1, "button_jump": 0, "button_teleport_dash": 2, "button_pause_unpause": 9, "axis_attack": 5, "axis_block": 2, "button_bullet_time": 3, "button_grow": 5, "button_shrink": 4},
-        "NONE": {"button_menu_up": None, "button_menu_down": None, "button_quicksave": None, "button_left": None, "button_right": None, "axis_horiz": None, "hat_horiz": None, "button_crouch_uncrouch": None, "button_jump": None, "button_teleport_dash": None, "button_pause_unpause": None, "axis_attack": None, "axis_block": None, "button_bullet_time": None, "button_grow": None, "button_shrink": None}}
+                        "XBOX": {"button_menu_up": None, "button_menu_down": None, "button_quicksave": 6, "button_left": None, "button_right": None, "axis_horiz": 0, "hat_horiz": 0, "button_crouch_uncrouch": 1, "button_jump": 0, "button_teleport_dash": 2, "button_pause_unpause": 7, "axis_attack": 5, "axis_block": 4, "button_bullet_time": 3, "button_grow": 5, "button_shrink": 4},
+                        "PS4": {"button_menu_up": 11, "button_menu_down": 12, "button_quicksave": 4, "button_left": 13, "button_right": 14, "axis_horiz": 0, "hat_horiz": None, "button_crouch_uncrouch": 1, "button_jump": 0, "button_teleport_dash": 2, "button_pause_unpause": 6, "axis_attack": 5, "axis_block": 4, "button_bullet_time": 3, "button_grow": 10, "button_shrink": 9},
+                        "PS5": {"button_menu_up": None, "button_menu_down": None, "button_quicksave": 8, "button_left": None, "button_right": None, "axis_horiz": 0, "hat_horiz": 0, "button_crouch_uncrouch": 1, "button_jump": 0, "button_teleport_dash": 2, "button_pause_unpause": 9, "axis_attack": 5, "axis_block": 2, "button_bullet_time": 3, "button_grow": 5, "button_shrink": 4},
+                        "NONE": {"button_menu_up": None, "button_menu_down": None, "button_quicksave": None, "button_left": None, "button_right": None, "axis_horiz": None, "hat_horiz": None, "button_crouch_uncrouch": None, "button_jump": None, "button_teleport_dash": None, "button_pause_unpause": None, "axis_attack": None, "axis_block": None, "button_bullet_time": None, "button_grow": None, "button_shrink": None}}
 
     def __init__(self, level, win, save, save_player_profile, layout=None, main_menu_music=None):
         self.win = win
@@ -77,6 +76,12 @@ class Controller:
                     pygame.mixer.music.queue(self.music[self.music_index])
                 else:
                     pygame.mixer.music.load(self.music[self.music_index])
+
+    def get_formatted_level_time(self):
+        minutes = self.level.time // 60000
+        seconds = (self.level.time - (minutes * 60000)) // 1000
+        milliseconds = self.level.time - ((minutes * 60000) + (seconds * 1000))
+        return ("0" if minutes < 10 else "") + str(minutes) + ":" + ("0" if seconds < 10 else "") + str(seconds) + "." + ("0" if milliseconds < 100 else "") + ("0" if milliseconds < 10 else "") + str(milliseconds)
 
     def set_difficulty(self):
         if self.level is not None:
@@ -177,14 +182,17 @@ class Controller:
                         selector.cycle_images(1)
                     case 2:
                         selector.fade_out(self.win)
-                        return
+                        return False
+                    case 3:
+                        selector.fade_out(self.win)
+                        return True
                     case _:
                         pass
             else:
                 match selector.display(self.win):
                     case 0:
                         selector.fade_out(self.win)
-                        return
+                        return False
                     case _:
                         pass
 
@@ -199,7 +207,7 @@ class Controller:
                     sys.exit()
                 elif event.type == pygame.KEYDOWN and event.key in self.keys_pause_unpause:
                     pygame.mouse.set_visible(False)
-                    return
+                    return False
 
             self.get_gamepad()
             if self.active_gamepad_layout is not None:
@@ -239,11 +247,11 @@ class Controller:
 
             match self.volume_menu.display(self.win):
                 case 0:
-                    pass #set background music volume
+                    pass  #set background music volume
                 case 1:
-                    pass #set player volume
+                    pass  #set player volume
                 case 2:
-                    pass #set effects volume
+                    pass  #set effects volume
                 case 3:
                     self.volume_menu.fade_out(self.win)
                     self.master_volume["background"] = self.volume_menu.notch_val[0]
@@ -306,8 +314,8 @@ class Controller:
                 case 0:
                     self.controls_menu.fade_out(self.win)
                     self.keyboard_layout_picker.set_index(self.keyboard_layout_picker.values.index(self.active_keyboard_layout))
-                    self.pick_from_selector(self.keyboard_layout_picker, clear=self.controls_menu.clear)
-                    self.set_keyboard_layout(self.keyboard_layout_picker.values[self.keyboard_layout_picker.image_index])
+                    if self.pick_from_selector(self.keyboard_layout_picker, clear=self.controls_menu.clear):
+                        self.set_keyboard_layout(self.keyboard_layout_picker.values[self.keyboard_layout_picker.image_index])
                     self.controls_menu.fade_in(self.win)
                 case 1:
                     if self.active_gamepad_layout is not None:
@@ -524,13 +532,17 @@ class Controller:
             match self.main_menu.display(self.win):
                 case 0:
                     self.main_menu.fade_out(self.win)
-                    self.pick_from_selector(self.sprite_picker, clear=self.main_menu.clear)
-                    self.player_sprite_selected = [self.sprite_picker.values[self.sprite_picker.image_index][0], self.sprite_picker.values[self.sprite_picker.image_index][1]]
-                    self.pick_from_selector(self.difficulty_picker, clear=self.main_menu.clear)
-                    self.difficulty = self.difficulty_picker.values[self.difficulty_picker.image_index]
-                    pygame.mouse.set_visible(False)
-                    self.main_menu.fade_music()
-                    return True
+                    while True:
+                        if self.pick_from_selector(self.sprite_picker, clear=self.main_menu.clear):
+                            self.player_sprite_selected = [self.sprite_picker.values[self.sprite_picker.image_index][0], self.sprite_picker.values[self.sprite_picker.image_index][1]]
+                            if self.pick_from_selector(self.difficulty_picker, clear=self.main_menu.clear):
+                                self.difficulty = self.difficulty_picker.values[self.difficulty_picker.image_index]
+                                pygame.mouse.set_visible(False)
+                                self.main_menu.fade_music()
+                                return True
+                        else:
+                            break
+                    self.main_menu.fade_in(self.win)
                 case 1:
                     self.main_menu.fade_out(self.win)
                     self.goto_load = True
@@ -539,11 +551,13 @@ class Controller:
                     return False
                 case 2:
                     self.main_menu.fade_out(self.win)
-                    self.pick_from_selector(self.level_picker, clear=self.main_menu.clear)
-                    self.level_selected = self.level_picker.values[self.level_picker.image_index]
-                    pygame.mouse.set_visible(False)
-                    self.main_menu.fade_music()
-                    return bool(self.level_picker.image_index == 0)
+                    if self.pick_from_selector(self.level_picker, clear=self.main_menu.clear):
+                        self.level_selected = self.level_picker.values[self.level_picker.image_index]
+                        pygame.mouse.set_visible(False)
+                        self.main_menu.fade_music()
+                        return bool(self.level_picker.image_index == 0)
+                    else:
+                        self.main_menu.fade_in(self.win)
                 case 3:
                     time.sleep(0.01)
                     self.settings(self.main_menu.clear)
