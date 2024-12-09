@@ -166,9 +166,9 @@ class Controller:
 
     def pick_from_selector(self, selector, clear=None, joystick_tolerance=0.25):
         pygame.mouse.set_visible(True)
-        selector.fade_in(self.win)
         if self.active_gamepad_layout is not None:
             selector.set_mouse_pos(self.win)
+        selector.fade_in(self.win)
         joystick_movement = 0
         selector.clear = clear
         while True:
@@ -237,9 +237,9 @@ class Controller:
         self.volume_menu.notch_val[0] = self.master_volume["background"]
         self.volume_menu.notch_val[1] = self.master_volume["player"]
         self.volume_menu.notch_val[2] = self.master_volume["non-player"]
-        self.volume_menu.fade_in(self.win)
         if self.active_gamepad_layout is not None:
             self.volume_menu.set_mouse_pos(self.win)
+        self.volume_menu.fade_in(self.win)
         joystick_movement = 0
         self.volume_menu.clear = clear
         while True:
@@ -297,7 +297,6 @@ class Controller:
 
     def controls(self, clear=None, joystick_tolerance=0.25):
         pygame.mouse.set_visible(True)
-        self.controls_menu.fade_in(self.win)
         if self.active_gamepad_layout is not None:
             self.controls_menu.set_mouse_pos(self.win)
             self.controls_menu.buttons[1][1].set_alpha(255)
@@ -305,10 +304,17 @@ class Controller:
         else:
             self.controls_menu.buttons[1][1].set_alpha(128)
             self.controls_menu.buttons[1][2].set_alpha(128)
+        self.controls_menu.fade_in(self.win)
         joystick_movement = 0
         self.controls_menu.clear = clear
         while True:
             time.sleep(0.01)
+            if self.active_gamepad_layout is not None:
+                self.controls_menu.buttons[1][1].set_alpha(255)
+                self.controls_menu.buttons[1][2].set_alpha(255)
+            else:
+                self.controls_menu.buttons[1][1].set_alpha(128)
+                self.controls_menu.buttons[1][2].set_alpha(128)
 
             match self.controls_menu.display(self.win):
                 case 0:
@@ -317,12 +323,16 @@ class Controller:
                     if self.pick_from_selector(self.keyboard_layout_picker, clear=self.controls_menu.clear):
                         self.set_keyboard_layout(self.keyboard_layout_picker.values[self.keyboard_layout_picker.image_index])
                     self.controls_menu.fade_in(self.win)
+                    if self.active_gamepad_layout is not None:
+                        self.controls_menu.set_mouse_pos(self.win)
                 case 1:
                     if self.active_gamepad_layout is not None:
                         self.controls_menu.fade_out(self.win)
                         self.gamepad_layout_picker.set_index(self.gamepad_layout_picker.values.index(self.active_gamepad_layout))
                         self.pick_from_selector(self.gamepad_layout_picker, clear=self.controls_menu.clear)
                         self.controls_menu.fade_in(self.win)
+                        if self.active_gamepad_layout is not None:
+                            self.controls_menu.set_mouse_pos(self.win)
                     else:
                         display_text("No controller connected.", self.win, self, type=False)
                 case 2:
@@ -367,9 +377,9 @@ class Controller:
     def settings(self, clear=None, joystick_tolerance=0.25):
         pygame.mouse.set_visible(True)
         self.settings_menu.notch_val[0] = (self.difficulty - DifficultyScale.EASIEST) / (DifficultyScale.HARDEST - DifficultyScale.EASIEST)
-        self.settings_menu.fade_in(self.win)
         if self.active_gamepad_layout is not None:
             self.settings_menu.set_mouse_pos(self.win)
+        self.settings_menu.fade_in(self.win)
         joystick_movement = 0
         self.settings_menu.clear = clear
         while True:
@@ -430,9 +440,9 @@ class Controller:
         pygame.mouse.set_visible(True)
         start = time.perf_counter_ns()
         pygame.mixer.pause()
-        self.pause_menu.fade_in(self.win)
         if self.active_gamepad_layout is not None:
             self.pause_menu.set_mouse_pos(self.win)
+        self.pause_menu.fade_in(self.win)
         joystick_movement = 0
         paused = True
         while paused:
@@ -521,9 +531,9 @@ class Controller:
     def main(self, joystick_tolerance=0.25):
         self.main_menu.fade_music()
         pygame.mouse.set_visible(True)
-        self.main_menu.fade_in(self.win)
         if self.active_gamepad_layout is not None:
             self.main_menu.set_mouse_pos(self.win)
+        self.main_menu.fade_in(self.win)
         joystick_movement = 0
         self.level_selected = None
         while True:
@@ -540,7 +550,11 @@ class Controller:
                                 pygame.mouse.set_visible(False)
                                 self.main_menu.fade_music()
                                 return True
+                            if self.active_gamepad_layout is not None:
+                                self.main_menu.set_mouse_pos(self.win)
                         else:
+                            if self.active_gamepad_layout is not None:
+                                self.main_menu.set_mouse_pos(self.win)
                             break
                     self.main_menu.fade_in(self.win)
                 case 1:
@@ -557,6 +571,8 @@ class Controller:
                         self.main_menu.fade_music()
                         return bool(self.level_picker.image_index == 0)
                     else:
+                        if self.active_gamepad_layout is not None:
+                            self.main_menu.set_mouse_pos(self.win)
                         self.main_menu.fade_in(self.win)
                 case 3:
                     time.sleep(0.01)

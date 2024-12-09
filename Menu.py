@@ -84,14 +84,21 @@ class Menu:
                 time.sleep(0.005)
 
     def set_mouse_pos(self, win):
-        pygame.mouse.set_pos(((win.get_width() // 2) + (self.buttons[0][0].width // 2.5), (win.get_height() + self.screen.get_height() - (2 * (len(self.buttons) - 0.5) * self.buttons[0][0].height)) // 2))
+        x = (win.get_width() // 2) + (self.buttons[0][0].width // 2.5)
+
+        y = (win.get_height() + self.screen.get_height() - (2 * (len(self.buttons) - 0.5) * self.buttons[0][0].height)) // 2
+
+        pygame.mouse.set_pos((x, y))
 
     def move_mouse_pos(self, win, direction):
+        x = (win.get_width() // 2) + (self.buttons[0][0].width // 2.5)
+
         target = pygame.mouse.get_pos()[1] + (direction * self.buttons[0][0].height)
         top = (win.get_height() + self.screen.get_height() - (2 * (len(self.buttons) - 0.5) * self.buttons[0][0].height)) // 2
         bottom = (win.get_height() + self.screen.get_height() - self.buttons[0][0].height) // 2
+        y = max(top, min(bottom, target))
 
-        pygame.mouse.set_pos(((win.get_width() // 2) + (self.buttons[0][0].width // 2.5), max(top, min(bottom, target))))
+        pygame.mouse.set_pos((x, y))
 
     def display(self, win, joystick_tolerance=0.25):
         if self.clear is not None:
@@ -222,12 +229,30 @@ class Selector(Menu):
         self.glitch_timer = 0
         self.glitches = None
 
+    def set_mouse_pos(self, win):
+        x = self.buttons[0 if len(self.buttons) <= 1 else 1][0].x + (self.buttons[0 if len(self.buttons) <= 1 else 1][0].width * 0.75)
+
+        y = (win.get_height() + self.screen.get_height() - self.buttons[0][0].height) // 2
+
+        pygame.mouse.set_pos((x, y))
+
     def move_mouse_sideways(self, direction):
         if direction > 0:
             x = self.buttons[1][0].x + (self.buttons[1][0].width * 0.75)
         else:
             x = self.buttons[0][0].x + (self.buttons[0][0].width * 0.75)
-        y = self.buttons[0][0].y + (self.buttons[0][0].height * 0.5)
+
+        y = pygame.mouse.get_pos()[1]
+
+        pygame.mouse.set_pos((x, y))
+
+    def move_mouse_pos(self, win, direction):
+        x = pygame.mouse.get_pos()[0]
+
+        target = pygame.mouse.get_pos()[1] + (direction * self.buttons[0][0].height)
+        top = (win.get_height() + self.screen.get_height() - (2 * (len(self.buttons) - 0.5) * self.buttons[0][0].height)) // 2
+        bottom = (win.get_height() + self.screen.get_height() - self.buttons[0][0].height) // 2
+        y = max(top, min(bottom, target))
 
         pygame.mouse.set_pos((x, y))
 
