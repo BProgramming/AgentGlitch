@@ -3,7 +3,7 @@ import random
 import pygame
 from os.path import join, isfile
 from Object import Object
-from Helpers import handle_exception, MovementDirection, load_sprite_sheets
+from Helpers import handle_exception, MovementDirection, load_sprite_sheets, set_sound_source
 
 
 class Block(Object):
@@ -25,18 +25,7 @@ class Block(Object):
             active_audio_channel = pygame.mixer.find_channel()
             if active_audio_channel is not None:
                 active_audio_channel.play(self.audios[name.upper()][random.randrange(len(self.audios[name.upper()]))])
-                window_width = self.controller.win.get_width()
-                window_height = self.controller.win.get_height()
-                adj_x_audio = self.level.get_player().rect.x - self.rect.x
-                adj_y_audio = self.level.get_player().rect.y - self.rect.y
-                if (-0.5 * window_width) <= adj_x_audio <= (1.5 * window_width) and (-0.5 * window_height) <= adj_y_audio <= (1.5 * window_height):
-                    height_vol = max(1 - (abs(adj_y_audio - (window_height // 2)) / window_height), 0)
-                    left_vol = max(1 - (abs(adj_x_audio - (window_width // 2)) / window_width), 0) * height_vol
-                    right_vol = max(1 - (abs(adj_x_audio + (window_width // 2)) / window_width), 0) * height_vol
-                    volume = self.controller.master_volume["non-player"]
-                else:
-                    left_vol = right_vol = volume = 0
-                active_audio_channel.set_volume(left_vol * volume, right_vol * volume)
+                set_sound_source(self.rect, self.level.get_player().rect, self.controller.master_volume["non-player"], active_audio_channel)
 
 class BreakableBlock(Block):
     GET_HIT_COOLDOWN = 1
@@ -200,7 +189,6 @@ class Door(MovingBlock):
     def collide(self, obj):
         if hasattr(obj, "can_open_doors") and obj.can_open_doors and obj.rect.bottom > self.rect.top:
             self.open()
-            print(self.rect.x, self.rect.y)
         return True
 
     def loop(self, fps, dtime):

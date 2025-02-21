@@ -1,6 +1,7 @@
 import math
 import pygame
 from Actor import Actor, MovementState
+from Block import Door
 from Helpers import DifficultyScale, MovementDirection
 
 
@@ -142,15 +143,12 @@ class Enemy(Actor):
 
     def collide(self, obj):
         if obj != self.level.get_player() and self.direction == (MovementDirection.RIGHT if obj.rect.centerx - self.rect.centerx > 0 else MovementDirection.LEFT):
-            if obj.is_stacked:
+            if obj.is_stacked or isinstance(obj, Door):
                 if self.patrol_path is not None:
                     points_checked = 0
-                    while points_checked < len(self.patrol_path) and self.direction == (MovementDirection.RIGHT if self.patrol_path[self.patrol_path_index][0] - obj.rect.x > 0 else MovementDirection.LEFT):
+                    while points_checked < len(self.patrol_path) and MovementDirection(math.copysign(1, self.patrol_path[self.patrol_path_index][0] - self.rect.x)) == self.direction:
                         self.increment_patrol_index()
-                        points_checked += 1 # this is to stop it from looping infinitely, although a properly made patrol path shouldn't allow this
-                    if points_checked >= len(self.patrol_path): # but if it somehow does, this will send the enemy to patrol point 0
-                        self.patrol_path_index = 0
-                        self.rect.x, self.rect.y = self.patrol_path[0][0], self.patrol_path[0][1]
+                        points_checked += 1
             else:
                 self.jump()
         elif self.cooldowns["spot_player"] <= 0 and self.patrol_path is not None:

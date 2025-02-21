@@ -5,7 +5,7 @@ from enum import Enum
 from Object import Object
 from Projectile import Projectile
 from Block import Hazard, MovableBlock, MovingBlock
-from Helpers import load_sprite_sheets, MovementDirection
+from Helpers import load_sprite_sheets, MovementDirection, set_sound_source
 
 
 class MovementState(Enum):
@@ -203,21 +203,10 @@ class Actor(Object):
                 active_audio_channel = pygame.mixer.find_channel()
                 if active_audio_channel is not None:
                     active_audio_channel.play(self.audios[attack_type][random.randrange(len(self.audios[attack_type]))])
-                    window_width = self.controller.win.get_width()
-                    window_height = self.controller.win.get_height()
-                    adj_x_audio = self.level.get_player().rect.x - self.rect.x
-                    adj_y_audio = self.level.get_player().rect.y - self.rect.y
                     if self == self.level.get_player():
-                        left_vol = right_vol = 1
-                        volume = self.controller.master_volume["player"]
-                    elif (-0.5 * window_width) <= adj_x_audio <= (1.5 * window_width) and (-0.5 * window_height) <= adj_y_audio <= (1.5 * window_height):
-                        height_vol = max(1 - (abs(adj_y_audio - (window_height // 2)) / window_height), 0)
-                        left_vol = max(1 - (abs(adj_x_audio - (window_width // 2)) / window_width), 0) * height_vol
-                        right_vol = max(1 - (abs(adj_x_audio + (window_width // 2)) / window_width), 0) * height_vol
-                        volume = self.controller.master_volume["non-player"]
+                        active_audio_channel.set_volume(self.controller.master_volume["player"])
                     else:
-                        left_vol = right_vol = volume = 0
-                    active_audio_channel.set_volume(left_vol * volume, right_vol * volume)
+                        set_sound_source(self.rect, self.level.get_player().rect, self.controller.master_volume["non-player"], active_audio_channel)
 
     def shoot_at_target(self, target, max_dist=MAX_SHOOT_DISTANCE, proj_cd=LAUNCH_PROJECTILE_COOLDOWN):
         if self.cooldowns["launch_projectile"] <= 0:
@@ -231,10 +220,9 @@ class Actor(Object):
                 if active_audio_channel is not None:
                     active_audio_channel.play(self.audios[attack_type][random.randrange(len(self.audios[attack_type]))])
                     if self == self.level.get_player():
-                        volume = self.controller.master_volume["player"]
+                        active_audio_channel.set_volume(self.controller.master_volume["player"])
                     else:
-                        volume = self.controller.master_volume["non-player"]
-                    active_audio_channel.set_volume(volume)
+                        set_sound_source(self.rect, self.level.get_player().rect, self.controller.master_volume["non-player"], active_audio_channel)
 
     def get_hit(self, obj, hit_cd=GET_HIT_COOLDOWN, heal_delay=HEAL_DELAY):
         self.cooldowns["get_hit"] = hit_cd
@@ -513,16 +501,9 @@ class Actor(Object):
                     self.active_audio_channel.play(self.active_audio)
             if self.active_audio_channel is not None and self.active_audio_channel.get_busy():
                 if self == self.level.get_player():
-                    left_vol = right_vol = 1
-                    volume = master_volume["player"]
-                elif (-0.5 * window_width) <= adj_x_audio <= (1.5 * window_width) and (-0.5 * window_height) <= adj_y_audio <= (1.5 * window_height):
-                    height_vol = max(1 - (abs(adj_y_audio - (window_height // 2)) / window_height), 0)
-                    left_vol = max(1 - (abs(adj_x_audio - (window_width // 2)) / window_width), 0) * height_vol
-                    right_vol = max(1 - (abs(adj_x_audio + (window_width // 2)) / window_width), 0) * height_vol
-                    volume = master_volume["non-player"]
+                    self.active_audio_channel.set_volume(master_volume["player"])
                 else:
-                    left_vol = right_vol = volume = 0
-                self.active_audio_channel.set_volume(left_vol * volume, right_vol * volume)
+                    set_sound_source(self.rect, self.level.get_player().rect, self.controller.master_volume["non-player"], self.active_audio_channel)
             else:
                 self.active_audio = None
                 self.active_audio_channel = None

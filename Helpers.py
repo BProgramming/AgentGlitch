@@ -243,6 +243,22 @@ def load_audios(dir):
         handle_exception(FileNotFoundError(path))
 
 
+def set_sound_source(source_rect, player_rect, type, channel):
+    height_vol = max(1 - (abs(source_rect.y - player_rect.y) / 1000), 0)
+    str_x = (source_rect.x - player_rect.x) / 1000
+    if abs(str_x) > 1:
+        left_vol = right_vol = 0
+    elif str_x > 0:
+        right_vol = max(1 - str_x, 0) * height_vol
+        left_vol = right_vol ** 2
+    elif str_x < 0:
+        left_vol = max(1 + str_x, 0) * height_vol
+        right_vol = left_vol ** 2
+    else:
+        left_vol = right_vol = 1
+    channel.set_volume(left_vol * type, right_vol * type)
+
+
 def load_text_from_file(file):
     path = join("Assets", "Text", file)
     if isfile(path):
