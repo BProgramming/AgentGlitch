@@ -1,4 +1,3 @@
-import math
 import random
 import sys
 import time
@@ -360,3 +359,22 @@ def load_path(path_in, i, j, block_size):
         else:
             path.append([(path_in[k] + j) * block_size, (path_in[k + 1] + i) * block_size])
     return path
+
+
+def set_property(entity, input):
+    if input is not None:
+        target, property, value = input["target"], input["property"], input["value"]
+        if len(target) == len(property) == len(value):
+            for i in range(len(target)):
+                if isinstance(value[i], str):
+                    if value[i].upper() in ("TRUE", "FALSE"):
+                        value[i] = bool(value[i].upper() == "TRUE")
+                    elif value[i].isnumeric():
+                        value[i] = float(value[i])
+                        if value[i] == int(value[i]):
+                            value[i] = int(value[i])
+                for obj in [entity.level.get_player()] + entity.level.get_objects():
+                    if obj.name.split()[0] == target[i] and hasattr(obj, property[i]):
+                        setattr(obj, property[i], value[i])
+                        if entity.controller.player_abilities.get(property[i]) is not None:
+                            entity.controller.player_abilities[property[i]] = value[i]

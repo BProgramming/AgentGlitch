@@ -50,7 +50,7 @@ class Actor(Object):
     HEAL_DELAY = 5
 
     def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, can_shoot=False, can_resize=False, width=SIZE, height=SIZE, attack_damage=ATTACK_DAMAGE, sprite=None, proj_sprite=None, name=None):
-        super().__init__(level, controller, x, y, width, height, name)
+        super().__init__(level, controller, x, y, width, height, name=name)
         self.x_vel = self.y_vel = 0.0
         self.push_x = self.push_y = 0.0
         self.should_move_horiz = False
@@ -287,6 +287,9 @@ class Actor(Object):
             self.is_wall_jumping = False
         return collided
 
+    def die(self):
+        pass
+
     def update_state(self):
         old = self.state
         if self.size_target != self.size:
@@ -416,6 +419,8 @@ class Actor(Object):
     def loop(self, fps, dtime, target=VELOCITY_TARGET, drag=0, grav=GRAVITY):
         self.animation_count += dtime
 
+        if self.hp <= 0:
+            self.die()
         super().loop(fps, dtime)
 
         if self.can_heal and self.hp < self.max_hp and self.cooldowns["heal"] <= 0:

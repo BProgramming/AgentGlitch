@@ -405,7 +405,6 @@ def main(win):
             while True:
                 dtime = clock.tick(FPS_TARGET) - dtime_offset
                 level.time += dtime
-                print(dtime)
                 if hud.save_icon_timer > 0:
                     hud.save_icon_timer -= dtime / 250
                 if glitch_timer > 0:

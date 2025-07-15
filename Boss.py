@@ -4,7 +4,7 @@ import pygame
 import random
 from Actor import MovementState
 from Enemy import Enemy
-from Helpers import validate_file_list
+from Helpers import set_property, validate_file_list
 
 
 class Boss(Enemy):
@@ -12,12 +12,24 @@ class Boss(Enemy):
     PLAYER_SPOT_COOLDOWN = 3
     VELOCITY_TARGET = 0.5
 
-    def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, music=None, path=None, hp=100, can_shoot=False, spot_range=PLAYER_SPOT_RANGE, sprite=None, proj_sprite=None, name="Boss"):
+    def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, music=None, death_triggers=None, path=None, hp=100, can_shoot=False, spot_range=PLAYER_SPOT_RANGE, sprite=None, proj_sprite=None, name="Boss"):
         super().__init__(level, controller, x, y, sprite_master, audios, difficulty, block_size, path=path, hp=hp, can_shoot=can_shoot, spot_range=spot_range, sprite=sprite, proj_sprite=proj_sprite, name=name)
         self.music = (None if music is None else validate_file_list("Music", list(music.split(' ')), "mp3"))
         self.music_is_playing = False
         self.is_animated_attack = True
         self.audio_trigger_frames.update({"WIND_UP": [0], "ATTACK_ANIM": [0], "WIND_DOWN": [0]})
+        if death_triggers is not None:
+            if type(death_triggers) not in [list, tuple]:
+                self.death_triggers = [death_triggers]
+            else:
+                self.death_triggers = death_triggers
+        else:
+            self.death_triggers = None
+
+    def die(self):
+        if self.death_triggers is not None:
+            for trigger in self.death_triggers:
+                set_property(self, trigger)
 
     async def queue_music(self):
         if self.music_is_playing and (self.hp <= 0 or math.dist((self.level.get_player().rect.x, self.level.get_player().rect.y), (self.rect.x, self.rect.y)) >= 2 * self.spot_range):
