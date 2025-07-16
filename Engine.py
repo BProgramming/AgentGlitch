@@ -8,6 +8,7 @@ import traceback
 from os.path import join, isfile
 from Actor import Actor
 from Block import BreakableBlock
+from Cinematics import *
 from Controls import Controller
 from Helpers import load_json_dict, load_levels, load_audios, display_text, glitch, DifficultyScale, handle_exception, load_text_from_file
 from Level import Level
@@ -80,73 +81,6 @@ def get_foreground(level):
             return image
         else:
             return None
-
-
-def play_slide(slide, controller, text=None, should_glitch=False, win=WINDOW):
-    ffwd = False
-    if text is not None:
-        for i in range(len(text)):
-            text_line = pygame.font.SysFont("courier", 32).render(text[i], True, (0, 0, 0))
-            slide.blit(text_line, (slide.get_width() // 5, (slide.get_height() // 5) + (i * text_line.get_height())))
-
-    black = pygame.Surface((win.get_width(), win.get_height()), pygame.SRCALPHA)
-    black.fill((0, 0, 0))
-    for i in range(64):
-        win.blit(slide, ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
-        black.set_alpha(255 - (4 * i))
-        win.blit(black, (0, 0))
-        pygame.display.update()
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                controller.save_player_profile(controller)
-                pygame.quit()
-                sys.exit()
-            elif event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
-                ffwd = True
-                break
-        if ffwd:
-            break
-        time.sleep(0.01)
-
-    pause_dtime = 0
-    while pause_dtime < 1000:
-        win.blit(slide, ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
-        if should_glitch and pause_dtime > 750:
-            for spot in glitch(0.5, win):
-                win.blit(spot[0], spot[1])
-        pygame.display.update()
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                controller.save_player_profile(controller)
-                pygame.quit()
-                sys.exit()
-            elif event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
-                ffwd = True
-                break
-        if ffwd:
-            break
-        time.sleep(0.01)
-        pause_dtime += 10
-
-    for i in range(64):
-        win.blit(slide, ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
-        black.set_alpha(4 * i)
-        win.blit(black, (0, 0))
-        if should_glitch:
-            for spot in glitch(0.5, win):
-                win.blit(spot[0], spot[1])
-        pygame.display.update()
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                controller.save_player_profile(controller)
-                pygame.quit()
-                sys.exit()
-            elif event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
-                ffwd = True
-                break
-        if ffwd:
-            break
-        time.sleep(0.01)
 
 
 def fade(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller, direction="in", win=WINDOW):
@@ -289,14 +223,18 @@ def main(win):
     controller = Controller(None, win, save, save_player_profile, main_menu_music=(None if meta_dict.get("MAIN_MENU") is None or meta_dict["MAIN_MENU"].get("music") is None else list(meta_dict["MAIN_MENU"]["music"].split(' '))))
     controller.get_gamepad(notify=False)
 
+    cinematics_files = [{"name": "credit1", "file": "credit1.png", "type": "SLIDE", "should_glitch": "TRUE"},
+                        {"name": "credit2", "file": "credit2.png", "type": "SLIDE", "should_glitch": "TRUE"},
+                        {"name": "recap", "file": "recap.png", "type": "SLIDE"},
+                        {"name": "all_done", "file": "all_done.png", "type": "SLIDE"}]
+    cinematics = CinematicsManager(cinematics_files, controller)
+
     while True:
         if len(load_player_profile(controller)) == 0:
             pygame.display.toggle_fullscreen()
         if not controller.goto_main:
-            if isfile(join("Assets", "Screens", "credit1.png")):
-                play_slide(pygame.image.load(join("Assets", "Screens", "credit1.png")), controller, should_glitch=True)
-            if isfile(join("Assets", "Screens", "credit2.png")):
-                play_slide(pygame.image.load(join("Assets", "Screens", "credit2.png")), controller, should_glitch=True)
+            cinematics.play("credit1", win, fps=FPS_TARGET)
+            cinematics.play("credit2", win, fps=FPS_TARGET)
         pygame.mixer.music.set_volume(controller.master_volume["background"])
         new_game = False
         if isfile(join("Assets", "Screens", "title.png")):
@@ -353,22 +291,18 @@ def main(win):
             block_audio = load_audios("Blocks")
             level = controller.level = Level(cur_level, levels, meta_dict, objects_dict, sprite_master, image_master, player_audio, enemy_audio, block_audio, win, controller)
 
+            if level.start_cinematic is not None:
+                for cinematic in level.start_cinematic:
+                    level.cinematics.play(cinematic, win, fps=FPS_TARGET)
+            else:
+                print("Starting level " + level.name)
+
             if level.music is not None:
                 controller.queue_track_list()
                 pygame.mixer.music.set_volume(controller.master_volume["background"])
                 pygame.mixer.music.set_endevent(pygame.USEREVENT)
                 pygame.mixer.music.play(fade_ms=2000)
                 controller.cycle_music()
-
-            if level.start_screen is not None:
-                if isfile(join("Assets", "Screens", str(level.start_screen))):
-                    play_slide(pygame.image.load(join("Assets", "Screens", str(level.start_screen))), controller)
-                elif isinstance(level.start_screen, list):
-                    for item in level.start_screen:
-                        if isfile(join("Assets", "Screens", item)):
-                            play_slide(pygame.image.load(join("Assets", "Screens", item)), controller)
-                else:
-                    print("Starting level " + level.name)
 
             if controller.player_abilities is not None:
                 for key in controller.player_abilities:
@@ -402,6 +336,7 @@ def main(win):
             glitches = None
             next_level = None
             clock.tick(FPS_TARGET)
+            # MAIN GAME LOOP
             while True:
                 dtime = clock.tick(FPS_TARGET) - dtime_offset
                 level.time += dtime
@@ -414,8 +349,11 @@ def main(win):
                         glitches = None
                 dtime_offset = 0
 
+                while len(level.cinematics.queued) > 0:
+                    dtime_offset += level.cinematics.play_queue(win, fps=FPS_TARGET)
+
                 dtime_offset += controller.get_gamepad()
-    
+
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         save_player_profile(controller, level)
@@ -483,23 +421,18 @@ def main(win):
                     display_text(load_text_from_file(level.end_message), win, controller)
                 save_player_profile(controller, level)
                 fade_out(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller)
-                if level.end_screen is not None:
-                    if isfile(join("Assets", "Screens", str(level.end_screen))):
-                        play_slide(pygame.image.load(join("Assets", "Screens", str(level.end_screen))), controller)
-                    elif isinstance(level.end_screen, list):
-                        for item in level.end_screen:
-                            if isfile(join("Assets", "Screens", item)):
-                                play_slide(pygame.image.load(join("Assets", "Screens", item)), controller)
-                    if isfile(join("Assets", "Screens", "recap.png")):
-                        play_slide(pygame.image.load(join("Assets", "Screens", "recap.png")), controller, text=["Mission successful.", "Mission time: " + controller.get_formatted_level_time() + "."])
+                if level.end_cinematic is not None:
+                    for cinematic in level.end_cinematic:
+                        level.cinematics.play(cinematic, win, fps=FPS_TARGET)
+                cinematics.cinematics["recap"].text = ["Mission successful.", "Mission time: " + controller.get_formatted_level_time() + "."]
+                cinematics.play("recap", win, fps=FPS_TARGET)
                 if level.grayscale:
                     sprite_master.clear()
                     image_master.clear()
                 cur_level = next_level
 
         if not controller.goto_main:
-            if isfile(join("Assets", "Screens", "all_done.png")):
-                play_slide(pygame.image.load(join("Assets", "Screens", "all_done.png")), controller)
+            cinematics.play("all_done", win, fps=FPS_TARGET)
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@ from os.path import join
 import pygame
 from Block import Block, BreakableBlock, MovingBlock, MovableBlock, Hazard, MovingHazard, Door, FallingHazard
 from Boss import Boss
+from Cinematics import CinematicsManager
 from Player import Player
 from Enemy import Enemy
 from Trigger import Trigger, TriggerType
@@ -21,8 +22,12 @@ class Level:
         self.can_glitch = (False if meta_dict[name].get("can_glitch") is None else bool(meta_dict[name]["can_glitch"].upper() == "TRUE"))
         self.background = (None if meta_dict[name].get("background") is None else meta_dict[name]["background"])
         self.foreground = (None if meta_dict[name].get("foreground") is None else meta_dict[name]["foreground"])
-        self.start_screen = (None if meta_dict[name].get("start_screen") is None else meta_dict[name]["start_screen"])
-        self.end_screen = (None if meta_dict[name].get("end_screen") is None else meta_dict[name]["end_screen"])
+        self.start_cinematic = (None if meta_dict[name].get("start_cinematic") is None else meta_dict[name]["start_cinematic"])
+        self.end_cinematic = (None if meta_dict[name].get("end_cinematic") is None else meta_dict[name]["end_cinematic"])
+        if type(self.start_cinematic) not in [list, tuple]:
+            self.start_cinematic = [self.start_cinematic]
+        if type(self.end_cinematic) not in [list, tuple]:
+            self.end_cinematic = [self.end_cinematic]
         self.start_message = (None if meta_dict[name].get("start_message") is None else meta_dict[name]["start_message"])
         self.end_message = (None if meta_dict[name].get("end_message") is None else meta_dict[name]["end_message"])
         self.music = (None if meta_dict[name].get("music") is None else validate_file_list("Music", list(meta_dict[name]["music"].split(' ')), "mp3"))
@@ -30,6 +35,7 @@ class Level:
         self.weather = (None if meta_dict[name].get("weather") is None else self.get_weather(meta_dict[name]["weather"].upper()))
         if meta_dict[name].get("abilities") is not None:
             self.set_player_abilities(meta_dict[name]["abilities"])
+        self.cinematics = (None if meta_dict[name].get("cinematics") is None else CinematicsManager(meta_dict[name]["cinematics"], controller))
 
     def get_player(self):
         return self.player

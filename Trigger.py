@@ -17,6 +17,7 @@ class TriggerType(Enum):
     SAVE = 5
     CHANGE_LEVEL = 6
     SET_PROPERTY = 7
+    CINEMATIC = 8
 
 
 class Trigger(Object):
@@ -26,7 +27,7 @@ class Trigger(Object):
         self.fire_once = fire_once
         self.has_fired = False
         self.type = type
-        self.value = self.load_input(input, objects_dict, sprite_master, enemy_audios, block_audios, image_master, block_size)
+        self.value = self.__load_input__(input, objects_dict, sprite_master, enemy_audios, block_audios, image_master, block_size)
 
     def save(self):
         if self.has_fired:
@@ -37,7 +38,7 @@ class Trigger(Object):
     def load(self, obj):
         self.has_fired = obj["has_fired"]
 
-    def load_input(self, input, objects_dict, sprite_master, enemy_audios, block_audios, image_master, block_size):
+    def __load_input__(self, input, objects_dict, sprite_master, enemy_audios, block_audios, image_master, block_size):
         if input is None or self.type is None:
             return None
         elif self.type == TriggerType.TEXT:
@@ -109,6 +110,8 @@ class Trigger(Object):
                 return None
             else:
                 return input
+        elif self.type == TriggerType.CINEMATIC:
+            return input
         else:
             return None
 
@@ -116,7 +119,7 @@ class Trigger(Object):
         start = time.perf_counter_ns()
 
         next_level = None
-        if (self.fire_once and self.has_fired) or self.type is None or self.value is None:
+        if ((self.fire_once or self.type == TriggerType.CINEMATIC) and self.has_fired) or self.type is None or self.value is None:
             return [0, next_level]
         self.has_fired = True
 
@@ -143,6 +146,9 @@ class Trigger(Object):
             next_level = self.value
         elif self.type == TriggerType.SET_PROPERTY:
             set_property(self, self.value)
+        elif self.type == TriggerType.CINEMATIC:
+            if self.level.cinematics is not None and self.level.cinematics.get(self.value) is not None:
+                self.level.cinematics.queue(self.value)
 
         return [(time.perf_counter_ns() - start) // 1000000, next_level]
 

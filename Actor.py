@@ -77,7 +77,7 @@ class Actor(Object):
         self.sprite = None
         self.audios = audios
         self.update_sprite(1)
-        self.update_geo()
+        self.__update_geo__()
         self.rect.x += (block_size - self.rect.width) // 2
         self.rect.y += (block_size - self.rect.height)
         self.audio_trigger_frames = {"TELEPORT": [0], "RUN": [4, 10], "JUMP": [0], "DOUBLE_JUMP": [0], "CROUCH": [0], "HIT": [0], "RESIZE": [0]}
@@ -116,7 +116,7 @@ class Actor(Object):
             self.active_projectiles.append(Projectile(self.level, self.controller, self.rect.centerx + (self.rect.width * self.facing // 3), self.rect.centery, None, 0, self.attack_damage, self.difficulty, sprite=self.proj_sprite, name=(self.name + "'s projectile #" + str(len(self.active_projectiles) + 1))))
             self.active_projectiles[-1].load(list(proj.values())[0])
         self.update_sprite(1)
-        self.update_geo()
+        self.__update_geo__()
 
     def set_difficulty(self, scale):
         self.difficulty = scale
@@ -412,7 +412,7 @@ class Actor(Object):
 
         return active_index
 
-    def update_geo(self):
+    def __update_geo__(self):
         self.rect = self.sprite.get_rect(topleft=(self.rect.x, self.rect.y))
         self.mask = pygame.mask.from_surface(self.sprite)
 
@@ -489,7 +489,7 @@ class Actor(Object):
                 proj.output(win, offset_x, offset_y, master_volume, fps)
         if self == self.level.get_player() or -self.rect.width < adj_x_image <= window_width and -self.rect.height < adj_y_image <= window_height:
             self.update_sprite(fps)
-            self.update_geo()
+            self.__update_geo__()
             win.blit(self.sprite, (adj_x_image, adj_y_image))
             if self.cooldowns.get("block_attempt") is not None and self.cooldowns["block_attempt"] > 0:
                 radius = math.dist((self.rect.x, self.rect.y), (self.rect.centerx, self.rect.centery))

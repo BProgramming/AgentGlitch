@@ -47,7 +47,7 @@ class Enemy(Actor):
             vision_spotted = pygame.transform.grayscale(vision_spotted)
         self.vision = {"hidden": {MovementDirection.LEFT: vision_hidden, MovementDirection.RIGHT: pygame.transform.flip(vision_hidden, True, False)}, "spotted": {MovementDirection.LEFT: vision_spotted, MovementDirection.RIGHT: pygame.transform.flip(vision_spotted, True, False)}}
 
-    def increment_patrol_index(self):
+    def __increment_patrol_index__(self):
         if self.patrol_path_index < 0:
             self.patrol_path_index -= 1
         elif self.patrol_path_index >= 0:
@@ -57,7 +57,7 @@ class Enemy(Actor):
         elif self.patrol_path_index <= -len(self.patrol_path):
             self.patrol_path_index = 0
 
-    def find_floor(self, dist):
+    def __find_floor__(self, dist):
         for block in self.level.get_objects_in_range((self.rect.x + dist, self.rect.bottom), blocks_only=True):
             if block.rect.collidepoint(self.rect.centerx + dist, self.rect.bottom):
                 return True
@@ -70,13 +70,13 @@ class Enemy(Actor):
                 self.should_move_vert = False
                 self.direction = self.facing = (MovementDirection.RIGHT if self.level.get_player().rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT)
                 if self.cooldowns["spot_player"] <= 0:
-                    self.spot_player()
+                    self.__spot_player__()
                     if math.dist(self.level.get_player().rect.center, self.rect.center) >= self.spot_range // 3:
                         self.is_attacking = True
                     elif not self.is_animated_attack:
                         self.is_attacking = False
             else:
-                if self.spot_player() or self.cooldowns["spot_player"] > 0:
+                if self.__spot_player__() or self.cooldowns["spot_player"] > 0:
                     dist = math.dist(self.level.get_player().rect.center, self.rect.center)
                     if self.can_shoot:
                         if dist < self.spot_range // 3:
@@ -84,7 +84,7 @@ class Enemy(Actor):
                                 self.direction = (MovementDirection.RIGHT if self.rect.centerx - self.level.get_player().rect.centerx >= 0 else MovementDirection.LEFT)
                                 self.facing = self.direction.swap()
                                 self.x_vel = self.direction * vel
-                                self.should_move_horiz = self.find_floor(self.x_vel * dtime)
+                                self.should_move_horiz = self.__find_floor__(self.x_vel * dtime)
                             if not self.is_animated_attack:
                                 self.is_attacking = False
                         else:
@@ -100,14 +100,14 @@ class Enemy(Actor):
                             else:
                                 self.direction = self.facing = (MovementDirection.RIGHT if self.level.get_player().rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT)
                                 self.x_vel = self.direction * min(vel, dist / dtime)
-                                self.should_move_horiz = self.find_floor(self.x_vel * dtime)
+                                self.should_move_horiz = self.__find_floor__(self.x_vel * dtime)
                         else:
                             if dist < self.rect.width:
                                 self.direction = self.facing = (MovementDirection.RIGHT if self.level.get_player().rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT)
                             if not self.is_animated_attack:
                                 self.is_attacking = False
                             self.x_vel = self.direction * min(vel, dist / dtime)
-                            self.should_move_horiz = self.find_floor(self.x_vel * dtime)
+                            self.should_move_horiz = self.__find_floor__(self.x_vel * dtime)
                 else:
                     if self.is_attacking and not self.is_animated_attack:
                         self.is_attacking = False
@@ -115,7 +115,7 @@ class Enemy(Actor):
                     if abs(target_x) > 5:
                         self.direction = self.facing = (MovementDirection.RIGHT if target_x >= 0 else MovementDirection.LEFT) ##replace probably the cause of glitching left and right
                         self.x_vel = self.direction * min(vel, abs(target_x) / dtime)
-                        self.should_move_horiz = self.find_floor(self.x_vel * dtime)
+                        self.should_move_horiz = self.__find_floor__(self.x_vel * dtime)
 
                     target_y = self.patrol_path[self.patrol_path_index][1] - self.rect.y
                     if self.should_move_horiz and self.jump_count < self.max_jumps and target_y < -5:
@@ -123,12 +123,12 @@ class Enemy(Actor):
                         self.should_move_vert = True
 
                     if not self.should_move_horiz and not self.should_move_vert:
-                        self.increment_patrol_index()
+                        self.__increment_patrol_index__()
 
     def __adj_spot_range__(self):
         return self.spot_range * self.level.get_player().size / (1.5 if self.level.get_player().is_crouching else 1)
 
-    def spot_player(self, spot_cd=PLAYER_SPOT_COOLDOWN):
+    def __spot_player__(self, spot_cd=PLAYER_SPOT_COOLDOWN):
         dist = math.dist(self.level.get_player().rect.center, self.rect.center)
         if dist <= self.__adj_spot_range__() and (self.facing == (MovementDirection.RIGHT if self.level.get_player().rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT) or self.cooldowns["get_hit"] > 0):
             for i in range(round(dist)):
@@ -147,12 +147,12 @@ class Enemy(Actor):
                 if self.patrol_path is not None:
                     points_checked = 0
                     while points_checked < len(self.patrol_path) and MovementDirection(math.copysign(1, self.patrol_path[self.patrol_path_index][0] - self.rect.x)) == self.direction:
-                        self.increment_patrol_index()
+                        self.__increment_patrol_index__()
                         points_checked += 1
             else:
                 self.jump()
         elif self.cooldowns["spot_player"] <= 0 and self.patrol_path is not None:
-            self.increment_patrol_index()
+            self.__increment_patrol_index__()
         return True
 
     def output(self, win, offset_x, offset_y, master_volume, fps):

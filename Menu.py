@@ -14,7 +14,7 @@ class Menu:
         self.clear = None
         button_assets = load_images("Menu", "Buttons")
         self.notch_val = []
-        self.buttons = self.make_buttons(button_labels, pygame.transform.smoothscale_by(button_assets["BUTTON_NORMAL"], 0.5), pygame.transform.smoothscale_by(button_assets["BUTTON_MOUSEOVER"], 0.5))
+        self.buttons = self.__make_buttons__(button_labels, pygame.transform.smoothscale_by(button_assets["BUTTON_NORMAL"], 0.5), pygame.transform.smoothscale_by(button_assets["BUTTON_MOUSEOVER"], 0.5))
         self.header = pygame.font.SysFont("courier", 32).render(header, True, (255, 255, 255))
         self.screen = pygame.Surface((min(2 * win.get_width() // 3, max(self.buttons[0][0].width, self.header.get_width())), (self.buttons[0][0].height * len(self.buttons)) + self.header.get_height() + 10), pygame.SRCALPHA)
         self.screen.fill((0, 0, 0, 128))
@@ -31,7 +31,7 @@ class Menu:
             if self.music_index >= len(self.music):
                 self.music_index = 0
 
-    def make_buttons(self, labels, button_normal, button_mouseover):
+    def __make_buttons__(self, labels, button_normal, button_mouseover):
         buttons = []
         for label in labels:
             text = pygame.font.SysFont("courier", 32).render(label["label"], True, (255, 255, 255))
@@ -202,7 +202,7 @@ class Selector(Menu):
         self.notch_val = [None, None, None]
         self.arrow_asset = pygame.transform.smoothscale_by(load_images("Menu", "Arrows")["ARROW_WHITE"], 0.5)
         button_assets = load_images("Menu", "Buttons")
-        self.buttons = self.make_buttons(pygame.transform.smoothscale_by(button_assets["HALF_BUTTON_NORMAL"], 0.5), pygame.transform.smoothscale_by(button_assets["HALF_BUTTON_MOUSEOVER"], 0.5), pygame.transform.smoothscale_by(button_assets["BUTTON_NORMAL"], 0.5), pygame.transform.smoothscale_by(button_assets["BUTTON_MOUSEOVER"], 0.5), accept_only=accept_only)
+        self.buttons = self.__make_buttons__(pygame.transform.smoothscale_by(button_assets["HALF_BUTTON_NORMAL"], 0.5), pygame.transform.smoothscale_by(button_assets["HALF_BUTTON_MOUSEOVER"], 0.5), pygame.transform.smoothscale_by(button_assets["BUTTON_NORMAL"], 0.5), pygame.transform.smoothscale_by(button_assets["BUTTON_MOUSEOVER"], 0.5), accept_only=accept_only)
         self.header = pygame.font.SysFont("courier", 32).render(header, True, (255, 255, 255))
         self.note = []
         if note is not None:
@@ -271,7 +271,7 @@ class Selector(Menu):
             self.image_index = len(self.images) - 1
         self.image_selected = self.images[self.image_index]
 
-    def make_buttons(self, half_button_normal, half_button_mouseover, button_normal, button_mouseover, accept_only=False):
+    def __make_buttons__(self, half_button_normal, half_button_mouseover, button_normal, button_mouseover, accept_only=False):
         buttons = []
         loop_range = range(1 if accept_only else 4)
         for i in loop_range:
