@@ -59,17 +59,7 @@ class Cinematic:
         self.controller = controller
         self.type = cinematic_type
         self.cinematic = obj
-        if pause_key is None:
-            self.pause_key = None
-        else:
-            self.pause_key = []
-            if type(pause_key) not in [list, tuple]:
-                pause_key = [pause_key]
-            for key in pause_key:
-                if hasattr(controller, key):
-                    self.pause_key.append(getattr(controller, key))
-            self.pause_key = sum(self.pause_key, [])
-            print(self.pause_key)
+        self.pause_key = pause_key
         self.text = text
         self.should_glitch = should_glitch
         self.should_fade_in = should_fade_in
@@ -135,6 +125,14 @@ class Cinematic:
             pause_dtime += 10
 
         if pause_key is not None:
+            valid_keys = []
+            if type(pause_key) not in [list, tuple]:
+                pause_key = [pause_key]
+            for key in pause_key:
+                if hasattr(controller, key):
+                    controller_keys = getattr(controller, key)
+                    for options in controller_keys:
+                        valid_keys.append(options)
             cont = False
             while True:
                 for event in pygame.event.get():
@@ -142,7 +140,7 @@ class Cinematic:
                         controller.save_player_profile(controller)
                         pygame.quit()
                         sys.exit()
-                    elif (event.type == pygame.KEYDOWN and event.key in pause_key) or ((event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.JOYBUTTONDOWN) and event.button in pause_key):
+                    elif (event.type == pygame.KEYDOWN and event.key in valid_keys) or ((event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.JOYBUTTONDOWN) and event.button in valid_keys):
                         cont = True
                         break
                 if cont:
@@ -246,6 +244,14 @@ class Cinematic:
                     break
 
             if pause_key is not None:
+                valid_keys = []
+                if type(pause_key) not in [list, tuple]:
+                    pause_key = [pause_key]
+                for key in pause_key:
+                    if hasattr(controller, key):
+                        controller_keys = getattr(controller, key)
+                        for options in controller_keys:
+                            valid_keys.append(options)
                 cont = False
                 while True:
                     for event in pygame.event.get():
@@ -253,7 +259,7 @@ class Cinematic:
                             controller.save_player_profile(controller)
                             pygame.quit()
                             sys.exit()
-                        elif (event.type == pygame.KEYDOWN and event.key in pause_key) or ((event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.JOYBUTTONDOWN) and event.button in pause_key):
+                        elif (event.type == pygame.KEYDOWN and event.key in valid_keys) or ((event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.JOYBUTTONDOWN) and event.button in valid_keys):
                             cont = True
                             break
                     if cont:
