@@ -59,6 +59,13 @@ class Menu:
             self.screen.set_alpha(8 * i)
             self.display(win)
             pygame.display.update()
+
+            for event in pygame.event.get():
+                if event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
+                    self.screen.set_alpha(248)
+                    self.display(win)
+                    pygame.display.update()
+                    return
             time.sleep(0.01)
 
     def fade_music(self):
@@ -81,6 +88,13 @@ class Menu:
                 self.screen.set_alpha(8 * i)
                 self.display(win)
                 pygame.display.update()
+
+                for event in pygame.event.get():
+                    if event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
+                        self.screen.set_alpha(0)
+                        self.display(win)
+                        pygame.display.update()
+                        return
                 time.sleep(0.005)
 
     def set_mouse_pos(self, win):

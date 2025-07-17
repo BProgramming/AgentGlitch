@@ -233,8 +233,8 @@ def main(win):
         if len(load_player_profile(controller)) == 0:
             pygame.display.toggle_fullscreen()
         if not controller.goto_main:
-            cinematics.play("credit1", win, fps=FPS_TARGET)
-            cinematics.play("credit2", win, fps=FPS_TARGET)
+            cinematics.play("credit1", win)
+            cinematics.play("credit2", win)
         pygame.mixer.music.set_volume(controller.master_volume["background"])
         new_game = False
         if isfile(join("Assets", "Screens", "title.png")):
@@ -293,7 +293,7 @@ def main(win):
 
             if level.start_cinematic is not None:
                 for cinematic in level.start_cinematic:
-                    level.cinematics.play(cinematic, win, fps=FPS_TARGET)
+                    level.cinematics.play(cinematic, win)
             else:
                 print("Starting level " + level.name)
 
@@ -350,7 +350,7 @@ def main(win):
                 dtime_offset = 0
 
                 while len(level.cinematics.queued) > 0:
-                    dtime_offset += level.cinematics.play_queue(win, fps=FPS_TARGET)
+                    dtime_offset += level.cinematics.play_queue(win)
 
                 dtime_offset += controller.get_gamepad()
 
@@ -423,16 +423,16 @@ def main(win):
                 fade_out(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller)
                 if level.end_cinematic is not None:
                     for cinematic in level.end_cinematic:
-                        level.cinematics.play(cinematic, win, fps=FPS_TARGET)
+                        level.cinematics.play(cinematic, win)
                 cinematics.cinematics["recap"].text = ["Mission successful.", "Mission time: " + controller.get_formatted_level_time() + "."]
-                cinematics.play("recap", win, fps=FPS_TARGET)
+                cinematics.play("recap", win)
                 if level.grayscale:
                     sprite_master.clear()
                     image_master.clear()
                 cur_level = next_level
 
         if not controller.goto_main:
-            cinematics.play("all_done", win, fps=FPS_TARGET)
+            cinematics.play("all_done", win)
 
 
 if __name__ == "__main__":

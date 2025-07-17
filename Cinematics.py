@@ -1,3 +1,4 @@
+import cv2
 import pygame
 import sys
 import time
@@ -32,7 +33,7 @@ class CinematicsManager:
         return pygame.image.load(file)
 
     def __load_video__(self, file):
-        return None
+        return cv2.VideoCapture(file)
 
     def clear_queue(self):
         self.queued = []
@@ -40,55 +41,67 @@ class CinematicsManager:
     def queue(self, name):
         self.queued.append(self.cinematics[name])
 
-    def play(self, name, win, fps=None):
+    def play(self, name, win):
         if self.cinematics.get(name) is not None:
-            return self.cinematics[name].play(win, fps=fps)
+            return self.cinematics[name].play(win)
         else:
             return 0
 
-    def play_queue(self, win, fps=None):
+    def play_queue(self, win):
         dtime = 0
         for cinematic in self.queued:
-            dtime += cinematic.play(win, fps=fps)
+            dtime += cinematic.play(win)
         self.queued = []
         return dtime
 
 class Cinematic:
-    def __init__(self, obj, type, controller, pause_key=None, text=None, should_glitch=False, should_fade_in=True, should_fade_out=True):
+    def __init__(self, obj, cinematic_type, controller, pause_key=None, text=None, should_glitch=False, should_fade_in=True, should_fade_out=True):
         self.controller = controller
-        self.type = type
+        self.type = cinematic_type
         self.cinematic = obj
-        self.pause_key = pause_key
+        if pause_key is None:
+            self.pause_key = None
+        else:
+            self.pause_key = []
+            if type(pause_key) not in [list, tuple]:
+                pause_key = [pause_key]
+            for key in pause_key:
+                if hasattr(controller, key):
+                    self.pause_key.append(getattr(controller, key))
+            self.pause_key = sum(self.pause_key, [])
+            print(self.pause_key)
         self.text = text
         self.should_glitch = should_glitch
         self.should_fade_in = should_fade_in
         self.should_fade_out = should_fade_out
 
-    def play(self, win, fps=None):
+    def play(self, win):
         start = time.perf_counter_ns()
         pygame.mixer.pause()
         if self.type == CinematicType.SLIDE:
-            self.__play_slide__(self.cinematic, self.controller, win, text=self.text, should_glitch=self.should_glitch, pause_key=self.pause_key, should_fade_in=self.should_fade_in, should_fade_out=self.should_fade_out, fps=fps)
+            self.__play_slide__(self.cinematic, self.controller, win, text=self.text, should_glitch=self.should_glitch, pause_key=self.pause_key, should_fade_in=self.should_fade_in, should_fade_out=self.should_fade_out)
         elif self.type == CinematicType.VIDEO:
-            self.__play_video__(self.cinematic, self.controller, win, text=self.text, should_glitch=self.should_glitch, pause_key=self.pause_key, should_fade_in=self.should_fade_in, should_fade_out=self.should_fade_out, fps=fps)
+            self.__play_video__(self.cinematic, self.controller, win, text=self.text, should_glitch=self.should_glitch, pause_key=self.pause_key, should_fade_in=self.should_fade_in, should_fade_out=self.should_fade_out)
         pygame.mixer.unpause()
         return (time.perf_counter_ns() - start) // 1000000
 
     @staticmethod
-    def __play_slide__(slide, controller, win, text=None, should_glitch=False, pause_key=None, should_fade_in=True, should_fade_out=True, fps=None):
-        ffwd = False
+    def __play_slide__(slide, controller, win, text=None, should_glitch=False, pause_key=None, should_fade_in=True, should_fade_out=True):
         og_slide = slide
         if text is not None:
             for i in range(len(text)):
                 text_line = pygame.font.SysFont("courier", 32).render(text[i], True, (0, 0, 0))
                 slide.blit(text_line, (slide.get_width() // 5, (slide.get_height() // 5) + (i * text_line.get_height())))
 
+        slide_x = (win.get_width() - slide.get_width()) // 2
+        slide_y = (win.get_height() - slide.get_height()) // 2
+
         black = pygame.Surface((win.get_width(), win.get_height()), pygame.SRCALPHA)
         black.fill((0, 0, 0))
 
         if should_fade_in:
             for i in range(64):
-                win.blit(slide, ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
+                win.blit(slide, (slide_x, slide_y))
                 black.set_alpha(255 - (4 * i))
                 win.blit(black, (0, 0))
                 pygame.display.update()
@@ -98,18 +111,15 @@ class Cinematic:
                         pygame.quit()
                         sys.exit()
                     elif event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
-                        ffwd = True
-                        break
-                if ffwd:
-                    break
+                        return
                 time.sleep(0.01)
-        else:
-            black.set_alpha(255)
-            win.blit(black, (0, 0))
+
+        black.set_alpha(255)
+        win.blit(black, (0, 0))
 
         pause_dtime = 0
         while pause_dtime < 1000:
-            win.blit(slide, ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
+            win.blit(slide, (slide_x, slide_y))
             if should_glitch and pause_dtime > 750:
                 for spot in glitch(0.5, win):
                     win.blit(spot[0], spot[1])
@@ -120,27 +130,28 @@ class Cinematic:
                     pygame.quit()
                     sys.exit()
                 elif event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
-                    ffwd = True
-                    break
-            if ffwd:
-                break
+                    return
             time.sleep(0.01)
             pause_dtime += 10
 
         if pause_key is not None:
+            cont = False
             while True:
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         controller.save_player_profile(controller)
                         pygame.quit()
                         sys.exit()
-                    elif (event.type == pygame.KEYDOWN and event.key == pause_key) or ((event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.JOYBUTTONDOWN) and event.button == pause_key):
+                    elif (event.type == pygame.KEYDOWN and event.key in pause_key) or ((event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.JOYBUTTONDOWN) and event.button in pause_key):
+                        cont = True
                         break
+                if cont:
+                    break
                 time.sleep(0.01)
 
         if should_fade_out:
             for i in range(64):
-                win.blit(slide, ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
+                win.blit(slide, (slide_x, slide_y))
                 black.set_alpha(4 * i)
                 win.blit(black, (0, 0))
                 if should_glitch:
@@ -153,18 +164,125 @@ class Cinematic:
                         pygame.quit()
                         sys.exit()
                     elif event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
-                        ffwd = True
-                        break
-                if ffwd:
-                    break
+                        return
                 time.sleep(0.01)
-        else:
-            black.set_alpha(255)
-            win.blit(black, (0, 0))
+
+        black.set_alpha(255)
+        win.blit(black, (0, 0))
 
         if text is not None:
             slide.blit(og_slide, (0, 0))
 
     @staticmethod
-    def __play_video__(video, controller, win, text=None, should_glitch=False, pause_key=None, should_fade_in=True, should_fade_out=True, fps=None):
-        pass
+    def __play_video__(video, controller, win, text=None, should_glitch=False, pause_key=None, should_fade_in=True, should_fade_out=True):
+        if not video.isOpened():
+            raise IOError("Video file " + str(video) + " could not be opened.")
+
+        ret, frame = video.read()
+        if ret:
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            pygame_frame = pygame.surfarray.make_surface(frame_rgb.swapaxes(0, 1))
+
+            rescale_width_factor = win.get_width() / pygame_frame.get_width()
+            rescale_height_factor = win.get_height() / pygame_frame.get_height()
+            rescale_factor = 1
+            if rescale_width_factor < 1 or rescale_height_factor < 1:
+                rescale_factor = min(rescale_width_factor, rescale_height_factor)
+                pygame_frame = pygame.transform.scale(pygame_frame, (int(pygame_frame.get_width() * rescale_factor), int(pygame_frame.get_height() * rescale_factor)))
+
+            pygame_frame_x = (win.get_width() - pygame_frame.get_width()) // 2
+            pygame_frame_y = (win.get_height() - pygame_frame.get_height()) // 2
+
+            black = pygame.Surface((win.get_width(), win.get_height()), pygame.SRCALPHA)
+            black.fill((0, 0, 0))
+
+            if should_fade_in:
+                for i in range(64):
+                    #if text is not None:
+                    #    for i in range(len(text)):
+                    #        text_line = pygame.font.SysFont("courier", 32).render(text[i], True, (0, 0, 0))
+                    #        pygame_frame.blit(text_line, (pygame_frame.get_width() // 5, (pygame_frame.get_height() // 5) + (i * text_line.get_height())))
+                    win.blit(pygame_frame, (pygame_frame_x, pygame_frame_y))
+                    black.set_alpha(255 - (4 * i))
+                    win.blit(black, (0, 0))
+                    pygame.display.update()
+                    for event in pygame.event.get():
+                        if event.type == pygame.QUIT:
+                            controller.save_player_profile(controller)
+                            pygame.quit()
+                            sys.exit()
+                        elif event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
+                            return
+                    time.sleep(0.01)
+
+            black.set_alpha(255)
+            win.blit(black, (0, 0))
+
+            while video.isOpened():
+                win.blit(black, (0, 0))
+                if text is not None:
+                    for i in range(len(text)):
+                        text_line = pygame.font.SysFont("courier", 32).render(text[i], True, (0, 0, 0))
+                        pygame_frame.blit(text_line, (pygame_frame.get_width() // 5, (pygame_frame.get_height() // 5) + (i * text_line.get_height())))
+                win.blit(pygame_frame, (pygame_frame_x, pygame_frame_y))
+                pygame.display.update()
+
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        controller.save_player_profile(controller)
+                        pygame.quit()
+                        sys.exit()
+                    elif event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
+                        return
+                time.sleep(0.01)
+
+                ret, frame = video.read()
+                if ret:
+                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    pygame_frame = pygame.surfarray.make_surface(frame_rgb.swapaxes(0, 1))
+                    if rescale_factor < 1:
+                        pygame_frame = pygame.transform.scale(pygame_frame, (int(pygame_frame.get_width() * rescale_factor), int(pygame_frame.get_height() * rescale_factor)))
+                else:
+                    break
+
+            if pause_key is not None:
+                cont = False
+                while True:
+                    for event in pygame.event.get():
+                        if event.type == pygame.QUIT:
+                            controller.save_player_profile(controller)
+                            pygame.quit()
+                            sys.exit()
+                        elif (event.type == pygame.KEYDOWN and event.key in pause_key) or ((event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.JOYBUTTONDOWN) and event.button in pause_key):
+                            cont = True
+                            break
+                    if cont:
+                        break
+                    time.sleep(0.01)
+
+            if should_fade_out:
+                for i in range(64):
+                    #if text is not None:
+                    #    for i in range(len(text)):
+                    #        text_line = pygame.font.SysFont("courier", 32).render(text[i], True, (0, 0, 0))
+                    #        pygame_frame.blit(text_line, (pygame_frame.get_width() // 5, (pygame_frame.get_height() // 5) + (i * text_line.get_height())))
+                    win.blit(pygame_frame, (pygame_frame_x, pygame_frame_y))
+                    black.set_alpha(4 * i)
+                    win.blit(black, (0, 0))
+                    if should_glitch:
+                        for spot in glitch(0.5, win):
+                            win.blit(spot[0], spot[1])
+                    pygame.display.update()
+                    for event in pygame.event.get():
+                        if event.type == pygame.QUIT:
+                            controller.save_player_profile(controller)
+                            pygame.quit()
+                            sys.exit()
+                        elif event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
+                            return
+                    time.sleep(0.01)
+
+            black.set_alpha(255)
+            win.blit(black, (0, 0))
+
+        video.release()
