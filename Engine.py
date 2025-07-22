@@ -296,7 +296,32 @@ def main(win):
             block_audio = load_audios("Blocks")
             win.fill((0, 0, 0))
             display_text("Loading mission... [3/3]", win, controller, type=False, min_pause_time=0, should_sleep=False)
-            level = controller.level = Level(cur_level, levels, meta_dict, objects_dict, sprite_master, image_master, player_audio, enemy_audio, block_audio, win, controller)
+            controller.level = level = Level(cur_level, levels, meta_dict, objects_dict, sprite_master, image_master, player_audio, enemy_audio, block_audio, win, controller)
+
+            win.fill((0, 0, 0))
+            display_text("Loading agent...", win, controller, type=False, min_pause_time=0, should_sleep=False)
+            if controller.player_abilities is not None:
+                for key in controller.player_abilities:
+                    setattr(level.get_player(), key, controller.player_abilities[key])
+            else:
+                controller.player_abilities = {"can_wall_jump": level.get_player().can_wall_jump, "can_teleport": level.get_player().can_teleport, "can_bullet_time": level.get_player().can_bullet_time, "can_resize": level.get_player().can_resize, "can_heal": level.get_player().can_heal, "max_jumps": level.get_player().max_jumps}
+
+            win.fill((0, 0, 0))
+            display_text("Initializing controls...", win, controller, type=False, min_pause_time=0, should_sleep=False)
+            controller.hud = hud = HUD(level.get_player(), win, grayscale=level.grayscale)
+
+            if should_load:
+                load_part2(load_data, controller.level)
+            save(controller.level, None)
+            controller.get_gamepad()
+
+            win.fill((0, 0, 0))
+            funny_loading_text = ["Applying finishing touches", "Applying one last coat of paint", "Almost done", "Any minute now", "Nearly there", "One more thing", "Tidying up", "Training agent", "Catching the train", "Finishing lunch", "Folding laundry"]
+            display_text(funny_loading_text[random.randint(0, len(funny_loading_text) - 1)] + "...", win, controller, type=False, min_pause_time=0, should_sleep=False)
+            background, bg_image = get_background(level)
+            fg_image = get_foreground(level)
+            offset_x = offset_y = 0
+            offset_x, offset_y = get_offset(level, offset_x, offset_y, win.get_width(), win.get_height())
 
             # FROM HERE, THE LEVEL ACTUALLY STARTS: #
             if level.start_cinematic is not None:
@@ -309,26 +334,6 @@ def main(win):
                 pygame.mixer.music.set_endevent(pygame.USEREVENT)
                 pygame.mixer.music.play(fade_ms=2000)
                 controller.cycle_music()
-
-            if controller.player_abilities is not None:
-                for key in controller.player_abilities:
-                    setattr(level.get_player(), key, controller.player_abilities[key])
-            else:
-                controller.player_abilities = {"can_wall_jump": level.get_player().can_wall_jump, "can_teleport": level.get_player().can_teleport, "can_bullet_time": level.get_player().can_bullet_time, "can_resize": level.get_player().can_resize, "can_heal": level.get_player().can_heal, "max_jumps": level.get_player().max_jumps}
-
-            hud = controller.hud = HUD(level.get_player(), win, grayscale=level.grayscale)
-
-            if should_load:
-                load_part2(load_data, controller.level)
-            save(controller.level, None)
-
-            controller.get_gamepad()
-
-            background, bg_image = get_background(level)
-            fg_image = get_foreground(level)
-
-            offset_x = offset_y = 0
-            offset_x, offset_y = get_offset(level, offset_x, offset_y, win.get_width(), win.get_height())
 
             fade_in(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller)
             if level.start_message is not None:

@@ -180,6 +180,9 @@ class Level:
         hazards = []
         for i in range(len(layout)):
             win.fill((0, 0, 0))
+            bar = pygame.Surface((int(win.get_width() * ((i + 1) / len(layout))), 10), pygame.SRCALPHA)
+            bar.fill((255, 255, 255))
+            win.blit(bar, (0, win.get_height() - 12))
             display_text("Building level." + ("." if i%3 <= 1 else " ") + ("." if i%3 <= 2 else " ") + "[" + str(i + 1) + "/" + str(len(layout)) + "]", win, controller, type=False, min_pause_time=0, should_sleep=False)
             static_blocks.append([])
             for j in range(len(layout[i])):
