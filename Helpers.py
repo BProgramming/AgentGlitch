@@ -270,7 +270,7 @@ def load_text_from_file(file):
         handle_exception(FileNotFoundError(path))
 
 
-def display_text(output, win, controller, type=True):
+def display_text(output, win, controller, type=True, min_pause_time=80, should_sleep=True):
     if output is None or output == "":
         return
     else:
@@ -293,7 +293,7 @@ def display_text(output, win, controller, type=True):
                         win.blit(text_box, ((win.get_width() - text_box.get_width()) // 2, win.get_height() - (text_box.get_height() + 100)))
                         pygame.display.update()
                         pause_dtime = 0
-                        while pause_dtime < 80:
+                        while pause_dtime < min_pause_time:
                             for event in pygame.event.get():
                                 if event.type == pygame.QUIT:
                                     controller.save_profile(controller)
@@ -317,20 +317,21 @@ def display_text(output, win, controller, type=True):
                 win.blit(text_box, ((win.get_width() - text_box.get_width()) // 2, win.get_height() - (text_box.get_height() + 100)))
                 pygame.display.update()
 
-            sleep_time = max((len(text) // 20), 1) * 1000
-            pause_dtime = 0
-            while pause_dtime < sleep_time:
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        controller.save_profile(controller)
-                        pygame.quit()
-                        sys.exit()
-                if type and controller.handle_anykey():
-                    break
-                if controller.goto_load or controller.goto_main:
-                    return
-                time.sleep(0.01)
-                pause_dtime += 10
+            if should_sleep:
+                sleep_time = max((len(text) // 20), 1) * 1000
+                pause_dtime = 0
+                while pause_dtime < sleep_time:
+                    for event in pygame.event.get():
+                        if event.type == pygame.QUIT:
+                            controller.save_profile(controller)
+                            pygame.quit()
+                            sys.exit()
+                    if type and controller.handle_anykey():
+                        break
+                    if controller.goto_load or controller.goto_main:
+                        return
+                    time.sleep(0.01)
+                    pause_dtime += 10
 
 
 def glitch(odds, screen):

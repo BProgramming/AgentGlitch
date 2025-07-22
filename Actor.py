@@ -51,6 +51,7 @@ class Actor(Object):
 
     def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, can_shoot=False, can_resize=False, width=SIZE, height=SIZE, attack_damage=ATTACK_DAMAGE, sprite=None, proj_sprite=None, name=None):
         super().__init__(level, controller, x, y, width, height, name=name)
+        self.patrol_path = None
         self.x_vel = self.y_vel = 0.0
         self.push_x = self.push_y = 0.0
         self.should_move_horiz = False
@@ -196,33 +197,23 @@ class Actor(Object):
     def hit_head(self):
         self.y_vel *= -0.5
 
-    def play_melee_attack_audio(self):
-        if self.is_attacking and not self.can_shoot:
-            attack_type = "ATTACK_MELEE"
-            if attack_type in self.audios:
-                active_audio_channel = pygame.mixer.find_channel()
-                if active_audio_channel is not None:
-                    active_audio_channel.play(self.audios[attack_type][random.randrange(len(self.audios[attack_type]))])
-                    if self == self.level.get_player():
-                        active_audio_channel.set_volume(self.controller.master_volume["player"])
-                    else:
-                        set_sound_source(self.rect, self.level.get_player().rect, self.controller.master_volume["non-player"], active_audio_channel)
+    def play_attack_audio(self, attack_type):
+        if attack_type in self.audios:
+            active_audio_channel = pygame.mixer.find_channel()
+            if active_audio_channel is not None:
+                active_audio_channel.play(self.audios[attack_type][random.randrange(len(self.audios[attack_type]))])
+                if self == self.level.get_player():
+                    active_audio_channel.set_volume(self.controller.master_volume["player"])
+                else:
+                    set_sound_source(self.rect, self.level.get_player().rect, self.controller.master_volume["non-player"], active_audio_channel)
 
     def shoot_at_target(self, target, max_dist=MAX_SHOOT_DISTANCE, proj_cd=LAUNCH_PROJECTILE_COOLDOWN):
         if self.cooldowns["launch_projectile"] <= 0:
             self.is_attacking = True
-            proj = Projectile(self.level, self.controller, self.rect.centerx + (self.rect.width * self.facing // 3), self.rect.centery, (target[0], self.rect.centery), max_dist, self.attack_damage, self.difficulty, sprite=self.proj_sprite, name=(self.name + "'s projectile #" + str(len(self.active_projectiles) + 1)))
+            proj = Projectile(self.level, self.controller, self.rect.centerx, self.rect.centery, (target[0], self.rect.centery), max_dist, self.attack_damage, self.difficulty, sprite=self.proj_sprite, name=(self.name + "'s projectile #" + str(len(self.active_projectiles) + 1)))
             self.active_projectiles.append(proj)
             self.cooldowns["launch_projectile"] = proj_cd
-            attack_type = "ATTACK_RANGE"
-            if attack_type in self.audios:
-                active_audio_channel = pygame.mixer.find_channel()
-                if active_audio_channel is not None:
-                    active_audio_channel.play(self.audios[attack_type][random.randrange(len(self.audios[attack_type]))])
-                    if self == self.level.get_player():
-                        active_audio_channel.set_volume(self.controller.master_volume["player"])
-                    else:
-                        set_sound_source(self.rect, self.level.get_player().rect, self.controller.master_volume["non-player"], active_audio_channel)
+            self.play_attack_audio("ATTACK_RANGE")
 
     def get_hit(self, obj, hit_cd=GET_HIT_COOLDOWN, heal_delay=HEAL_DELAY):
         self.cooldowns["get_hit"] = hit_cd
@@ -433,7 +424,7 @@ class Actor(Object):
                 else:
                     proj.loop(fps, dtime)
 
-        if (not hasattr(self, "patrol_path") or self.patrol_path is not None) and self.state != MovementState.WIND_UP and self.state != MovementState.WIND_DOWN:
+        if self.patrol_path is not None and self.state != MovementState.WIND_UP and self.state != MovementState.WIND_DOWN:
             self.should_move_vert = True
             self.push_x *= 0.9
             if abs(self.push_x) < 0.01:
@@ -480,8 +471,8 @@ class Actor(Object):
     def output(self, win, offset_x, offset_y, master_volume, fps):
         adj_x_image = self.rect.x - offset_x
         adj_y_image = self.rect.y - offset_y
-        adj_x_audio = self.level.get_player().rect.x - self.rect.x
-        adj_y_audio = self.level.get_player().rect.y - self.rect.y
+        #adj_x_audio = self.level.get_player().rect.x - self.rect.x
+        #adj_y_audio = self.level.get_player().rect.y - self.rect.y
         window_width = win.get_width()
         window_height = win.get_height()
         if len(self.active_projectiles) > 0:

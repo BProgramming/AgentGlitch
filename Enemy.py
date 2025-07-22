@@ -96,7 +96,7 @@ class Enemy(Actor):
                             if abs(self.rect.x - self.level.get_player().rect.x) <= 5 or pygame.sprite.collide_mask(self, self.level.get_player()):
                                 self.x_vel = 0.0
                                 if not self.is_animated_attack:
-                                    self.play_melee_attack_audio()
+                                    self.play_attack_audio("ATTACK_MELEE")
                             else:
                                 self.direction = self.facing = (MovementDirection.RIGHT if self.level.get_player().rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT)
                                 self.x_vel = self.direction * min(vel, dist / dtime)

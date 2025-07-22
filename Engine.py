@@ -114,6 +114,7 @@ def fade_in(background, bg_image, fg_image, level, hud, offset_x, offset_y, cont
 
 def fade_out(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller, win=WINDOW):
     fade(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller, direction="out", win=win)
+    win.fill((0, 0, 0))
 
 
 def draw(background, bg_image, fg_image, level, hud, offset_x, offset_y, master_volume, fps, glitches=None, win=WINDOW):
@@ -270,6 +271,9 @@ def main(win):
         load_data = None
         cur_level = None
         while True:
+            # THIS PART LOADS EVERYTHING: #
+            win.fill((0, 0, 0))
+            display_text("Loading mission.   [1/3]", win, controller, type=False, min_pause_time=0, should_sleep=False)
             should_load = False
             if new_game:
                 cur_level = "__START__"
@@ -286,16 +290,18 @@ def main(win):
                 cur_level = controller.level_selected
                 controller.level_selected = None
             controller.goto_load = False
-
+            win.fill((0, 0, 0))
+            display_text("Loading mission..  [2/3]", win, controller, type=False, min_pause_time=0, should_sleep=False)
             player_audio = enemy_audio = load_audios("Actors")
             block_audio = load_audios("Blocks")
+            win.fill((0, 0, 0))
+            display_text("Loading mission... [3/3]", win, controller, type=False, min_pause_time=0, should_sleep=False)
             level = controller.level = Level(cur_level, levels, meta_dict, objects_dict, sprite_master, image_master, player_audio, enemy_audio, block_audio, win, controller)
 
+            # FROM HERE, THE LEVEL ACTUALLY STARTS: #
             if level.start_cinematic is not None:
                 for cinematic in level.start_cinematic:
                     level.cinematics.play(cinematic, win)
-            else:
-                print("Starting level " + level.name)
 
             if level.music is not None:
                 controller.queue_track_list()
@@ -310,12 +316,10 @@ def main(win):
             else:
                 controller.player_abilities = {"can_wall_jump": level.get_player().can_wall_jump, "can_teleport": level.get_player().can_teleport, "can_bullet_time": level.get_player().can_bullet_time, "can_resize": level.get_player().can_resize, "can_heal": level.get_player().can_heal, "max_jumps": level.get_player().max_jumps}
 
-            hud = HUD(level.get_player(), win, grayscale=level.grayscale)
-            controller.hud = hud
+            hud = controller.hud = HUD(level.get_player(), win, grayscale=level.grayscale)
 
             if should_load:
                 load_part2(load_data, controller.level)
-
             save(controller.level, None)
 
             controller.get_gamepad()
@@ -336,7 +340,8 @@ def main(win):
             glitches = None
             next_level = None
             clock.tick(FPS_TARGET)
-            # MAIN GAME LOOP
+
+            # MAIN GAME LOOP: #
             while True:
                 dtime = clock.tick(FPS_TARGET) - dtime_offset
                 level.time += dtime

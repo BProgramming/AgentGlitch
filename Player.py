@@ -133,10 +133,10 @@ class Player(Actor):
                     obj.get_hit(self)
                     if obj.patrol_path is not None:
                         obj.rect.x -= self.direction * int(push)
-                    self.play_melee_attack_audio()
+                    self.play_attack_audio("ATTACK_MELEE")
                 elif isinstance(obj, BreakableBlock) and pygame.sprite.collide_rect(self, obj):
                     obj.get_hit(self)
-                    self.play_melee_attack_audio()
+                    self.play_attack_audio("ATTACK_MELEE")
 
     def bullet_time(self, active_time=BULLET_TIME_ACTIVE, cd=BULLET_TIME_COOLDOWN):
         if self.can_bullet_time:
