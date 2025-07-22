@@ -1,5 +1,7 @@
 from os.path import join
 import pygame
+
+import WeatherEffects
 from Block import Block, BreakableBlock, MovingBlock, MovableBlock, Hazard, MovingHazard, Door, FallingHazard
 from Boss import Boss
 from Cinematics import CinematicsManager
@@ -37,10 +39,10 @@ class Level:
             self.set_player_abilities(meta_dict[name]["abilities"])
         self.cinematics = (None if meta_dict[name].get("cinematics") is None else CinematicsManager(meta_dict[name]["cinematics"], controller))
 
-    def get_player(self):
+    def get_player(self) -> Player:
         return self.player
 
-    def set_player_abilities(self, abilities):
+    def set_player_abilities(self, abilities) -> None:
         if abilities.get("can_open_doors") is not None:
             self.player.can_open_doors = bool(abilities["can_open_doors"].upper() == "TRUE")
         if abilities.get("can_move_blocks") is not None:
@@ -58,10 +60,10 @@ class Level:
         if abilities.get("can_heal") is not None:
             self.player.can_heal = bool(abilities["can_heal"].upper() == "TRUE")
 
-    def get_objects(self):
+    def get_objects(self) -> list:
         return self.triggers + self.blocks + self.hazards + self.enemies
 
-    def get_objects_in_range(self, point, dist=1, blocks_only=False):
+    def get_objects_in_range(self, point, dist=1, blocks_only=False) -> list:
         x = int(point[0] / self.block_size)
         y = int(point[1] / self.block_size)
         # this sum thing below is a hack to turn a 2D list into a 1D list since it applies the + operator to the second (optional) [] argument (e.g. an empty list), thereby concatenating all the elements
@@ -77,7 +79,7 @@ class Level:
 
         return in_range
 
-    def queue_purge(self, obj):
+    def queue_purge(self, obj) -> None:
         if isinstance(obj, Trigger):
             self.purge_queue["triggers"].add(obj)
         if isinstance(obj, Hazard):
@@ -87,7 +89,7 @@ class Level:
         elif isinstance(obj, Enemy):
             self.purge_queue["enemies"].add(obj)
 
-    def purge(self):
+    def purge(self) -> None:
         if bool(self.purge_queue["triggers"]):
             self.triggers = [obj for obj in self.triggers if obj not in self.purge_queue["triggers"]]
             self.purge_queue["triggers"].clear()
@@ -105,7 +107,7 @@ class Level:
             self.purge_queue["enemies"].clear()
 
     #NOTE: having weather with lots of particles + lots of enemies + bullets will decrease the frame rate
-    def get_weather(self, name):
+    def get_weather(self, name) -> WeatherEffects.ParticleEffect | None:
         if name is None:
             return None
         else:
@@ -116,13 +118,13 @@ class Level:
             else:
                 return None
 
-    def gen_image(self):
+    def gen_image(self) -> None:
         img = pygame.Surface((self.level_bounds[1][0], self.level_bounds[1][1]), pygame.SRCALPHA)
         for obj in self.get_objects() + [self.get_player()]:
             img.blit(obj.sprite, (obj.rect.x, obj.rect.y))
         pygame.image.save(img, join("Assets", "Misc", self.name + ".png"))
 
-    def gen_background(self):
+    def gen_background(self) -> None:
         img = pygame.Surface((self.level_bounds[1][0], self.level_bounds[1][1]), pygame.SRCALPHA)
         img.fill((255, 255, 255, 255))
         square = pygame.Surface((self.block_size, self.block_size), pygame.SRCALPHA)
@@ -136,10 +138,10 @@ class Level:
             img.blit(square, (block.rect.x, block.rect.y))
         pygame.image.save(img, join("Assets", "Misc", self.name + "_bg.png"))
 
-    def __get_static_block_slice__(self, win, offset_x, offset_y):
+    def __get_static_block_slice__(self, win, offset_x, offset_y) -> list:
         return [row[int(offset_x // self.block_size):int((offset_x + (1.5 * win.get_width())) // self.block_size)] for row in self.static_blocks[int(offset_y // self.block_size):int((offset_y + (1.5 * win.get_height())) // self.block_size)]]
 
-    def output(self, win, offset_x, offset_y, master_volume, fps):
+    def output(self, win, offset_x, offset_y, master_volume, fps) -> None:
         above_player = []
 
         for obj in self.triggers + self.__get_static_block_slice__(win, offset_x, offset_y) + self.dynamic_blocks + list(self.doors.values()) + self.hazards + self.enemies:
@@ -165,7 +167,7 @@ class Level:
             self.weather.draw(win, offset_x, offset_y)
 
     @staticmethod
-    def build_level(level, layout, sprite_master, image_master, objects_dict, player_audios, enemy_audios, block_audios, win, controller, player_sprite, block_size):
+    def build_level(level, layout, sprite_master, image_master, objects_dict, player_audios, enemy_audios, block_audios, win, controller, player_sprite, block_size) -> tuple:
         width = len(layout[-1]) * block_size
         height = len(layout) * block_size
         level_bounds = [(0, 0), (width, height)]

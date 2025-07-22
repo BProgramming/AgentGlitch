@@ -30,7 +30,7 @@ class MovementState(Enum):
     ATTACK_ANIM = 18
     WIND_DOWN = 19
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
 
@@ -97,13 +97,13 @@ class Actor(Object):
         self.cooldowns = {"get_hit": 0, "launch_projectile": 0, "resize": 0, "resize_delay": 0, "heal": 0, "attack": 0}
         self.cached_cooldowns = self.cooldowns.copy()
 
-    def save(self):
+    def save(self) -> dict:
         projectiles = []
         for proj in self.active_projectiles:
             projectiles.append(proj.save())
         return {self.name: {"hp": self.hp, "cached x y": (self.cached_x, self.cached_y), "cooldowns": self.cached_cooldowns, "size": self.size, "can_wall_jump": self.can_wall_jump, "can_shoot": self.can_shoot, "can_resize": self.can_resize, "max_jumps": self.max_jumps, "projectiles": projectiles}}
 
-    def load(self, obj):
+    def load(self, obj) -> None:
         self.rect.x, self.rect.y = self.cached_x, self.cached_y = obj["cached x y"]
         self.cooldowns = self.cached_cooldowns = obj["cooldowns"]
         self.load_attribute(obj, "hp")
@@ -119,7 +119,7 @@ class Actor(Object):
         self.update_sprite(1)
         self.__update_geo__()
 
-    def set_difficulty(self, scale):
+    def set_difficulty(self, scale) -> None:
         self.difficulty = scale
         self.max_hp *= scale
         self.hp *= scale
@@ -128,7 +128,7 @@ class Actor(Object):
             proj.set_difficulty(scale)
             proj.attack_damage = self.attack_damage
 
-    def grow(self, resize_cd=RESIZE_COOLDOWN, delay_cd=RESIZE_DELAY, max_scale=RESIZE_SCALE_LIMIT):
+    def grow(self, resize_cd=RESIZE_COOLDOWN, delay_cd=RESIZE_DELAY, max_scale=RESIZE_SCALE_LIMIT) -> None:
         if self.can_resize and self.cooldowns["resize"] <= 0:
             target = min(self.size_target * max_scale, max_scale)
             if self.size_target != target:
@@ -137,7 +137,7 @@ class Actor(Object):
                 self.cooldowns["resize_delay"] = delay_cd
                 self.attack_damage *= target
 
-    def shrink(self, resize_cd=RESIZE_COOLDOWN, delay_cd=RESIZE_DELAY, max_scale=RESIZE_SCALE_LIMIT):
+    def shrink(self, resize_cd=RESIZE_COOLDOWN, delay_cd=RESIZE_DELAY, max_scale=RESIZE_SCALE_LIMIT) -> None:
         if self.can_resize and self.cooldowns["resize"] <= 0:
             target = max(self.size_target / max_scale, 1 / max_scale)
             if self.size_target != target:
@@ -146,7 +146,7 @@ class Actor(Object):
                 self.cooldowns["resize_delay"] = delay_cd
                 self.attack_damage *= target
 
-    def move(self, dx, dy):
+    def move(self, dx, dy) -> None:
         if dx != 0:
             if self.rect.left + dx < self.level.level_bounds[0][0] - (self.rect.width // 5):
                 self.rect.left = -self.rect.width // 5
@@ -163,7 +163,7 @@ class Actor(Object):
             else:
                 self.rect.y += dy
 
-    def cache(self):
+    def cache(self) -> None:
         if self.cooldowns["get_hit"] <= 0 and self.state != MovementState.HIT and self.hp == self.max_hp and self.jump_count == 0 and self.y_vel == 0:
             self.cached_x, self.cached_y = self.rect.x, self.rect.y
             self.cached_hp = self.hp
@@ -171,10 +171,10 @@ class Actor(Object):
             self.cached_size_target = self.size_target
             self.cached_cooldowns = self.cooldowns.copy()
 
-    def revert(self):
+    def revert(self) -> None:
         pass
 
-    def jump(self, target=VELOCITY_JUMP):
+    def jump(self, target=VELOCITY_JUMP) -> None:
         if self.jump_count < self.max_jumps:
             self.y_vel = -target
             self.jump_count += 1
@@ -186,7 +186,7 @@ class Actor(Object):
                 self.move(self.direction * self.rect.width // 4, 0)
         self.is_crouching = False
 
-    def land(self):
+    def land(self) -> None:
         if self.y_vel > 20:
             self.hp -= 2 * self.y_vel
         self.y_vel = 0.0
@@ -194,10 +194,10 @@ class Actor(Object):
         self.should_move_vert = False
         self.is_wall_jumping = False
 
-    def hit_head(self):
+    def hit_head(self) -> None:
         self.y_vel *= -0.5
 
-    def play_attack_audio(self, attack_type):
+    def play_attack_audio(self, attack_type) -> None:
         if attack_type in self.audios:
             active_audio_channel = pygame.mixer.find_channel()
             if active_audio_channel is not None:
@@ -207,7 +207,7 @@ class Actor(Object):
                 else:
                     set_sound_source(self.rect, self.level.get_player().rect, self.controller.master_volume["non-player"], active_audio_channel)
 
-    def shoot_at_target(self, target, max_dist=MAX_SHOOT_DISTANCE, proj_cd=LAUNCH_PROJECTILE_COOLDOWN):
+    def shoot_at_target(self, target, max_dist=MAX_SHOOT_DISTANCE, proj_cd=LAUNCH_PROJECTILE_COOLDOWN) -> None:
         if self.cooldowns["launch_projectile"] <= 0:
             self.is_attacking = True
             proj = Projectile(self.level, self.controller, self.rect.centerx, self.rect.centery, (target[0], self.rect.centery), max_dist, self.attack_damage, self.difficulty, sprite=self.proj_sprite, name=(self.name + "'s projectile #" + str(len(self.active_projectiles) + 1)))
@@ -215,12 +215,12 @@ class Actor(Object):
             self.cooldowns["launch_projectile"] = proj_cd
             self.play_attack_audio("ATTACK_RANGE")
 
-    def get_hit(self, obj, hit_cd=GET_HIT_COOLDOWN, heal_delay=HEAL_DELAY):
+    def get_hit(self, obj, hit_cd=GET_HIT_COOLDOWN, heal_delay=HEAL_DELAY) -> None:
         self.cooldowns["get_hit"] = hit_cd
         self.cooldowns["heal"] = heal_delay * self.difficulty
         self.hp -= obj.attack_damage
 
-    def get_collisions(self):
+    def get_collisions(self) -> bool:
         collided = False
 
         for obj in self.level.get_objects_in_range((self.rect.x, self.rect.y)) if self == self.level.get_player() else [self.level.get_player()] + self.level.get_objects_in_range((self.rect.x, self.rect.y), blocks_only=True):
@@ -278,10 +278,10 @@ class Actor(Object):
             self.is_wall_jumping = False
         return collided
 
-    def die(self):
+    def die(self) -> None:
         pass
 
-    def update_state(self):
+    def update_state(self) -> None:
         old = self.state
         if self.size_target != self.size:
             # this is not combined because, when kept separate, it lets the animation keep playing until the cooldown ends
@@ -302,7 +302,8 @@ class Actor(Object):
                     self.animation_count = 0
                 else:
                     self.is_attacking = False
-                    return self.update_state()
+                    self.update_state()
+                    return
         elif self.cooldowns["get_hit"] > 0:
             # this is not combined because, when kept separate, it lets the animation keep playing until the cooldown ends
             if self.state != MovementState.HIT:
@@ -380,7 +381,7 @@ class Actor(Object):
                 self.state = old
         self.state_changed = bool(old != self.state)
 
-    def update_sprite(self, fps, delay=ANIMATION_DELAY):
+    def update_sprite(self, fps, delay=ANIMATION_DELAY) -> int:
         active_sprites = self.sprites[str(self.state) + "_" + str(self.facing)]
         active_index = math.floor((self.animation_count // (1000 // (fps * delay))) % len(active_sprites))
         if active_index == len(active_sprites) - 1:
@@ -400,14 +401,13 @@ class Actor(Object):
                 if self.active_audio_channel is not None:
                     self.active_audio_channel.stop()
                     self.active_audio_channel = None
-
         return active_index
 
-    def __update_geo__(self):
+    def __update_geo__(self) -> None:
         self.rect = self.sprite.get_rect(topleft=(self.rect.x, self.rect.y))
         self.mask = pygame.mask.from_surface(self.sprite)
 
-    def loop(self, fps, dtime, target=VELOCITY_TARGET, drag=0, grav=GRAVITY):
+    def loop(self, fps, dtime, target=VELOCITY_TARGET, drag=0, grav=GRAVITY) -> bool:
         self.animation_count += dtime
 
         if self.hp <= 0:
@@ -468,7 +468,7 @@ class Actor(Object):
         self.update_state()
         return collided
 
-    def output(self, win, offset_x, offset_y, master_volume, fps):
+    def output(self, win, offset_x, offset_y, master_volume, fps) -> None:
         adj_x_image = self.rect.x - offset_x
         adj_y_image = self.rect.y - offset_y
         #adj_x_audio = self.level.get_player().rect.x - self.rect.x

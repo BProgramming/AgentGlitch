@@ -9,18 +9,18 @@ from Helpers import handle_exception, MovementDirection, load_sprite_sheets, set
 class Block(Object):
     def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=0, coord_y=0, is_blocking=True, name="Block"):
         super().__init__(level, controller, x, y, width, height, is_blocking=is_blocking, name=name)
-        self.sprite.blit(self.load_image(join("Assets", "Terrain", "Terrain.png"), width, height, image_master, coord_x, coord_y, grayscale=self.level.grayscale), (0, 0))
+        self.sprite = self.load_image(join("Assets", "Terrain", "Terrain.png"), width, height, image_master, coord_x, coord_y, grayscale=self.level.grayscale)
         self.mask = pygame.mask.from_surface(self.sprite)
         self.is_stacked = is_stacked
         self.audios = audios
 
-    def save(self):
+    def save(self) -> dict | None:
         if self.hp != 0:
             super().save()
         else:
             return None
 
-    def play_sound(self, name):
+    def play_sound(self, name) -> None:
         if self.audios.get(name.upper()) is not None:
             active_audio_channel = pygame.mixer.find_channel()
             if active_audio_channel is not None:
@@ -28,12 +28,12 @@ class Block(Object):
                 set_sound_source(self.rect, self.level.get_player().rect, self.controller.master_volume["non-player"], active_audio_channel)
 
     @staticmethod
-    def load_image(path, width, height, image_master, coord_x, coord_y, grayscale=False):
+    def load_image(path, width, height, image_master, coord_x, coord_y, grayscale=False) -> pygame.Surface:
         if isfile(path):
             if image_master.get(path) is None:
                 image_master[path] = pygame.image.load(path).convert_alpha()
-            surface = pygame.Surface((width, height), pygame.SRCALPHA, 32)
-            rect = pygame.Rect(coord_x, coord_y, width, height)
+            surface = pygame.Surface((width // 2, height // 2), pygame.SRCALPHA)
+            rect = pygame.Rect(coord_x, coord_y, width // 2, height // 2)
             surface.blit(image_master[path], (0, 0), rect)
             if grayscale:
                 surface = pygame.transform.grayscale(surface)
@@ -49,11 +49,11 @@ class BreakableBlock(Block):
         self.sprite_damaged = self.load_image(join("Assets", "Terrain", "Terrain.png"), width, height, image_master, coord_x2, coord_y2, grayscale=self.level.grayscale)
         self.cooldowns = {"get_hit": 0}
 
-    def get_hit(self, obj, cd=GET_HIT_COOLDOWN):
+    def get_hit(self, obj, cd=GET_HIT_COOLDOWN) -> None:
         if self.cooldowns["get_hit"] <= 0:
             if self.hp == self.max_hp:
                 self.hp = self.max_hp // 2
-                self.sprite.blit(self.sprite_damaged, (0, 0))
+                self.sprite = self.sprite_damaged
                 self.mask = pygame.mask.from_surface(self.sprite)
                 self.cooldowns["get_hit"] += cd
             else:
@@ -81,7 +81,7 @@ class MovingBlock(Block):
         self.should_move_horiz = self.should_move_vert = True
         self.cooldowns = {"wait": 0.0}
 
-    def increment_patrol_index(self):
+    def increment_patrol_index(self) -> None:
         if self.patrol_path_index < 0:
             self.patrol_path_index -= 1
         elif self.patrol_path_index >= 0:
@@ -91,7 +91,7 @@ class MovingBlock(Block):
         elif self.patrol_path_index <= -len(self.patrol_path):
             self.patrol_path_index = 0
 
-    def patrol(self, dtime, path_stop_time=PATH_STOP_TIME):
+    def patrol(self, dtime, path_stop_time=PATH_STOP_TIME) -> None:
         self.should_move_horiz = self.should_move_vert = False
         if self.patrol_path is not None and self.cooldowns["wait"] <= 0:
             target_x = self.patrol_path[self.patrol_path_index][0] - self.rect.x
@@ -110,14 +110,14 @@ class MovingBlock(Block):
                     self.cooldowns["wait"] = path_stop_time
                 self.increment_patrol_index()
 
-    def collide(self, obj):
+    def collide(self, obj) -> bool:
         if hasattr(obj, "push_x"):
             obj.push_x = self.x_vel
         if hasattr(obj, "push_y"):
             obj.push_y = self.y_vel
         return self.is_blocking
 
-    def move(self, dx, dy):
+    def move(self, dx, dy) -> None:
         if dx != 0:
             if self.rect.left + dx < self.level.level_bounds[0][0]:
                 self.rect.left = self.rect.width
@@ -142,7 +142,7 @@ class MovingBlock(Block):
                 else:
                     self.rect.y = target
 
-    def loop(self, fps, dtime):
+    def loop(self, fps, dtime) -> None:
         super().loop(fps, dtime)
 
         if self.should_move_horiz:
@@ -172,7 +172,7 @@ class Door(MovingBlock):
         self.is_open = False
         self.direction = self.facing = MovementDirection.LEFT
 
-    def open(self):
+    def open(self) -> None:
         if not self.is_locked:
             self.patrol_path = self.patrol_path_open
             self.is_open = True
@@ -180,32 +180,32 @@ class Door(MovingBlock):
         else:
             self.play_sound("door_locked")
 
-    def close(self):
+    def close(self) -> None:
         self.patrol_path = self.patrol_path_closed
         self.is_open = False
         self.play_sound("door")
 
-    def toggle_open(self):
+    def toggle_open(self) -> None:
         if self.is_open:
             self.close()
         elif not self.is_locked:
             self.open()
 
-    def unlock(self):
+    def unlock(self) -> None:
         self.is_locked = False
 
-    def lock(self):
+    def lock(self) -> None:
         self.is_locked = True
 
-    def toggle_lock(self):
+    def toggle_lock(self) -> None:
         self.is_locked = not self.is_locked
 
-    def collide(self, obj):
+    def collide(self, obj) -> bool:
         if hasattr(obj, "can_open_doors") and obj.can_open_doors and obj.rect.bottom > self.rect.top:
             self.open()
         return True
 
-    def loop(self, fps, dtime):
+    def loop(self, fps, dtime) -> None:
         if not self.is_open and self.rect.y == self.patrol_path_closed[0][1]:
             return
         else:
@@ -222,14 +222,14 @@ class MovableBlock(Block):
         self.x_vel = self.y_vel = self.push_x = self.push_y = 0.0
         self.should_move_horiz = self.should_move_vert = True
 
-    def collide(self, obj):
+    def collide(self, obj) -> bool:
         if hasattr(obj, "push_x"):
             obj.push_x = self.x_vel
         if hasattr(obj, "push_y") and self.rect.top >= obj.rect.bottom:
             obj.push_y = self.y_vel
         return True
 
-    def get_collisions(self):
+    def get_collisions(self) -> None:
         self.should_move_horiz = self.should_move_vert = True
         for obj in self.level.get_objects_in_range((self.rect.x, self.rect.y), blocks_only=True):
             if obj != self and pygame.sprite.collide_rect(self, obj):
@@ -254,7 +254,7 @@ class MovableBlock(Block):
             if not self.should_move_horiz and not self.should_move_vert:
                 break
 
-    def move(self, dx, dy):
+    def move(self, dx, dy) -> None:
         if dx != 0:
             if self.rect.left + dx < self.level.level_bounds[0][0]:
                 self.rect.left = self.rect.width
@@ -275,7 +275,7 @@ class MovableBlock(Block):
             else:
                 self.rect.y += dy
 
-    def loop(self, fps, dtime, grav=GRAVITY):
+    def loop(self, fps, dtime, grav=GRAVITY) -> None:
         super().loop(fps, dtime)
 
         self.push_x *= 0.9
@@ -313,11 +313,11 @@ class Hazard(Block):
         self.update_sprite(1)
         self.update_geo()
 
-    def set_difficulty(self, scale):
+    def set_difficulty(self, scale) -> None:
         self.difficulty = scale
         self.attack_damage *= scale
 
-    def update_sprite(self, fps, delay=ANIMATION_DELAY):
+    def update_sprite(self, fps, delay=ANIMATION_DELAY) -> int:
         active_index = math.floor((self.animation_count // (1000 // (fps * delay))) % len(self.sprites))
         if active_index >= len(self.sprites):
             active_index = 0
@@ -325,15 +325,15 @@ class Hazard(Block):
         self.sprite = self.sprites[active_index]
         return active_index
 
-    def update_geo(self):
+    def update_geo(self) -> None:
         self.rect = self.sprite.get_rect(topleft=(self.rect.x, self.rect.y))
         self.mask = pygame.mask.from_surface(self.sprite)
 
-    def loop(self, fps, dtime):
+    def loop(self, fps, dtime) -> None:
         self.animation_count += dtime
         super().loop(fps, dtime)
 
-    def output(self, win, offset_x, offset_y, master_volume, fps):
+    def output(self, win, offset_x, offset_y, master_volume, fps) -> None:
         adj_x = self.rect.x - offset_x
         adj_y = self.rect.y - offset_y
         if -self.rect.width < adj_x <= win.get_width() and -self.rect.height < adj_y <= win.get_height():
@@ -358,7 +358,7 @@ class MovingHazard(MovingBlock, Hazard):
         self.sprite = None
         self.update_sprite(1)
 
-    def loop(self, fps, dtime):
+    def loop(self, fps, dtime) -> None:
         MovingBlock.loop(self, fps, dtime)
 
 
@@ -379,7 +379,7 @@ class FallingHazard(Hazard):
         self.y_vel = 0
         self.cooldowns = {"reset_time": 0}
 
-    def update_sprite(self, fps, delay=ANIMATION_DELAY):
+    def update_sprite(self, fps, delay=ANIMATION_DELAY) -> int:
         if hasattr(self, "has_fired") and self.has_fired:
             if self.y_vel != 0:
                 active_index = -2
@@ -393,7 +393,7 @@ class FallingHazard(Hazard):
         self.sprite = self.sprites[active_index]
         return active_index
 
-    def loop(self, fps, dtime, grav=GRAVITY, cd=RESET_DELAY):
+    def loop(self, fps, dtime, grav=GRAVITY, cd=RESET_DELAY) -> bool:
         if not self.has_fired:
             if abs(self.level.get_player().rect.x - self.rect.x) <= self.drop_x and self.level.get_player().rect.top >= self.rect.bottom and abs(self.level.get_player().rect.y - self.rect.y) <= self.drop_y:
                 self.has_fired = True

@@ -28,17 +28,17 @@ class DifficultyScale(float, Enum):
     HARD = 1.5
     HARDEST = 2
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name.replace("_", " ")
 
 
-def handle_exception(e):
+def handle_exception(e) -> None:
     pygame.quit()
     messagebox.showerror(title="An error occurred", message="Even the agent couldn't glitch out of this!\n\nFile " + str(e) + " not found.")
     sys.exit()
 
 
-def validate_file_list(dir, list, ext=None):
+def validate_file_list(dir, list, ext=None) -> list | None:
     out = []
     for name in list:
         if ext is None or name[-len(ext):].upper() == ext.upper():
@@ -51,7 +51,7 @@ def validate_file_list(dir, list, ext=None):
         return None
 
 
-def load_picker_sprites(dir):
+def load_picker_sprites(dir) -> tuple:
     images = []
     values = []
     path = join("Assets", dir)
@@ -74,7 +74,7 @@ def load_picker_sprites(dir):
         handle_exception(FileNotFoundError(path))
 
 
-def load_level_images(dir):
+def load_level_images(dir) -> tuple:
     images = []
     values = []
     path = join("Assets", dir)
@@ -94,7 +94,7 @@ def load_level_images(dir):
         handle_exception(FileNotFoundError(path))
 
 
-def make_image_from_text(width, height, header, body, border=5):
+def make_image_from_text(width, height, header, body, border=5) -> pygame.Surface:
     text_header = pygame.font.SysFont("courier", 32).render(header, True, (255, 255, 255))
     box_header = pygame.Surface((text_header.get_width() + (border * 2), text_header.get_height() + (border * 2)), pygame.SRCALPHA)
     box_header.blit(text_header, (border, border))
@@ -116,7 +116,7 @@ def make_image_from_text(width, height, header, body, border=5):
 
 
 
-def load_images(dir1, dir2):
+def load_images(dir1, dir2) -> dict:
     path = join("Assets", dir1, dir2)
     if isdir(path):
         images = [f for f in listdir(path) if isfile(join(path, f)) and f[-4:].lower()==".png"]
@@ -134,11 +134,11 @@ def load_images(dir1, dir2):
         handle_exception(FileNotFoundError(path))
 
 
-def flip(sprites):
+def flip(sprites) -> list:
     return [pygame.transform.flip(sprite, True, False) for sprite in sprites]
 
 
-def load_sprite_sheets(dir1, dir2, sprite_master, direction=False, grayscale=False):
+def load_sprite_sheets(dir1, dir2, sprite_master, direction=False, grayscale=False) -> dict:
     if sprite_master.get(dir2) is None:
         path = join("Assets", dir1, dir2)
 
@@ -165,7 +165,7 @@ def load_sprite_sheets(dir1, dir2, sprite_master, direction=False, grayscale=Fal
 
             sprites = []
             for i in range(sprite_sheet.get_width() // width):
-                surface = pygame.Surface((width, height), pygame.SRCALPHA, 32)
+                surface = pygame.Surface((width, height), pygame.SRCALPHA)
                 rect = pygame.Rect(i * width, 0, width, height)
                 surface.blit(sprite_sheet, (0, 0), rect)
                 sprites.append(pygame.transform.scale2x(surface))
@@ -179,7 +179,7 @@ def load_sprite_sheets(dir1, dir2, sprite_master, direction=False, grayscale=Fal
     return sprite_master[dir2]
 
 
-def load_json_dict(dir, file):
+def load_json_dict(dir, file) -> dict:
     path = join("Assets", dir, file)
     try:
         with open(path, "r") as file:
@@ -192,7 +192,7 @@ def load_json_dict(dir, file):
         handle_exception(FileNotFoundError(path))
 
 
-def load_levels(dir):
+def load_levels(dir) -> dict:
     path = join("Assets", dir)
     if isdir(path):
         files = [f for f in listdir(path) if isfile(join(path, f))]
@@ -209,7 +209,7 @@ def load_levels(dir):
         handle_exception(FileNotFoundError(path))
 
 
-def __load_single_audio__(dir1, dir2):
+def __load_single_audio__(dir1, dir2) -> dict:
     path = join("Assets", "SoundEffects", dir1, dir2)
     if isdir(path):
         sounds = {}
@@ -222,7 +222,7 @@ def __load_single_audio__(dir1, dir2):
         handle_exception(FileNotFoundError(path))
 
 
-def load_audios(dir):
+def load_audios(dir) -> dict:
     path = join("Assets", "SoundEffects", dir)
     if isdir(path):
         sounds = {}
@@ -242,7 +242,7 @@ def load_audios(dir):
         handle_exception(FileNotFoundError(path))
 
 
-def set_sound_source(source_rect, player_rect, type, channel):
+def set_sound_source(source_rect, player_rect, type, channel) -> None:
     height_vol = max(1 - (abs(source_rect.y - player_rect.y) / 1000), 0)
     str_x = (source_rect.x - player_rect.x) / 1000
     if abs(str_x) > 1:
@@ -258,7 +258,7 @@ def set_sound_source(source_rect, player_rect, type, channel):
     channel.set_volume(left_vol * type, right_vol * type)
 
 
-def load_text_from_file(file):
+def load_text_from_file(file) -> list:
     path = join("Assets", "Text", file)
     if isfile(path):
         text = []
@@ -270,7 +270,7 @@ def load_text_from_file(file):
         handle_exception(FileNotFoundError(path))
 
 
-def display_text(output, win, controller, type=True, min_pause_time=80, should_sleep=True):
+def display_text(output, win, controller, type=True, min_pause_time=80, should_sleep=True) -> None:
     if output is None or output == "":
         return
     else:
@@ -334,7 +334,7 @@ def display_text(output, win, controller, type=True, min_pause_time=80, should_s
                     pause_dtime += 10
 
 
-def glitch(odds, screen):
+def glitch(odds, screen) -> list:
     color = [(42, 128, 65), (32, 93, 179), (129, 49, 176), (222, 60, 152), (102, 42, 40)]
     screen = screen.copy()
     glitches = []
@@ -352,7 +352,7 @@ def glitch(odds, screen):
     return glitches
 
 
-def load_path(path_in, i, j, block_size):
+def load_path(path_in, i, j, block_size) -> list:
     path = []
     for k in range(0, len(path_in), 2):
         if k >= 2 and path_in[k] == path_in[k - 2] and path_in[k + 1] == path_in[k - 1]:
@@ -362,7 +362,7 @@ def load_path(path_in, i, j, block_size):
     return path
 
 
-def set_property(entity, input):
+def set_property(entity, input) -> None:
     if input is not None:
         target, property, value = input["target"], input["property"], input["value"]
         if len(target) == len(property) == len(value):

@@ -29,15 +29,16 @@ class Trigger(Object):
         self.type = type
         self.value = self.__load_input__(input, objects_dict, sprite_master, enemy_audios, block_audios, image_master, block_size)
 
-    def save(self):
+    def save(self) -> dict | None:
         if self.has_fired:
             return {self.name: {"has_fired": self.has_fired}}
         else:
             return None
 
-    def load(self, obj):
+    def load(self, obj) -> None:
         self.has_fired = obj["has_fired"]
 
+    # THIS CAN RETURN SO MANY DIFFERENT THINGS, SO IT DOESN'T HAVE A TYPE HINT. #
     def __load_input__(self, input, objects_dict, sprite_master, enemy_audios, block_audios, image_master, block_size):
         if input is None or self.type is None:
             return None
@@ -115,7 +116,7 @@ class Trigger(Object):
         else:
             return None
 
-    def collide(self, obj):
+    def collide(self, obj) -> list:
         start = time.perf_counter_ns()
 
         next_level = None
@@ -152,5 +153,5 @@ class Trigger(Object):
 
         return [(time.perf_counter_ns() - start) // 1000000, next_level]
 
-    def output(self, win, offset_x, offset_y, master_volume, fps):
+    def output(self, win, offset_x, offset_y, master_volume, fps) -> None:
         pass

@@ -47,7 +47,7 @@ class Enemy(Actor):
             vision_spotted = pygame.transform.grayscale(vision_spotted)
         self.vision = {"hidden": {MovementDirection.LEFT: vision_hidden, MovementDirection.RIGHT: pygame.transform.flip(vision_hidden, True, False)}, "spotted": {MovementDirection.LEFT: vision_spotted, MovementDirection.RIGHT: pygame.transform.flip(vision_spotted, True, False)}}
 
-    def __increment_patrol_index__(self):
+    def __increment_patrol_index__(self) -> None:
         if self.patrol_path_index < 0:
             self.patrol_path_index -= 1
         elif self.patrol_path_index >= 0:
@@ -57,13 +57,13 @@ class Enemy(Actor):
         elif self.patrol_path_index <= -len(self.patrol_path):
             self.patrol_path_index = 0
 
-    def __find_floor__(self, dist):
+    def __find_floor__(self, dist) -> bool:
         for block in self.level.get_objects_in_range((self.rect.x + dist, self.rect.bottom), blocks_only=True):
             if block.rect.collidepoint(self.rect.centerx + dist, self.rect.bottom):
                 return True
         return False
 
-    def patrol(self, dtime, vel=VELOCITY_TARGET):
+    def patrol(self, dtime, vel=VELOCITY_TARGET) -> None:
         self.should_move_horiz = False
         if self.cooldowns["get_hit"] <= 0 and self.state != MovementState.WIND_UP and self.state != MovementState.WIND_DOWN:
             if self.patrol_path is None:
@@ -125,10 +125,10 @@ class Enemy(Actor):
                     if not self.should_move_horiz and not self.should_move_vert:
                         self.__increment_patrol_index__()
 
-    def __adj_spot_range__(self):
+    def __adj_spot_range__(self) -> float:
         return self.spot_range * self.level.get_player().size / (1.5 if self.level.get_player().is_crouching else 1)
 
-    def __spot_player__(self, spot_cd=PLAYER_SPOT_COOLDOWN):
+    def __spot_player__(self, spot_cd=PLAYER_SPOT_COOLDOWN) -> bool:
         dist = math.dist(self.level.get_player().rect.center, self.rect.center)
         if dist <= self.__adj_spot_range__() and (self.facing == (MovementDirection.RIGHT if self.level.get_player().rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT) or self.cooldowns["get_hit"] > 0):
             for i in range(round(dist)):
@@ -141,7 +141,7 @@ class Enemy(Actor):
             return True
         return False
 
-    def collide(self, obj):
+    def collide(self, obj) -> bool:
         if obj != self.level.get_player() and self.direction == (MovementDirection.RIGHT if obj.rect.centerx - self.rect.centerx > 0 else MovementDirection.LEFT):
             if obj.is_stacked or isinstance(obj, Door):
                 if self.patrol_path is not None:
@@ -155,7 +155,7 @@ class Enemy(Actor):
             self.__increment_patrol_index__()
         return True
 
-    def output(self, win, offset_x, offset_y, master_volume, fps):
+    def output(self, win, offset_x, offset_y, master_volume, fps) -> None:
         if self.difficulty <= DifficultyScale.EASY:
             adj_x_image = self.rect.centerx - offset_x - (self.__adj_spot_range__() if self.facing == MovementDirection.LEFT else 0)
             adj_y_image = self.rect.y - offset_y + (7 * self.rect.height // 24)

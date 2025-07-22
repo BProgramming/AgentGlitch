@@ -25,13 +25,13 @@ class Menu:
         self.glitch_timer = 0
         self.glitches = None
 
-    def cycle_music(self):
+    def cycle_music(self) -> None:
         if self.music is not None:
             self.music_index += 1
             if self.music_index >= len(self.music):
                 self.music_index = 0
 
-    def __make_buttons__(self, labels, button_normal, button_mouseover):
+    def __make_buttons__(self, labels, button_normal, button_mouseover) -> list:
         buttons = []
         for label in labels:
             text = pygame.font.SysFont("courier", 32).render(label["label"], True, (255, 255, 255))
@@ -52,7 +52,7 @@ class Menu:
             self.notch_val.append(notch_val)
         return buttons
 
-    def fade_in(self, win):
+    def fade_in(self, win) -> None:
         if self.clear is None:
             self.clear = pygame.display.get_surface().copy()
         for i in range(32):
@@ -68,7 +68,7 @@ class Menu:
                     return
             time.sleep(0.01)
 
-    def fade_music(self):
+    def fade_music(self) -> None:
         if self.music is not None:
             if pygame.mixer.music.get_busy():
                 pygame.mixer.music.fadeout(1000)
@@ -80,7 +80,7 @@ class Menu:
                 self.cycle_music()
                 pygame.mixer.music.queue(self.music[self.music_index])
 
-    def fade_out(self, win):
+    def fade_out(self, win) -> None:
         if self.clear is None:
             return
         else:
@@ -97,14 +97,14 @@ class Menu:
                         return
                 time.sleep(0.005)
 
-    def set_mouse_pos(self, win):
+    def set_mouse_pos(self, win) -> None:
         x = (win.get_width() // 2) + (self.buttons[0][0].width // 2.5)
 
         y = (win.get_height() + self.screen.get_height() - (2 * (len(self.buttons) - 0.5) * self.buttons[0][0].height)) // 2
 
         pygame.mouse.set_pos((x, y))
 
-    def move_mouse_pos(self, win, direction):
+    def move_mouse_pos(self, win, direction) -> None:
         x = (win.get_width() // 2) + (self.buttons[0][0].width // 2.5)
 
         target = pygame.mouse.get_pos()[1] + (direction * self.buttons[0][0].height)
@@ -114,7 +114,7 @@ class Menu:
 
         pygame.mouse.set_pos((x, y))
 
-    def display(self, win, joystick_tolerance=0.25):
+    def display(self, win, joystick_tolerance=0.25) -> int | None:
         if self.clear is not None:
             win.blit(self.clear, (0, 0))
 
@@ -243,14 +243,14 @@ class Selector(Menu):
         self.glitch_timer = 0
         self.glitches = None
 
-    def set_mouse_pos(self, win):
+    def set_mouse_pos(self, win) -> None:
         x = self.buttons[0 if len(self.buttons) <= 1 else 1][0].x + (self.buttons[0 if len(self.buttons) <= 1 else 1][0].width * 0.75)
 
         y = (win.get_height() + self.screen.get_height() - self.buttons[0][0].height) // 2
 
         pygame.mouse.set_pos((x, y))
 
-    def move_mouse_sideways(self, direction):
+    def move_mouse_sideways(self, direction) -> None:
         if direction > 0:
             x = self.buttons[1][0].x + (self.buttons[1][0].width * 0.75)
         else:
@@ -260,7 +260,7 @@ class Selector(Menu):
 
         pygame.mouse.set_pos((x, y))
 
-    def move_mouse_pos(self, win, direction):
+    def move_mouse_pos(self, win, direction) -> None:
         x = pygame.mouse.get_pos()[0]
 
         target = pygame.mouse.get_pos()[1] + (direction * self.buttons[0][0].height)
@@ -270,11 +270,11 @@ class Selector(Menu):
 
         pygame.mouse.set_pos((x, y))
 
-    def set_index(self, index):
+    def set_index(self, index) -> None:
         self.image_index = index
         self.image_selected = self.images[index]
 
-    def cycle_images(self, direction):
+    def cycle_images(self, direction) -> None:
         if direction > 0:
             self.image_index += 1
         else:
@@ -285,7 +285,7 @@ class Selector(Menu):
             self.image_index = len(self.images) - 1
         self.image_selected = self.images[self.image_index]
 
-    def __make_buttons__(self, half_button_normal, half_button_mouseover, button_normal, button_mouseover, accept_only=False):
+    def __make_buttons__(self, half_button_normal, half_button_mouseover, button_normal, button_mouseover, accept_only=False) -> list:
         buttons = []
         loop_range = range(1 if accept_only else 4)
         for i in loop_range:
@@ -309,7 +309,7 @@ class Selector(Menu):
             buttons.append([pygame.Rect(0, 0, max(normal.get_width(), mouseover.get_width()), max(normal.get_height(), mouseover.get_height())), normal, mouseover, ButtonType.CLICK])
         return buttons
 
-    def display(self, win, joystick_tolerance=0.25):
+    def display(self, win, joystick_tolerance=0.25) -> int | None:
         if self.clear is not None:
             win.blit(self.clear, (0, 0))
 

@@ -25,7 +25,7 @@ class Boss(Enemy):
             if death_triggers.get("cinematics") is not None:
                 self.death_triggers["cinematics"] = death_triggers["cinematics"]
 
-    def die(self):
+    def die(self) -> None:
         if self.death_triggers.get("properties") is not None:
             for trigger in self.death_triggers["properties"]:
                 set_property(self, trigger)
@@ -33,7 +33,7 @@ class Boss(Enemy):
             for cinematic in self.death_triggers["cinematics"]:
                 self.level.cinematics.queue(cinematic)
 
-    async def __queue_music__(self):
+    async def __queue_music__(self) -> None:
         if self.music_is_playing and (self.hp <= 0 or math.dist((self.level.get_player().rect.x, self.level.get_player().rect.y), (self.rect.x, self.rect.y)) >= 2 * self.spot_range):
             if pygame.mixer.music.get_busy():
                 pygame.mixer.music.fadeout(1000)
@@ -45,11 +45,11 @@ class Boss(Enemy):
             self.controller.queue_track_list(music=self.music)
             self.music_is_playing = True
 
-    async def __toggle_music__(self):
+    async def __toggle_music__(self) -> None:
         await self.__queue_music__()
         pygame.event.Event(pygame.USEREVENT)
 
-    def update_sprite(self, fps, delay=0):
+    def update_sprite(self, fps, delay=0) -> int:
         active_index = super().update_sprite(fps)
         if self.audios is not None and (self.state in [MovementState.WIND_UP, MovementState.ATTACK_ANIM, MovementState.WIND_DOWN]) and self.audio_trigger_frames.get(str(self.state)) is not None:
             audio_folder = self.name.upper().split(" ",1)[0] + "_" + str(self.state)
@@ -61,6 +61,6 @@ class Boss(Enemy):
 
         return active_index
 
-    def loop(self, fps, dtime, target=VELOCITY_TARGET, drag=0, grav=0):
+    def loop(self, fps, dtime, target=VELOCITY_TARGET, drag=0, grav=0) -> bool:
         asyncio.run(self.__toggle_music__())
         return super().loop(fps, dtime, target=target)

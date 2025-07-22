@@ -21,10 +21,10 @@ class Projectile(Object):
         self.mask = pygame.mask.from_surface(self.sprite)
         self.attack_damage = attack_damage
 
-    def save(self):
+    def save(self) -> dict:
         return {self.name: {"hp": self.hp, "cached x y": (self.rect.x, self.rect.y), "speed": self.speed, "max_dist": self.max_dist, "dest": self.dest, "angle": self.angle}}
 
-    def load(self, obj):
+    def load(self, obj) -> None:
         self.hp = obj["hp"]
         self.rect.x, self.rect.y = obj["cached x y"]
         self.speed = obj["speed"]
@@ -32,7 +32,7 @@ class Projectile(Object):
         self.dest = obj["dest"]
         self.angle = obj["angle"]
 
-    def move(self, speed):
+    def move(self, speed) -> None:
         if self.rect.colliderect(self.level.get_player()) and pygame.sprite.collide_mask(self, self.level.get_player()):
             self.collide(None)
             self.level.get_player().get_hit(self)
@@ -53,12 +53,12 @@ class Projectile(Object):
             delta = speed / dist
             self.rect.center = [((1 - delta) * self.rect.centerx) + (delta * self.dest[0]), ((1 - delta) * self.rect.centery) + (delta * self.dest[1])]
 
-    def loop(self, fps, dtime):
+    def loop(self, fps, dtime) -> None:
         self.move(self.speed * (dtime / fps) * (0.5 if self.level.get_player() is not None and self.level.get_player().is_slow_time else 1))
 
-    def collide(self, obj):
+    def collide(self, obj) -> bool:
         self.hp = 0
         return True
 
-    def set_difficulty(self, scale):
+    def set_difficulty(self, scale) -> None:
         self.speed = (0.75 * self.speed) + (0.25 * self.speed * scale)

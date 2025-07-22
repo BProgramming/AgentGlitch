@@ -66,7 +66,7 @@ class HUD():
             if grayscale:
                 self.save_icon = pygame.transform.grayscale(self.save_icon)
 
-    def draw_health_bar(self):
+    def draw_health_bar(self) -> None:
         hp_pct = min(1, max(0.01, self.player.hp / self.player.max_hp))
         if self.hp_pct != hp_pct:
             self.hp_pct = hp_pct
@@ -78,7 +78,7 @@ class HUD():
         self.win.blit(self.hp_outline, (10, 10))
         self.win.blit(self.hp_bar, (12, 12))
 
-    def draw_icons(self):
+    def draw_icons(self) -> None:
         if self.player.max_jumps > 0:
             if self.player.jump_count == 0 and self.player.max_jumps > 1:
                 self.win.blit(self.icon_double_jump, (10, 28))
@@ -100,10 +100,10 @@ class HUD():
             self.icon_bullet_time.set_alpha(128 if self.player.cooldowns["bullet_time"] > 0 else 255)
             self.win.blit(self.icon_bullet_time, (270, 28))
 
-    def draw_save(self):
+    def draw_save(self) -> None:
         self.win.blit(self.save_icon, (self.win.get_width() * 0.94, self.win.get_height() - (self.win.get_width() * 0.06)))
 
-    def output(self):
+    def output(self) -> None:
         self.draw_health_bar()
         self.draw_icons()
         if self.save_icon_timer > 0:

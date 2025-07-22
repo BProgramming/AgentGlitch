@@ -18,7 +18,7 @@ class CinematicsManager:
         self.queued = []
         self.load(files, controller)
 
-    def load(self, files, controller):
+    def load(self, files, controller) -> None:
         if type(files) not in [list, tuple]:
             files = [files]
         for file in files:
@@ -32,25 +32,25 @@ class CinematicsManager:
                 else:
                     handle_exception(FileNotFoundError(path))
 
-    def __load_slide__(self, file):
+    def __load_slide__(self, file) -> pygame.image:
         return pygame.image.load(file)
 
-    def __load_video__(self, file):
+    def __load_video__(self, file) -> cv2.VideoCapture:
         return cv2.VideoCapture(file)
 
-    def clear_queue(self):
+    def clear_queue(self) -> None:
         self.queued = []
 
-    def queue(self, name):
+    def queue(self, name) -> None:
         self.queued.append(self.cinematics[name])
 
-    def play(self, name, win):
+    def play(self, name, win) -> int:
         if self.cinematics.get(name) is not None:
             return self.cinematics[name].play(win)
         else:
             return 0
 
-    def play_queue(self, win):
+    def play_queue(self, win) -> int:
         dtime = 0
         for cinematic in self.queued:
             dtime += cinematic.play(win)
@@ -68,7 +68,7 @@ class Cinematic:
         self.should_fade_in = should_fade_in
         self.should_fade_out = should_fade_out
 
-    def play(self, win):
+    def play(self, win) -> int:
         start = time.perf_counter_ns()
         pygame.mixer.pause()
         if self.type == CinematicType.SLIDE:
@@ -79,7 +79,7 @@ class Cinematic:
         return (time.perf_counter_ns() - start) // 1000000
 
     @staticmethod
-    def __play_slide__(slide, controller, win, text=None, should_glitch=False, pause_key=None, should_fade_in=True, should_fade_out=True):
+    def __play_slide__(slide, controller, win, text=None, should_glitch=False, pause_key=None, should_fade_in=True, should_fade_out=True) -> None:
         og_slide = slide
         if text is not None:
             for i in range(len(text)):
@@ -175,7 +175,7 @@ class Cinematic:
             slide.blit(og_slide, (0, 0))
 
     @staticmethod
-    def __play_video__(video, controller, win, text=None, should_glitch=False, pause_key=None, should_fade_in=True, should_fade_out=True):
+    def __play_video__(video, controller, win, text=None, should_glitch=False, pause_key=None, should_fade_in=True, should_fade_out=True) -> None:
         if not video.isOpened():
             raise IOError("Video file " + str(video) + " could not be opened.")
 

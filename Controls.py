@@ -55,7 +55,7 @@ class Controller:
         self.music = None
         self.music_index = 0
 
-    def queue_track_list(self, music=None):
+    def queue_track_list(self, music=None) -> None:
         if music is None:
             self.music = self.level.music
         else:
@@ -66,7 +66,7 @@ class Controller:
         else:
             pygame.mixer.music.load(self.music[self.music_index])
 
-    def cycle_music(self):
+    def cycle_music(self) -> None:
         if self.music is not None:
             self.music_index += 1
             if self.music_index >= len(self.music):
@@ -77,18 +77,18 @@ class Controller:
                 else:
                     pygame.mixer.music.load(self.music[self.music_index])
 
-    def get_formatted_level_time(self):
+    def get_formatted_level_time(self) -> str:
         minutes = self.level.time // 60000
         seconds = (self.level.time - (minutes * 60000)) // 1000
         milliseconds = self.level.time - ((minutes * 60000) + (seconds * 1000))
         return ("0" if minutes < 10 else "") + str(minutes) + ":" + ("0" if seconds < 10 else "") + str(seconds) + "." + ("0" if milliseconds < 100 else "") + ("0" if milliseconds < 10 else "") + str(milliseconds)
 
-    def set_difficulty(self):
+    def set_difficulty(self) -> None:
         if self.level is not None:
             for obj in [self.level.get_player()] + self.level.get_objects():
                 obj.set_difficulty(self.difficulty)
 
-    def get_gamepad(self, notify=True, layout_options=GAMEPAD_LAYOUTS):
+    def get_gamepad(self, notify=True, layout_options=GAMEPAD_LAYOUTS) -> int:
         start = time.perf_counter_ns()
         if pygame.joystick.get_count() > 0:
             gamepad = pygame.joystick.Joystick(0)
@@ -126,7 +126,7 @@ class Controller:
                 display_text(msg, self.win, self, type=False)
         return (time.perf_counter_ns() - start) // 1000000
 
-    def set_keyboard_layout(self, name, layout_options=KEYBOARD_LAYOUTS):
+    def set_keyboard_layout(self, name, layout_options=KEYBOARD_LAYOUTS) -> None:
         layout = layout_options[name]
         self.keys_quicksave = layout["keys_quicksave"]
         self.keys_cycle_layout = layout["keys_cycle_layout"]
@@ -144,7 +144,7 @@ class Controller:
         self.keys_shrink = layout["keys_shrink"]
         self.active_keyboard_layout = name
 
-    def set_gamepad_layout(self, name, layout_options=GAMEPAD_LAYOUTS):
+    def set_gamepad_layout(self, name, layout_options=GAMEPAD_LAYOUTS) -> None:
         layout = layout_options[name]
         self.button_menu_up = layout["button_menu_up"]
         self.button_menu_down = layout["button_menu_down"]
@@ -164,7 +164,7 @@ class Controller:
         self.button_shrink = layout["button_shrink"]
         self.active_gamepad_layout = (None if name == "NONE" else name)
 
-    def pick_from_selector(self, selector, clear=None, joystick_tolerance=0.25):
+    def pick_from_selector(self, selector, clear=None, joystick_tolerance=0.25) -> bool:
         pygame.mouse.set_visible(True)
         if self.active_gamepad_layout is not None:
             selector.set_mouse_pos(self.win)
@@ -232,7 +232,7 @@ class Controller:
                     selector.move_mouse_pos(self.win, 1 if joystick_movement >= 0 else -1)
                     joystick_movement = 0
 
-    def volume(self, clear=None, joystick_tolerance=0.25):
+    def volume(self, clear=None, joystick_tolerance=0.25) -> None:
         pygame.mouse.set_visible(True)
         self.volume_menu.notch_val[0] = self.master_volume["background"]
         self.volume_menu.notch_val[1] = self.master_volume["player"]
@@ -295,7 +295,7 @@ class Controller:
                     self.settings_menu.move_mouse_pos(self.win, 1 if joystick_movement >= 0 else -1)
                     joystick_movement = 0
 
-    def controls(self, clear=None, joystick_tolerance=0.25):
+    def controls(self, clear=None, joystick_tolerance=0.25) -> None:
         pygame.mouse.set_visible(True)
         if self.active_gamepad_layout is not None:
             self.controls_menu.set_mouse_pos(self.win)
@@ -374,7 +374,7 @@ class Controller:
                     self.controls_menu.move_mouse_pos(self.win, 1 if joystick_movement >= 0 else -1)
                     joystick_movement = 0
 
-    def settings(self, clear=None, joystick_tolerance=0.25):
+    def settings(self, clear=None, joystick_tolerance=0.25) -> None:
         pygame.mouse.set_visible(True)
         self.settings_menu.notch_val[0] = (self.difficulty - DifficultyScale.EASIEST) / (DifficultyScale.HARDEST - DifficultyScale.EASIEST)
         if self.active_gamepad_layout is not None:
@@ -436,7 +436,7 @@ class Controller:
                     self.settings_menu.move_mouse_pos(self.win, 1 if joystick_movement >= 0 else -1)
                     joystick_movement = 0
 
-    def pause(self, joystick_tolerance=0.25):
+    def pause(self, joystick_tolerance=0.25) -> int:
         pygame.mouse.set_visible(True)
         start = time.perf_counter_ns()
         pygame.mixer.pause()
@@ -528,7 +528,7 @@ class Controller:
         pygame.mouse.set_visible(False)
         return (time.perf_counter_ns() - start) // 1000000
 
-    def main(self, joystick_tolerance=0.25):
+    def main(self, joystick_tolerance=0.25) -> bool:
         self.main_menu.fade_music()
         pygame.mouse.set_visible(True)
         if self.active_gamepad_layout is not None:
@@ -618,7 +618,7 @@ class Controller:
                     self.main_menu.move_mouse_pos(self.win, 1 if joystick_movement >= 0 else -1)
                     joystick_movement = 0
 
-    def cycle_keyboard_layout(self, win, layout_options=KEYBOARD_LAYOUTS):
+    def cycle_keyboard_layout(self, win, layout_options=KEYBOARD_LAYOUTS) -> int:
         if self.active_keyboard_layout == "ARROW_MOVE":
             self.set_keyboard_layout("WASD_MOVE", layout_options)
             text = "Control layout changed to WASD movement (left hand move, right hand interact)."
@@ -644,13 +644,13 @@ class Controller:
 
         return 1000
 
-    def handle_pause_unpause(self, input):
+    def handle_pause_unpause(self, input) -> int:
         if input in self.keys_pause_unpause or (self.active_gamepad_layout is not None and self.button_pause_unpause is not None and input == self.button_pause_unpause):
             return self.pause()
         else:
             return 0
 
-    def handle_anykey(self):
+    def handle_anykey(self) -> bool:
         if any(pygame.key.get_pressed()):
             return True
         elif self.active_gamepad_layout is not None:
@@ -659,7 +659,7 @@ class Controller:
                     return True
         return False
 
-    def handle_single_input(self, input, win):
+    def handle_single_input(self, input, win) -> int:
         if input in self.keys_pause_unpause or (self.active_gamepad_layout is not None and self.button_pause_unpause is not None and input == self.button_pause_unpause):
             return self.pause()
         elif input in self.keys_quicksave or (self.active_gamepad_layout is not None and self.button_quicksave is not None and input == self.button_quicksave):
@@ -682,7 +682,7 @@ class Controller:
             self.level.get_player().shrink()
         return 0
 
-    def handle_continuous_input(self, joystick_tolerance=0.1):
+    def handle_continuous_input(self, joystick_tolerance=0.1) -> None:
         player_is_moving = False
         player_is_attacking = False
 

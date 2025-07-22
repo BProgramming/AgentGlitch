@@ -11,7 +11,7 @@ class ParticleEffect:
         self.x_vel = x_vel
         self.y_vel = y_vel
 
-    def generate(self, width, height, amount, color, level_bounds):
+    def generate(self, width, height, amount, color, level_bounds) -> pygame.Surface:
         points = []
         for i in range(amount):
             points.append((random.randint(0, level_bounds[1][0]), random.randint(0, level_bounds[1][1])))
@@ -24,7 +24,7 @@ class ParticleEffect:
             image.blit(particle, point)
         return image
 
-    def move(self, dtime):
+    def move(self, dtime) -> None:
         if self.x_vel != 0:
             self.rect.x += self.x_vel * dtime
             if self.rect.x < 0:
@@ -38,7 +38,7 @@ class ParticleEffect:
             elif self.rect.y > self.rect.height:
                 self.rect.y = 0
 
-    def draw(self, win, offset_x, offset_y):
+    def draw(self, win, offset_x, offset_y) -> None:
         win.blit(self.image, (self.rect.x - offset_x, self.rect.y - offset_y))
         if self.y_vel > 0:
             win.blit(self.image, (self.rect.x - offset_x, self.rect.y - self.rect.height - offset_y))
