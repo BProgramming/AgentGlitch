@@ -129,7 +129,7 @@ class Player(Actor):
         if self.state in [MovementState.IDLE, MovementState.CROUCH, MovementState.RUN, MovementState.FALL, MovementState.JUMP, MovementState.DOUBLE_JUMP, MovementState.IDLE_ATTACK, MovementState.CROUCH_ATTACK, MovementState.RUN_ATTACK, MovementState.FALL_ATTACK, MovementState.JUMP_ATTACK, MovementState.DOUBLE_JUMP_ATTACK]:
             self.is_attacking = True
             for obj in self.level.get_objects_in_range((self.rect.x, self.rect.y)):
-                if isinstance(obj, Enemy) and pygame.sprite.collide_rect(self, obj):
+                if isinstance(obj, Enemy) and pygame.sprite.collide_rect(self, obj) and self.facing == (MovementDirection.RIGHT if obj.rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT):
                     obj.get_hit(self)
                     if obj.patrol_path is not None:
                         obj.rect.x -= self.direction * int(push)

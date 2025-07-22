@@ -231,7 +231,7 @@ class Actor(Object):
                     else:
                         overlap = self.rect.clip(obj.rect)
                     if (isinstance(obj, Actor) and obj != self.level.get_player()):
-                        if obj.is_attacking and self.cooldowns["get_hit"] <= 0:
+                        if obj.facing == (MovementDirection.RIGHT if self.rect.centerx - obj.rect.centerx >= 0 else MovementDirection.LEFT) and obj.is_attacking and self.cooldowns["get_hit"] <= 0:
                             self.get_hit(obj)
                     elif isinstance(obj, Hazard):
                         if obj.is_attacking and self.cooldowns["get_hit"] <= 0:
@@ -424,7 +424,7 @@ class Actor(Object):
                 else:
                     proj.loop(fps, dtime)
 
-        if self.patrol_path is not None and self.state != MovementState.WIND_UP and self.state != MovementState.WIND_DOWN:
+        if (self == self.level.get_player() or self.patrol_path is not None) and self.state != MovementState.WIND_UP and self.state != MovementState.WIND_DOWN:
             self.should_move_vert = True
             self.push_x *= 0.9
             if abs(self.push_x) < 0.01:
