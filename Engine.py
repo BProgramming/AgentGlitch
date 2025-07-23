@@ -4,7 +4,6 @@ import time
 import pygame
 import sys
 import pickle
-import traceback
 from os.path import join, isfile
 from Actor import Actor
 from Block import BreakableBlock
@@ -13,8 +12,11 @@ from Controls import Controller
 from Helpers import load_json_dict, load_levels, load_audios, display_text, glitch, DifficultyScale, handle_exception, load_text_from_file
 from Level import Level
 from HUD import HUD
+import SteamworksConnection as sw
 
 pygame.init()
+
+steamworks_connection = sw.initialize()
 
 WIDTH, HEIGHT = 1920, 1080
 FPS_TARGET = 60
@@ -23,7 +25,7 @@ icon = join("Assets", "Icons", "icon.png")
 if isfile(icon):
     pygame.display.set_icon(pygame.image.load(icon))
 else:
-    handle_exception(FileNotFoundError(icon))
+    handle_exception("File " + str(FileNotFoundError(icon)) + " not found.")
 
 WINDOW = pygame.display.set_mode((WIDTH, HEIGHT), flags=pygame.SCALED)
 pygame.display.set_caption("AGENT GLITCH")
@@ -344,6 +346,7 @@ def main(win):
             glitch_timer = 0
             glitches = None
             next_level = None
+            should_store_steam_stats = False
             clock.tick(FPS_TARGET)
 
             # MAIN GAME LOOP: #
@@ -424,6 +427,19 @@ def main(win):
                 pygame.mixer.music.fadeout(1000)
                 pygame.mixer.music.unload()
 
+            if should_store_steam_stats:
+                win.fill((0, 0, 0))
+                display_text("Updating your steam achievements...", win, controller, type=False, min_pause_time=0, should_sleep=False)
+                while True:
+                    if steamworks_connection.UserStats.StoreStats():
+                        break
+                    else:
+                        for event in pygame.event.get():
+                            if event.type == pygame.QUIT:
+                                controller.save_player_profile(controller)
+                                pygame.quit()
+                                sys.exit()
+
             if controller.goto_main:
                 break
             elif next_level is not None:
@@ -449,4 +465,4 @@ if __name__ == "__main__":
     try:
         main(WINDOW)
     except Exception as e:
-        print(traceback.print_exception(e))
+        handle_exception(str(e))

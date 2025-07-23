@@ -17,42 +17,42 @@ class HUD():
         self.icon_bar = pygame.Surface((324, 64), pygame.SRCALPHA)
         file = join("Assets", "Icons", "jump.png")
         if not isfile(file):
-            handle_exception(FileNotFoundError(file))
+            handle_exception("File " + str(FileNotFoundError(file)) + " not found.")
         else:
             self.icon_jump = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
             if grayscale:
                 self.icon_jump = pygame.transform.grayscale(self.icon_jump)
         file = join("Assets", "Icons", "double_jump.png")
         if not isfile(file):
-            handle_exception(FileNotFoundError(file))
+            handle_exception("File " + str(FileNotFoundError(file)) + " not found.")
         else:
             self.icon_double_jump = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
             if grayscale:
                 self.icon_double_jump = pygame.transform.grayscale(self.icon_double_jump)
         file = join("Assets", "Icons", "block.png")
         if not isfile(file):
-            handle_exception(FileNotFoundError(file))
+            handle_exception("File " + str(FileNotFoundError(file)) + " not found.")
         else:
             self.icon_block = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
             if grayscale:
                 self.icon_block = pygame.transform.grayscale(self.icon_block)
         file = join("Assets", "Icons", "teleport.png")
         if not isfile(file):
-            handle_exception(FileNotFoundError(file))
+            handle_exception("File " + str(FileNotFoundError(file)) + " not found.")
         else:
             self.icon_teleport = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
             if grayscale:
                 self.icon_teleport = pygame.transform.grayscale(self.icon_teleport)
         file = join("Assets", "Icons", "resize.png")
         if not isfile(file):
-            handle_exception(FileNotFoundError(file))
+            handle_exception("File " + str(FileNotFoundError(file)) + " not found.")
         else:
             self.icon_resize = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
             if grayscale:
                 self.icon_resize = pygame.transform.grayscale(self.icon_resize)
         file = join("Assets", "Icons", "bullet_time.png")
         if not isfile(file):
-            handle_exception(FileNotFoundError(file))
+            handle_exception("File " + str(FileNotFoundError(file)) + " not found.")
         else:
             self.icon_bullet_time = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
             if grayscale:
@@ -60,7 +60,7 @@ class HUD():
 
         file = join("Assets", "Icons", "save.png")
         if not isfile(file):
-            handle_exception(FileNotFoundError(file))
+            handle_exception("File " + str(FileNotFoundError(file)) + " not found.")
         else:
             self.save_icon = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
             if grayscale:

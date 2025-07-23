@@ -32,9 +32,9 @@ class DifficultyScale(float, Enum):
         return self.name.replace("_", " ")
 
 
-def handle_exception(e) -> None:
+def handle_exception(msg) -> None:
     pygame.quit()
-    messagebox.showerror(title="An error occurred", message="Even the agent couldn't glitch out of this!\n\nFile " + str(e) + " not found.")
+    messagebox.showerror(title="Even the agent couldn't glitch out of this!", message="ERROR:\n\n" + msg + ("" if msg[-1] == "." else "."))
     sys.exit()
 
 
@@ -68,10 +68,10 @@ def load_picker_sprites(dir) -> tuple:
                     images.append(surface)
                     values.append([folder, "Retro" + folder if isfile(join(path, "Retro" + folder, "picker.png")) else None])
         if len(images) == 0:
-            handle_exception(FileNotFoundError("No sprite images found in " + path))
+            handle_exception("No sprite images found in " + str(FileNotFoundError(path)) + ".")
         return images, values
     else:
-        handle_exception(FileNotFoundError(path))
+        handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
 
 
 def load_level_images(dir) -> tuple:
@@ -88,10 +88,10 @@ def load_level_images(dir) -> tuple:
             images.append(surface)
             values.append(file.replace(".png", "").upper())
         if len(images) == 0:
-            handle_exception(FileNotFoundError("No level images found in " + path))
+            handle_exception("No level images found in " + str(FileNotFoundError(path)) + ".")
         return images, values
     else:
-        handle_exception(FileNotFoundError(path))
+        handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
 
 
 def make_image_from_text(width, height, header, body, border=5) -> pygame.Surface:
@@ -131,7 +131,7 @@ def load_images(dir1, dir2) -> dict:
 
         return all_images
     else:
-        handle_exception(FileNotFoundError(path))
+        handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
 
 
 def flip(sprites) -> list:
@@ -152,7 +152,7 @@ def load_sprite_sheets(dir1, dir2, sprite_master, direction=False, grayscale=Fal
                 dir2 = options[i]
                 path = join("Assets", dir1, dir2)
             else:
-                handle_exception(FileNotFoundError(path))
+                handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
 
         images = [f for f in listdir(path) if isfile(join(path, f))]
 
@@ -189,7 +189,7 @@ def load_json_dict(dir, file) -> dict:
         else:
             return {}
     except FileNotFoundError:
-        handle_exception(FileNotFoundError(path))
+        handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
 
 
 def load_levels(dir) -> dict:
@@ -206,7 +206,7 @@ def load_levels(dir) -> dict:
 
         return levels
     else:
-        handle_exception(FileNotFoundError(path))
+        handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
 
 
 def __load_single_audio__(dir1, dir2) -> dict:
@@ -219,7 +219,7 @@ def __load_single_audio__(dir1, dir2) -> dict:
             sounds[dir2.upper()].append(path + "\\" + file)
         return sounds
     else:
-        handle_exception(FileNotFoundError(path))
+        handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
 
 
 def load_audios(dir) -> dict:
@@ -239,7 +239,7 @@ def load_audios(dir) -> dict:
 
         return sounds
     else:
-        handle_exception(FileNotFoundError(path))
+        handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
 
 
 def set_sound_source(source_rect, player_rect, type, channel) -> None:
@@ -267,7 +267,7 @@ def load_text_from_file(file) -> list:
                 text.append(line.replace("\n", ""))
         return text
     else:
-        handle_exception(FileNotFoundError(path))
+        handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
 
 
 def display_text(output, win, controller, type=True, min_pause_time=80, should_sleep=True) -> None:
