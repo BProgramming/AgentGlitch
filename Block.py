@@ -16,7 +16,7 @@ class Block(Object):
 
     def save(self) -> dict | None:
         if self.hp != 0:
-            super().save()
+            return super().save()
         else:
             return None
 
@@ -40,6 +40,7 @@ class Block(Object):
             return pygame.transform.scale2x(surface)
         else:
             handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
+
 
 class BreakableBlock(Block):
     GET_HIT_COOLDOWN = 1

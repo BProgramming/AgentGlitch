@@ -5,6 +5,7 @@ from enum import Enum
 from Object import Object
 from Projectile import Projectile
 from Block import Hazard, MovableBlock, MovingBlock
+from Objectives import Objective
 from Helpers import load_sprite_sheets, MovementDirection, set_sound_source
 
 
@@ -226,7 +227,7 @@ class Actor(Object):
         for obj in self.level.get_objects_in_range((self.rect.x, self.rect.y)) if self == self.level.get_player() else [self.level.get_player()] + self.level.get_objects_in_range((self.rect.x, self.rect.y), blocks_only=True):
             if pygame.sprite.collide_rect(self, obj):
                 if pygame.sprite.collide_mask(self, obj):
-                    if isinstance(obj, Actor):
+                    if isinstance(obj, Actor) or isinstance(obj, Objective):
                         overlap = self.mask.overlap_mask(obj.mask, (0, 0)).get_rect()
                     else:
                         overlap = self.rect.clip(obj.rect)
@@ -239,6 +240,8 @@ class Actor(Object):
                                 self.get_hit(obj)
                             if overlap.width >= overlap.height and ((self.rect.y <= obj.rect.y and "U" in obj.hit_sides) or (self.rect.y >= obj.rect.y and "D" in obj.hit_sides)):
                                 self.get_hit(obj)
+                    elif isinstance(obj, Objective) and self == self.level.get_player():
+                        obj.get_hit(self)
                     if obj.collide(self):
                         self.collide(obj)
                         if overlap.width <= overlap.height and (self.x_vel == 0 or self.direction == (MovementDirection.RIGHT if self.x_vel >= 0 else MovementDirection.LEFT)):

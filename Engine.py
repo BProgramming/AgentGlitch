@@ -3,6 +3,7 @@ import random
 import time
 import pygame
 import sys
+import traceback
 import pickle
 from os.path import join, isfile
 from Actor import Actor
@@ -178,7 +179,7 @@ def save(level, hud):
         hud.save_icon_timer = 1.0
 
     data = {"level": level.name}
-    for obj in [level.get_player()] + level.get_objects():
+    for obj in [level.get_player()] + level.get_objects() + level.objectives_collected:
         obj_data = obj.save()
         if obj_data is not None:
             data.update(obj_data)
@@ -371,7 +372,7 @@ def main(win):
                     if event.type == pygame.QUIT:
                         save_player_profile(controller, level)
                         if controller.level is not None:
-                            controller.save(controller.level, controller.hud)
+                            save(controller.level, controller.hud)
                         pygame.quit()
                         sys.exit()
                     elif event.type == pygame.KEYDOWN:
@@ -450,7 +451,7 @@ def main(win):
                 if level.end_cinematic is not None:
                     for cinematic in level.end_cinematic:
                         level.cinematics.play(cinematic, win)
-                cinematics.cinematics["recap"].text = ["Mission successful.", "Mission time: " + controller.get_formatted_level_time() + "."]
+                cinematics.cinematics["recap"].text = ["Mission successful.", "Mission time: " + controller.get_formatted_level_time() + ".", "Packets collected: " + str(len(level.objectives_collected)) + "."]
                 cinematics.play("recap", win)
                 if level.grayscale:
                     sprite_master.clear()
@@ -465,4 +466,5 @@ if __name__ == "__main__":
     try:
         main(WINDOW)
     except Exception as e:
+        traceback.print_exception(e)
         handle_exception(str(e))
