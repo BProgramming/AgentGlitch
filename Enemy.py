@@ -145,10 +145,14 @@ class Enemy(Actor):
         if obj != self.level.get_player() and self.direction == (MovementDirection.RIGHT if obj.rect.centerx - self.rect.centerx > 0 else MovementDirection.LEFT):
             if obj.is_stacked or isinstance(obj, Door):
                 if self.patrol_path is not None:
-                    points_checked = 0
-                    while points_checked < len(self.patrol_path) and MovementDirection(math.copysign(1, self.patrol_path[self.patrol_path_index][0] - self.rect.x)) == self.direction:
+                    for point in range(len(self.patrol_path)):
                         self.__increment_patrol_index__()
-                        points_checked += 1
+                        if self.direction == MovementDirection.RIGHT and self.rect.centerx > self.patrol_path[self.patrol_path_index][0]:
+                            self.direction = self.facing = self.direction.swap()
+                            break
+                        elif self.direction == MovementDirection.LEFT and self.rect.centerx < self.patrol_path[self.patrol_path_index][0]:
+                            self.direction = self.facing = self.direction.swap()
+                            break
             else:
                 self.jump()
         elif self.cooldowns["spot_player"] <= 0 and self.patrol_path is not None:

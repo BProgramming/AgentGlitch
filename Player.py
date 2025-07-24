@@ -1,10 +1,11 @@
 import random
+import time
 import pygame
 from Actor import Actor, MovementState
 from Object import Object
 from Enemy import Enemy
 from Block import BreakableBlock
-from Helpers import MovementDirection, load_sprite_sheets
+from Helpers import MovementDirection, load_sprite_sheets, display_text
 
 
 class Player(Actor):
@@ -102,13 +103,18 @@ class Player(Actor):
         if self.direction != MovementDirection.RIGHT:
             self.direction = self.facing = MovementDirection.RIGHT
 
-    def revert(self) -> None:
+    def revert(self) -> int:
+        start = time.perf_counter_ns()
+        text = ["Careful!", "You died.", "Watch out!", "OUCH!", "Don't try that again!", "Agent? Agent?!", "Initiating respawn...", "Reverting time..."]
+        display_text(text[random.randrange(len(text))], self.controller.win, self.controller, type=False, min_pause_time=0, should_sleep=True)
         self.should_move_vert = False
         self.rect.x, self.rect.y = self.cached_x, self.cached_y
         self.hp = self.cached_hp
         self.size = self.cached_size
         self.size_target = self.cached_size_target
         self.cooldowns = self.cached_cooldowns
+        self.level.revert_counter += 1
+        return (time.perf_counter_ns() - start) // 1000000
 
     def teleport(self, vel=(VELOCITY_TARGET * MULTIPLIER_TELEPORT), delay=TELEPORT_DELAY, cd=TELEPORT_COOLDOWN) -> None:
         if self.can_teleport and self.cooldowns["teleport"] <= 0:

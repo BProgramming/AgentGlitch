@@ -1,7 +1,5 @@
-from os.path import join
 import pygame
-
-import WeatherEffects
+from os.path import join
 from Block import Block, BreakableBlock, MovingBlock, MovableBlock, Hazard, MovingHazard, Door, FallingHazard
 from Boss import Boss
 from Cinematics import CinematicsManager
@@ -9,7 +7,7 @@ from Player import Player
 from Enemy import Enemy
 from Objectives import Objective
 from Trigger import Trigger, TriggerType
-from WeatherEffects import Rain, Snow
+from WeatherEffects import *
 from Helpers import load_path, validate_file_list, display_text
 
 
@@ -18,8 +16,11 @@ class Level:
 
     def __init__(self, name, levels, meta_dict, objects_dict, sprite_master, image_master, player_audios, enemy_audios, block_audios, win, controller, block_size=BLOCK_SIZE):
         self.name = name.upper()
-        self.block_size = block_size if meta_dict[name].get("block_size") is None or not meta_dict[name]["block_size"].isnumeric() else int(meta_dict[name]["block_size"])
         self.time = 0
+        self.revert_counter = 0
+        self.objectives_collected = []
+        self.achievement = (None if meta_dict[name].get("achievement") is None else meta_dict[name]["achievement"])
+        self.block_size = block_size if meta_dict[name].get("block_size") is None or not meta_dict[name]["block_size"].isnumeric() else int(meta_dict[name]["block_size"])
         self.purge_queue = {"triggers": set(), "hazards": set(), "blocks": set(), "doors": set(), "enemies": set(), "objectives": set()}
         self.grayscale = (False if meta_dict[name].get("grayscale") is None else bool(meta_dict[name]["grayscale"].upper() == "TRUE"))
         self.can_glitch = (False if meta_dict[name].get("can_glitch") is None else bool(meta_dict[name]["can_glitch"].upper() == "TRUE"))
@@ -39,7 +40,17 @@ class Level:
         if meta_dict[name].get("abilities") is not None:
             self.set_player_abilities(meta_dict[name]["abilities"])
         self.cinematics = (None if meta_dict[name].get("cinematics") is None else CinematicsManager(meta_dict[name]["cinematics"], controller))
-        self.objectives_collected = []
+
+    def get_formatted_time(self) -> str:
+        minutes = self.time // 60000
+        seconds = (self.time - (minutes * 60000)) // 1000
+        milliseconds = self.time - ((minutes * 60000) + (seconds * 1000))
+        return ("0" if minutes < 10 else "") + str(minutes) + ":" + ("0" if seconds < 10 else "") + str(seconds) + "." + ("0" if milliseconds < 100 else "") + ("0" if milliseconds < 10 else "") + str(milliseconds)
+
+    def get_recap_text(self) -> list:
+        return ["Mission time: " + self.get_formatted_time() + ".",
+                "Packets collected: " + str(len(self.objectives_collected)) + ".",
+                "Deaths: " + str(self.revert_counter) + "."]
 
     def get_player(self) -> Player:
         return self.player
@@ -114,7 +125,7 @@ class Level:
             self.purge_queue["objectives"].clear()
 
     #NOTE: having weather with lots of particles + lots of enemies + bullets will decrease the frame rate
-    def get_weather(self, name) -> WeatherEffects.ParticleEffect | None:
+    def get_weather(self, name) -> ParticleEffect | None:
         if name is None:
             return None
         else:
@@ -205,7 +216,7 @@ class Level:
                         case "PLAYER":
                             player_start = ((j * block_size), (i * block_size))
                         case "OBJECTIVE":
-                            objectives.append(Objective(level, controller, j * block_size, i * block_size, block_size, block_size, sprite_master, block_audios, sprite=data["sprite"], sound=("objective" if data.get("sound") is None else data["sound"].lower()), is_blocking=bool(data.get("is_blocking") is not None and data["is_blocking"].upper() == "TRUE"),  name=(element if data.get("name") is None else data["name"])))
+                            objectives.append(Objective(level, controller, j * block_size, i * block_size, block_size, block_size, sprite_master, block_audios, sprite=data["sprite"], sound=("objective" if data.get("sound") is None else data["sound"].lower()), is_blocking=bool(data.get("is_blocking") is not None and data["is_blocking"].upper() == "TRUE"), achievement=(None if data.get("achievement") is None else data["achievement"]),  name=(element if data.get("name") is None else data["name"])))
                         case "BLOCK":
                             if i > 0 and len(str(layout[i - 1][j])) > 0 and objects_dict.get(str(layout[i - 1][j])) is not None and objects_dict[str(layout[i - 1][j])]["type"] in ["Block"]:
                                 is_stacked = True

@@ -17,10 +17,12 @@ class Controller:
                         "PS5": {"button_menu_up": None, "button_menu_down": None, "button_quicksave": 8, "button_left": None, "button_right": None, "axis_horiz": 0, "hat_horiz": 0, "button_crouch_uncrouch": 1, "button_jump": 0, "button_teleport_dash": 2, "button_pause_unpause": 9, "axis_attack": 5, "axis_block": 2, "button_bullet_time": 3, "button_grow": 5, "button_shrink": 4},
                         "NONE": {"button_menu_up": None, "button_menu_down": None, "button_quicksave": None, "button_left": None, "button_right": None, "axis_horiz": None, "hat_horiz": None, "button_crouch_uncrouch": None, "button_jump": None, "button_teleport_dash": None, "button_pause_unpause": None, "axis_attack": None, "axis_block": None, "button_bullet_time": None, "button_grow": None, "button_shrink": None}}
 
-    def __init__(self, level, win, save, save_player_profile, layout=None, main_menu_music=None):
+    def __init__(self, level, win, save, save_player_profile, layout=None, main_menu_music=None, steamworks=None):
         self.win = win
         self.save = save
         self.save_player_profile = save_player_profile
+        self.steamworks = steamworks
+        self.should_store_steam_stats = False
         self.player_sprite_selected = [None, None]
         self.player_abilities = None
         self.difficulty = DifficultyScale.MEDIUM
@@ -76,12 +78,6 @@ class Controller:
                     pygame.mixer.music.queue(self.music[self.music_index])
                 else:
                     pygame.mixer.music.load(self.music[self.music_index])
-
-    def get_formatted_level_time(self) -> str:
-        minutes = self.level.time // 60000
-        seconds = (self.level.time - (minutes * 60000)) // 1000
-        milliseconds = self.level.time - ((minutes * 60000) + (seconds * 1000))
-        return ("0" if minutes < 10 else "") + str(minutes) + ":" + ("0" if seconds < 10 else "") + str(seconds) + "." + ("0" if milliseconds < 100 else "") + ("0" if milliseconds < 10 else "") + str(milliseconds)
 
     def set_difficulty(self) -> None:
         if self.level is not None:

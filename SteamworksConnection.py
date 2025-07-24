@@ -17,9 +17,3 @@ def initialize() -> STEAMWORKS:
     except Exception as e:
         handle_exception(str(e))
     return sw
-
-def get_achievement(sw: STEAMWORKS, name: str) -> bool:
-    return sw.UserStats.GetAchievement(name)
-
-def set_achievement(sw: STEAMWORKS, name: str) -> None:
-    sw.UserStats.SetAchievement(name)

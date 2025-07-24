@@ -172,8 +172,8 @@ class Actor(Object):
             self.cached_size_target = self.size_target
             self.cached_cooldowns = self.cooldowns.copy()
 
-    def revert(self) -> None:
-        pass
+    def revert(self) -> int:
+        return 0
 
     def jump(self, target=VELOCITY_JUMP) -> None:
         if self.jump_count < self.max_jumps:

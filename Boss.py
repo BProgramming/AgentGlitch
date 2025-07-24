@@ -24,6 +24,10 @@ class Boss(Enemy):
                 self.death_triggers["properties"] = death_triggers["properties"]
             if death_triggers.get("cinematics") is not None:
                 self.death_triggers["cinematics"] = death_triggers["cinematics"]
+            if death_triggers.get("achievement") is not None:
+                self.death_triggers["achievement"] = death_triggers["achievement"]
+            elif death_triggers.get("achievements") is not None:
+                self.death_triggers["achievement"] = death_triggers["achievements"]
 
     def die(self) -> None:
         if self.death_triggers.get("properties") is not None:
@@ -32,6 +36,11 @@ class Boss(Enemy):
         if self.death_triggers.get("cinematics") is not None:
             for cinematic in self.death_triggers["cinematics"]:
                 self.level.cinematics.queue(cinematic)
+        if self.death_triggers.get("achievement") is not None and self.controller.steamworks is not None:
+            for achievement in self.death_triggers["achievement"]:
+                if not self.controller.steamworks.UserStats.GetAchievement(achievement):
+                    self.controller.steamworks.UserStats.SetAchievement(achievement)
+                    self.controller.should_store_steam_stats = True
 
     async def __queue_music__(self) -> None:
         if self.music_is_playing and (self.hp <= 0 or math.dist((self.level.get_player().rect.x, self.level.get_player().rect.y), (self.rect.x, self.rect.y)) >= 2 * self.spot_range):

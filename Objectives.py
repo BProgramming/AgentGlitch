@@ -9,7 +9,7 @@ from Helpers import handle_exception, set_sound_source, load_sprite_sheets
 class Objective(Object):
     ANIMATION_DELAY = 0.3
 
-    def __init__(self, level, controller, x, y, width, height, sprite_master, audios, sprite=None, sound="objective", is_blocking=False, name="Objective"):
+    def __init__(self, level, controller, x, y, width, height, sprite_master, audios, sprite=None, sound="objective", is_blocking=False, achievement=None, name="Objective"):
         super().__init__(level, controller, x, y, width, height, is_blocking=is_blocking, name=name)
         if sprite is not None:
             self.sprites = load_sprite_sheets("Sprites", sprite, sprite_master, direction=False, grayscale=self.level.grayscale)["ANIMATE"]
@@ -21,6 +21,7 @@ class Objective(Object):
         self.update_geo()
         self.audios = audios
         self.sound = sound
+        self.achievement = achievement
 
     def collide(self, obj) -> bool:
         return False
@@ -29,6 +30,9 @@ class Objective(Object):
         self.hp = 0
         self.play_sound(self.sound)
         self.__collect__()
+        if self.achievement is not None and self.controller.steamworks is not None and not self.controller.steamworks.UserStats.GetAchievement(self.achievement):
+            self.controller.steamworks.UserStats.SetAchievement(self.achievement)
+            self.controller.should_store_steam_stats = True
 
     def save(self) -> dict:
         return super().save()

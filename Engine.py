@@ -18,6 +18,7 @@ import SteamworksConnection as sw
 pygame.init()
 
 steamworks_connection = sw.initialize()
+steamworks_connection.UserStats.RequestCurrentStats()
 
 WIDTH, HEIGHT = 1920, 1080
 FPS_TARGET = 60
@@ -224,7 +225,7 @@ def main(win):
     sprite_master = {}
     image_master = {}
 
-    controller = Controller(None, win, save, save_player_profile, main_menu_music=(None if meta_dict.get("MAIN_MENU") is None or meta_dict["MAIN_MENU"].get("music") is None else list(meta_dict["MAIN_MENU"]["music"].split(' '))))
+    controller = Controller(None, win, save, save_player_profile, main_menu_music=(None if meta_dict.get("MAIN_MENU") is None or meta_dict["MAIN_MENU"].get("music") is None else list(meta_dict["MAIN_MENU"]["music"].split(' '))), steamworks=steamworks_connection)
     controller.get_gamepad(notify=False)
 
     cinematics_files = [{"name": "credit1", "file": "credit1.png", "type": "SLIDE", "should_glitch": "TRUE"},
@@ -347,7 +348,6 @@ def main(win):
             glitch_timer = 0
             glitches = None
             next_level = None
-            should_store_steam_stats = False
             clock.tick(FPS_TARGET)
 
             # MAIN GAME LOOP: #
@@ -403,7 +403,7 @@ def main(win):
                         controller.goto_restart = True
                         break
                     else:
-                        level.get_player().revert()
+                        dtime_offset += level.get_player().revert()
     
                 for obj in level.get_objects():
                     if (not isinstance(obj, Actor) and type(obj).__name__.upper() != "BLOCK") or (isinstance(obj, Actor) and math.dist(obj.rect.topleft, level.get_player().rect.topleft) < win.get_width() * 1.5):
@@ -428,11 +428,16 @@ def main(win):
                 pygame.mixer.music.fadeout(1000)
                 pygame.mixer.music.unload()
 
-            if should_store_steam_stats:
+            if level.achievement is not None and controller.steamworks is not None and not controller.steamworks.UserStats.GetAchievement(level.achievement):
+                controller.steamworks.UserStats.SetAchievement(level.achievement)
+                controller.should_store_steam_stats = True
+
+            if controller.should_store_steam_stats and controller.steamworks is not None:
+                controller.should_store_steam_stats = False
                 win.fill((0, 0, 0))
                 display_text("Updating your steam achievements...", win, controller, type=False, min_pause_time=0, should_sleep=False)
                 while True:
-                    if steamworks_connection.UserStats.StoreStats():
+                    if controller.steamworks.UserStats.StoreStats():
                         break
                     else:
                         for event in pygame.event.get():
@@ -451,7 +456,7 @@ def main(win):
                 if level.end_cinematic is not None:
                     for cinematic in level.end_cinematic:
                         level.cinematics.play(cinematic, win)
-                cinematics.cinematics["recap"].text = ["Mission successful.", "Mission time: " + controller.get_formatted_level_time() + ".", "Packets collected: " + str(len(level.objectives_collected)) + "."]
+                cinematics.cinematics["recap"].text = ["Mission successful."] + level.get_recap_text()
                 cinematics.play("recap", win)
                 if level.grayscale:
                     sprite_master.clear()

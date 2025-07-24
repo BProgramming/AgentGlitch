@@ -19,6 +19,7 @@ class TriggerType(Enum):
     CHANGE_LEVEL = 6
     SET_PROPERTY = 7
     CINEMATIC = 8
+    SET_ACHIEVEMENT = 9
 
 
 class Trigger(Object):
@@ -61,7 +62,7 @@ class Trigger(Object):
                 data = entry["data"]
                 match entry["type"].upper():
                     case "OBJECTIVE":
-                        return Objective(self.level, self.controller, j * block_size, i * block_size, block_size, block_size, sprite_master, block_audios, sprite=data["sprite"], sound=("objective" if data.get("sound") is None else data["sound"].lower()), is_blocking=bool(data.get("is_blocking") is not None and data["is_blocking"].upper() == "TRUE"), name=(element if data.get("name") is None else data["name"]))
+                        return Objective(self.level, self.controller, j * block_size, i * block_size, block_size, block_size, sprite_master, block_audios, sprite=data["sprite"], sound=("objective" if data.get("sound") is None else data["sound"].lower()), is_blocking=bool(data.get("is_blocking") is not None and data["is_blocking"].upper() == "TRUE"), achievement=(None if data.get("achievement") is None else data["achievement"]), name=(element if data.get("name") is None else data["name"]))
                     case "BLOCK":
                         is_stacked = False
                         return Block(self.level, self.controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, coord_x=data["coord_x"], coord_y=data["coord_y"], is_blocking=bool(data.get("is_blocking") is None or data["is_blocking"].upper() == "TRUE"), name=(element if data.get("name") is None else data["name"]))
@@ -116,6 +117,8 @@ class Trigger(Object):
                 return input
         elif self.type == TriggerType.CINEMATIC:
             return input
+        elif self.type == TriggerType.SET_ACHIEVEMENT:
+            return input
         else:
             return None
 
@@ -153,6 +156,10 @@ class Trigger(Object):
         elif self.type == TriggerType.CINEMATIC:
             if self.level.cinematics is not None and self.level.cinematics.get(self.value) is not None:
                 self.level.cinematics.queue(self.value)
+        elif self.type == TriggerType.SET_ACHIEVEMENT:
+            if self.controller.steamworks is not None and not self.controller.steamworks.UserStats.GetAchievement(self.value):
+                self.controller.steamworks.UserStats.SetAchievement(self.value)
+                self.controller.should_store_steam_stats = True
 
         return [(time.perf_counter_ns() - start) // 1000000, next_level]
 
