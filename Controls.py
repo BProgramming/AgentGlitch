@@ -29,15 +29,16 @@ class Controller:
         self.hud = None
         self.goto_load = self.goto_main = self.goto_restart = False
         self.level = level
-        self.master_volume = {"background": 1, "player": 1, "non-player": 1}
+        self.master_volume = {"background": 1, "player": 1, "non-player": 1, "cinematics": 1}
         dif = {"label": "Difficulty", "type": ButtonType.BAR, "snap": True, "value": self.difficulty, "range": (float(DifficultyScale.EASIEST), float(DifficultyScale.EASY), float(DifficultyScale.MEDIUM), float(DifficultyScale.HARD), float(DifficultyScale.HARDEST))}
         vol_bg = {"label": "Music", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["background"], "range": (0, 100)}
         vol_pc = {"label": "Player", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["player"], "range": (0, 100)}
         vol_fx = {"label": "Effects", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["non-player"], "range": (0, 100)}
+        vol_cn = {"label": "Cinematics", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["cinematics"], "range": (0, 100)}
         self.main_menu = Menu(win, "MAIN MENU", [{"label": "New game", "type": ButtonType.CLICK}, {"label": "Continue", "type": ButtonType.CLICK}, {"label": "Select a level", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}], music=main_menu_music)
         self.pause_menu = Menu(win, "PAUSED", [{"label": "Resume", "type": ButtonType.CLICK}, {"label": "Load last save", "type": ButtonType.CLICK}, {"label": "Restart level", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Quit to menu", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}])
         self.settings_menu = Menu(win, "SETTINGS", [dif, {"label": "Controls", "type": ButtonType.CLICK}, {"label": "Volume", "type": ButtonType.CLICK}, {"label": "Toggle fullscreen", "type": ButtonType.CLICK}, {"label": "Back", "type": ButtonType.CLICK}])
-        self.volume_menu = Menu(win, "VOLUME", [vol_bg, vol_pc, vol_fx, {"label": "Back", "type": ButtonType.CLICK}])
+        self.volume_menu = Menu(win, "VOLUME", [vol_bg, vol_pc, vol_fx, vol_cn, {"label": "Back", "type": ButtonType.CLICK}])
         self.controls_menu = Menu(win, "CONTROLS", [{"label": "Keyboard", "type": ButtonType.CLICK}, {"label": "Controller", "type": ButtonType.CLICK}, {"label": "Back", "type": ButtonType.CLICK}])
         difficulty_images = [make_image_from_text(256, 128, "EASIEST", ["Agent is much stronger", "Enemies are much weaker", "Enemy sight ranges are visible"], border=5), make_image_from_text(256, 128, "EASY", ["Agent is stronger", "Enemies are weaker", "Enemy sight ranges are visible"], border=5), make_image_from_text(256, 128, "MEDIUM", ["Agent is normal strength", "Enemies are normal strength", "Enemy sight ranges are not visible"], border=5), make_image_from_text(256, 128, "HARD", ["Agent is weaker", "Enemies are stronger", "Enemy sight ranges are not visible"], border=5), make_image_from_text(256, 128, "HARDEST", ["Agent is much weaker", "Enemies are much stronger", "Enemy sight ranges are not visible"], border=5)]
         self.difficulty_picker = Selector(win, "CHOOSE DIFFICULTY", ["You can change this at any time."], difficulty_images, [DifficultyScale.EASIEST, DifficultyScale.EASY, DifficultyScale.MEDIUM, DifficultyScale.HARD, DifficultyScale.HARDEST], index=2)
@@ -233,6 +234,7 @@ class Controller:
         self.volume_menu.notch_val[0] = self.master_volume["background"]
         self.volume_menu.notch_val[1] = self.master_volume["player"]
         self.volume_menu.notch_val[2] = self.master_volume["non-player"]
+        self.volume_menu.notch_val[3] = self.master_volume["cinematics"]
         if self.active_gamepad_layout is not None:
             self.volume_menu.set_mouse_pos(self.win)
         self.volume_menu.fade_in(self.win)
@@ -249,11 +251,14 @@ class Controller:
                 case 2:
                     pass  #set effects volume
                 case 3:
+                    pass  #set cinematics volume
+                case 4:
                     self.volume_menu.fade_out(self.win)
                     self.master_volume["background"] = self.volume_menu.notch_val[0]
                     pygame.mixer.music.set_volume(self.master_volume["background"])
                     self.master_volume["player"] = self.volume_menu.notch_val[1]
                     self.master_volume["non-player"] = self.volume_menu.notch_val[2]
+                    self.master_volume["cinematics"] = self.volume_menu.notch_val[3]
                     return
                 case _:
                     pass

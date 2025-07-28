@@ -14,7 +14,7 @@ from Helpers import load_path, validate_file_list, display_text
 class Level:
     BLOCK_SIZE = 96
 
-    def __init__(self, name, levels, meta_dict, objects_dict, sprite_master, image_master, player_audios, enemy_audios, block_audios, win, controller, block_size=BLOCK_SIZE):
+    def __init__(self, name, levels, meta_dict, objects_dict, sprite_master, image_master, player_audios, enemy_audios, block_audios, message_audios, win, controller, block_size=BLOCK_SIZE):
         self.name = name.upper()
         self.time = 0
         self.revert_counter = 0
@@ -35,7 +35,7 @@ class Level:
         self.start_message = (None if meta_dict[name].get("start_message") is None else meta_dict[name]["start_message"])
         self.end_message = (None if meta_dict[name].get("end_message") is None else meta_dict[name]["end_message"])
         self.music = (None if meta_dict[name].get("music") is None else validate_file_list("Music", list(meta_dict[name]["music"].split(' ')), "mp3"))
-        self.level_bounds, self.player, self.triggers, self.blocks, self.dynamic_blocks, self.doors, self.static_blocks, self.hazards, self.enemies, self.objectives = self.build_level(self, levels[self.name], sprite_master, image_master, objects_dict, player_audios, enemy_audios, block_audios, win, controller, None if meta_dict[name].get("player_sprite") is None or meta_dict[name]["player_sprite"].upper() == "NONE" else meta_dict[name]["player_sprite"], self.block_size)
+        self.level_bounds, self.player, self.triggers, self.blocks, self.dynamic_blocks, self.doors, self.static_blocks, self.hazards, self.enemies, self.objectives = self.build_level(self, levels[self.name], sprite_master, image_master, objects_dict, player_audios, enemy_audios, block_audios, message_audios, win, controller, None if meta_dict[name].get("player_sprite") is None or meta_dict[name]["player_sprite"].upper() == "NONE" else meta_dict[name]["player_sprite"], self.block_size)
         self.weather = (None if meta_dict[name].get("weather") is None else self.get_weather(meta_dict[name]["weather"].upper()))
         if meta_dict[name].get("abilities") is not None:
             self.set_player_abilities(meta_dict[name]["abilities"])
@@ -185,7 +185,7 @@ class Level:
             self.weather.draw(win, offset_x, offset_y)
 
     @staticmethod
-    def build_level(level, layout, sprite_master, image_master, objects_dict, player_audios, enemy_audios, block_audios, win, controller, player_sprite, block_size) -> tuple:
+    def build_level(level, layout, sprite_master, image_master, objects_dict, player_audios, enemy_audios, block_audios, message_audios, win, controller, player_sprite, block_size) -> tuple:
         width = len(layout[-1]) * block_size
         height = len(layout) * block_size
         level_bounds = [(0, 0), (width, height)]
@@ -279,7 +279,7 @@ class Level:
                                 path = load_path(list(map(int, data["path"].split(' '))), i, j, block_size)
                             enemies.append(Boss(level, controller, j * block_size, i * block_size, sprite_master, enemy_audios, controller.difficulty, block_size, music=(None if data.get("music") is None or data["music"].upper() == "NONE" else data["music"]), death_triggers=(None if data.get("death_triggers") is None else data["death_triggers"]), path=path, hp=data["hp"], can_shoot=bool(data.get("can_shoot") is not None and data["can_shoot"].upper() == "TRUE"), sprite=data["sprite"], proj_sprite=(None if data.get("proj_sprite") is None or data["proj_sprite"].upper() == "NONE" else data["proj_sprite"]), name=(element if data.get("name") is None else data["name"])))
                         case "TRIGGER":
-                            triggers.append(Trigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, win, objects_dict, sprite_master, enemy_audios, block_audios, image_master, block_size, fire_once=bool(data.get("fire_once") is not None and data["fire_once"].upper() == "TRUE"), type=TriggerType(data["type"]), input=data["input"], name=(element if data.get("name") is None else data["name"])))
+                            triggers.append(Trigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, win, objects_dict, sprite_master, enemy_audios, block_audios, message_audios, image_master, block_size, fire_once=bool(data.get("fire_once") is not None and data["fire_once"].upper() == "TRUE"), type=TriggerType(data["type"]), input=data["input"], name=(element if data.get("name") is None else data["name"])))
                         case _:
                             pass
 

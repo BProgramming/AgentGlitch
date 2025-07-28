@@ -48,7 +48,7 @@ class Objective(Object):
 
     def play_sound(self, name) -> None:
         if self.audios.get(name.upper()) is not None:
-            active_audio_channel = pygame.mixer.find_channel()
+            active_audio_channel = pygame.mixer.find_channel(force=True)
             if active_audio_channel is not None:
                 active_audio_channel.play(self.audios[name.upper()][random.randrange(len(self.audios[name.upper()]))])
                 set_sound_source(self.rect, self.level.get_player().rect, self.controller.master_volume["non-player"], active_audio_channel)

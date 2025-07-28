@@ -138,7 +138,7 @@ class Player(Actor):
                 if isinstance(obj, Enemy) and pygame.sprite.collide_rect(self, obj) and self.facing == (MovementDirection.RIGHT if obj.rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT):
                     obj.get_hit(self)
                     if obj.patrol_path is not None:
-                        obj.rect.x -= self.direction * int(push)
+                        obj.push_x -= self.direction * int(push)
                     self.play_attack_audio("ATTACK_MELEE")
                 elif isinstance(obj, BreakableBlock) and pygame.sprite.collide_rect(self, obj):
                     obj.get_hit(self)

@@ -243,14 +243,14 @@ def main(win):
         pygame.mixer.music.set_volume(controller.master_volume["background"])
         new_game = False
         if isfile(join("Assets", "Screens", "title.png")):
-            slide = pygame.image.load(join("Assets", "Screens", "title.png"))
-            overlay = pygame.image.load(join("Assets", "Screens", "title_overlay.png"))
+            slide = pygame.transform.scale2x(pygame.image.load(join("Assets", "Screens", "title2.0.png")))
+            #overlay = pygame.image.load(join("Assets", "Screens", "title_overlay.png"))
             black = pygame.Surface((win.get_width(), win.get_height()), pygame.SRCALPHA)
             black.fill((0, 0, 0))
             if not controller.goto_main:
                 for i in range(64):
                     win.blit(slide, ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
-                    win.blit(overlay, ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
+                    #win.blit(overlay, ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
                     black.set_alpha(255 - (4 * i))
                     win.blit(black, (0, 0))
                     pygame.display.update()
@@ -264,7 +264,7 @@ def main(win):
             new_game = controller.main()
             for i in range(64):
                 win.blit(slide, ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
-                win.blit(overlay, ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
+                #win.blit(overlay, ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
                 black.set_alpha(4 * i)
                 win.blit(black, (0, 0))
                 pygame.display.update()
@@ -298,9 +298,10 @@ def main(win):
             display_text("Loading mission..  [2/3]", win, controller, type=False, min_pause_time=0, should_sleep=False)
             player_audio = enemy_audio = load_audios("Actors")
             block_audio = load_audios("Blocks")
+            message_audio = load_audios("Messages", dir2=cur_level)
             win.fill((0, 0, 0))
             display_text("Loading mission... [3/3]", win, controller, type=False, min_pause_time=0, should_sleep=False)
-            controller.level = level = Level(cur_level, levels, meta_dict, objects_dict, sprite_master, image_master, player_audio, enemy_audio, block_audio, win, controller)
+            controller.level = level = Level(cur_level, levels, meta_dict, objects_dict, sprite_master, image_master, player_audio, enemy_audio, block_audio, message_audio, win, controller)
 
             win.fill((0, 0, 0))
             display_text("Loading agent...", win, controller, type=False, min_pause_time=0, should_sleep=False)

@@ -38,9 +38,9 @@ def handle_exception(msg) -> None:
     sys.exit()
 
 
-def validate_file_list(dir, list, ext=None) -> list | None:
+def validate_file_list(dir, lst, ext=None) -> list | None:
     out = []
-    for name in list:
+    for name in lst:
         if ext is None or name[-len(ext):].upper() == ext.upper():
             file = join("Assets", dir, name)
             if isfile(file):
@@ -222,8 +222,11 @@ def __load_single_audio__(dir1, dir2) -> dict:
         handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
 
 
-def load_audios(dir) -> dict:
-    path = join("Assets", "SoundEffects", dir)
+def load_audios(dir, dir2=None) -> dict:
+    if dir2 is None:
+        path = join("Assets", "SoundEffects", dir)
+    else:
+        path = join("Assets", "SoundEffects", dir, dir2)
     if isdir(path):
         sounds = {}
         for sub_dir in [d for d in listdir(path) if isdir(path)]:
@@ -242,7 +245,7 @@ def load_audios(dir) -> dict:
         handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
 
 
-def set_sound_source(source_rect, player_rect, type, channel) -> None:
+def set_sound_source(source_rect, player_rect, sound_type, channel) -> None:
     height_vol = max(1 - (abs(source_rect.y - player_rect.y) / 1000), 0)
     str_x = (source_rect.x - player_rect.x) / 1000
     if abs(str_x) > 1:
@@ -255,7 +258,7 @@ def set_sound_source(source_rect, player_rect, type, channel) -> None:
         right_vol = left_vol ** 2
     else:
         left_vol = right_vol = 1
-    channel.set_volume(left_vol * type, right_vol * type)
+    channel.set_volume(left_vol * sound_type, right_vol * sound_type)
 
 
 def load_text_from_file(file) -> list:
@@ -270,14 +273,15 @@ def load_text_from_file(file) -> list:
         handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
 
 
-def display_text(output, win, controller, type=True, min_pause_time=80, should_sleep=True) -> None:
+def display_text(output: list | str, win, controller, type=True, min_pause_time=80, should_sleep=True, audio=None) -> None:
     if output is None or output == "":
         return
     else:
         if not isinstance(output, list):
             output = [output]
         clear = pygame.display.get_surface().copy()
-        for line in output:
+        for j in range(len(output)):
+            line = output[j]
             if type:
                 text = []
                 for i in range(len(line)):
@@ -318,7 +322,13 @@ def display_text(output, win, controller, type=True, min_pause_time=80, should_s
                 pygame.display.update()
 
             if should_sleep:
-                sleep_time = max((len(text) // 20), 1) * 1000
+                if audio is not None and isinstance(audio, list) and len(output) == len(audio) and audio[j] is not None:
+                    sleep_time = audio[j].get_length() * 1000
+                    channel = pygame.mixer.find_channel(force=True)
+                    channel.set_volume(controller.master_volume["cinematics"])
+                    channel.play(audio[j])
+                else:
+                    sleep_time = max((len(text) // 20), 1) * 1000
                 pause_dtime = 0
                 while pause_dtime < sleep_time:
                     for event in pygame.event.get():

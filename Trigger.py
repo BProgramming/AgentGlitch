@@ -23,13 +23,13 @@ class TriggerType(Enum):
 
 
 class Trigger(Object):
-    def __init__(self, level, controller, x, y, width, height, win, objects_dict, sprite_master, enemy_audios, block_audios, image_master, block_size, fire_once=False, type=None, input=None, name="Trigger"):
+    def __init__(self, level, controller, x, y, width, height, win, objects_dict, sprite_master, enemy_audios, block_audios, message_audios, image_master, block_size, fire_once=False, type=None, input=None, name="Trigger"):
         super().__init__(level, controller, x, y, width, height, name=name)
         self.win = win
         self.fire_once = fire_once
         self.has_fired = False
         self.type = type
-        self.value = self.__load_input__(input, objects_dict, sprite_master, enemy_audios, block_audios, image_master, block_size)
+        self.value = self.__load_input__(input, objects_dict, sprite_master, enemy_audios, block_audios, message_audios, image_master, block_size)
 
     def save(self) -> dict | None:
         if self.has_fired:
@@ -41,11 +41,14 @@ class Trigger(Object):
         self.has_fired = obj["has_fired"]
 
     # THIS CAN RETURN SO MANY DIFFERENT THINGS, SO IT DOESN'T HAVE A TYPE HINT. #
-    def __load_input__(self, input, objects_dict, sprite_master, enemy_audios, block_audios, image_master, block_size):
+    def __load_input__(self, input, objects_dict, sprite_master, enemy_audios, block_audios, message_audios, image_master, block_size):
         if input is None or self.type is None:
             return None
         elif self.type == TriggerType.TEXT:
-            return load_text_from_file(input)
+            if type(input) == dict and input.get("text") is not None and input.get("audio") is not None:
+                return {"text": load_text_from_file(input["text"]), "audio": message_audios[input["audio"]]}
+            else:
+                return load_text_from_file(input)
         elif self.type == TriggerType.CHANGE_LEVEL:
             return input.upper()
         elif self.type == TriggerType.SOUND:
@@ -106,7 +109,7 @@ class Trigger(Object):
                             path = load_path(list(map(int, data["path"].split(' '))), i, j, block_size)
                         return Boss(self.level, self.controller, j * block_size, i * block_size, sprite_master, enemy_audios, self.controller.difficulty, block_size, music=(None if data.get("music") is None or data["music"].upper() == "NONE" else data["music"]), death_triggers=(None if data.get("death_triggers") is None else data["death_triggers"]), path=path, hp=data["hp"], can_shoot=bool(data.get("can_shoot") is not None and data["can_shoot"].upper() == "TRUE"), sprite=data["sprite"], proj_sprite=(None if data.get("proj_sprite") is None or data["proj_sprite"].upper() == "NONE" else data["proj_sprite"]), name=(element if data.get("name") is None else data["name"]))
                     case "TRIGGER":
-                        return Trigger(self.level, self.controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, self.win, objects_dict, sprite_master, enemy_audios, block_audios, image_master, block_size, fire_once=bool(data.get("fire_once") is not None and data["fire_once"].upper() == "TRUE"), type=TriggerType(data["type"]), input=data["input"], name=(element if data.get("name") is None else data["name"]))
+                        return Trigger(self.level, self.controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, self.win, objects_dict, sprite_master, enemy_audios, block_audios, message_audios, image_master, block_size, fire_once=bool(data.get("fire_once") is not None and data["fire_once"].upper() == "TRUE"), type=TriggerType(data["type"]), input=data["input"], name=(element if data.get("name") is None else data["name"]))
                     case _:
                         pass
             return None
@@ -131,7 +134,10 @@ class Trigger(Object):
         self.has_fired = True
 
         if self.type == TriggerType.TEXT:
-            display_text(self.value, self.win, self.controller)
+            if type(self.value) == dict and self.value.get("text") is not None and self.value.get("audio") is not None:
+                display_text(self.value["text"], self.win, self.controller, audio=self.value["audio"])
+            else:
+                display_text(self.value, self.win, self.controller)
         elif self.type == TriggerType.SOUND:
             if self.value is not None:
                 pygame.mixer.find_channel(force=True).play(self.value)
