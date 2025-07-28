@@ -43,6 +43,8 @@ class Player(Actor):
         self.max_jumps = 2
         self.attack_damage *= 2
         self.max_hp = self.hp = self.cached_hp = 100 / self.difficulty
+        self.been_hit_this_level = False
+        self.been_seen_this_level = False
 
     def toggle_retro(self) -> None:
         if self.is_retro:
@@ -54,12 +56,14 @@ class Player(Actor):
 
     def save(self) -> dict:
         data = super().save()
-        data[self.name].update({"can_teleport": self.can_teleport, "can_bullet_time": self.can_bullet_time})
+        data[self.name].update({"can_teleport": self.can_teleport, "can_bullet_time": self.can_bullet_time, "been_hit_this_level": self.been_hit_this_level, "been_seen_this_level": self.been_seen_this_level})
         return data
 
     def load(self, obj) -> None:
         self.load_attribute(obj, "can_teleport")
         self.load_attribute(obj, "can_bullet_time")
+        self.load_attribute(obj, "been_hit_this_level")
+        self.load_attribute(obj, "been_seen_this_level")
         super().load(obj)
 
     def set_difficulty(self, scale) -> None:
@@ -91,6 +95,7 @@ class Player(Actor):
             self.cooldowns["block"] = block_cd
             self.is_blocking = False
         else:
+            self.been_hit_this_level = True
             super().get_hit(obj)
 
     def move_left(self) -> None:

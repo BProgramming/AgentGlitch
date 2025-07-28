@@ -13,11 +13,11 @@ from Controls import Controller
 from Helpers import load_json_dict, load_levels, load_audios, display_text, glitch, DifficultyScale, handle_exception, load_text_from_file
 from Level import Level
 from HUD import HUD
-import SteamworksConnection as sw
+import SteamworksConnection
 
 pygame.init()
 
-steamworks_connection = sw.initialize()
+steamworks_connection = SteamworksConnection.initialize()
 steamworks_connection.UserStats.RequestCurrentStats()
 
 WIDTH, HEIGHT = 1920, 1080

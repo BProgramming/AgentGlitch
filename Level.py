@@ -40,6 +40,8 @@ class Level:
         if meta_dict[name].get("abilities") is not None:
             self.set_player_abilities(meta_dict[name]["abilities"])
         self.cinematics = (None if meta_dict[name].get("cinematics") is None else CinematicsManager(meta_dict[name]["cinematics"], controller))
+        self.get_player().been_hit_this_level = False
+        self.get_player().been_seen_this_level = False
 
     def get_formatted_time(self) -> str:
         minutes = self.time // 60000
@@ -48,9 +50,14 @@ class Level:
         return ("0" if minutes < 10 else "") + str(minutes) + ":" + ("0" if seconds < 10 else "") + str(seconds) + "." + ("0" if milliseconds < 100 else "") + ("0" if milliseconds < 10 else "") + str(milliseconds)
 
     def get_recap_text(self) -> list:
-        return ["Mission time: " + self.get_formatted_time() + ".",
-                "Packets collected: " + str(len(self.objectives_collected)) + ".",
+        text = ["Mission time: " + self.get_formatted_time() + ".",
+                "Packets collected: " + str(len(self.objectives_collected)) + " of " + str(len(self.objectives)) + "(" + str(len(self.objectives_collected) // len(self.objectives)) + "%).",
                 "Deaths: " + str(self.revert_counter) + "."]
+        if not self.get_player().been_hit_this_level:
+            text.append("Untouchable: You never got hit.")
+        if not self.get_player().been_seen_this_level:
+            text.append("Shadow: You were never even spotted!")
+        return text
 
     def get_player(self) -> Player:
         return self.player
