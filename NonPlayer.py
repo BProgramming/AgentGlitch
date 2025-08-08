@@ -12,7 +12,7 @@ class NonPlayer(Actor):
     PLAYER_SPOT_RANGE = 3
     PLAYER_SPOT_COOLDOWN = 2
 
-    def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, path=None, is_hostile=True, collision_message=None, hp=100, can_shoot=False, spot_range=PLAYER_SPOT_RANGE, sprite=None, proj_sprite=None, name="Enemy"):
+    def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, path=None, kill_at_end=False, is_hostile=True, collision_message=None, hp=100, can_shoot=False, spot_range=PLAYER_SPOT_RANGE, sprite=None, proj_sprite=None, name="Enemy"):
         super().__init__(level, controller, x, y, sprite_master, audios, difficulty, block_size, can_shoot=can_shoot, sprite=sprite, proj_sprite=proj_sprite, name=name)
         self.is_hostile = is_hostile
         if collision_message is not None:
@@ -28,6 +28,7 @@ class NonPlayer(Actor):
             self.collision_message = None
         self.queued_message = None
         self.patrol_path = path
+        self.kill_at_end = kill_at_end
         self.spot_range = spot_range * block_size
         if path is None:
             self.max_jumps = 0
@@ -68,6 +69,9 @@ class NonPlayer(Actor):
         elif self.patrol_path_index >= 0:
             self.patrol_path_index += 1
         if self.patrol_path_index >= len(self.patrol_path) - 1:
+            if self.kill_at_end:
+                self.level.queue_purge(self)
+                return
             self.patrol_path_index = -1
         elif self.patrol_path_index <= -len(self.patrol_path):
             self.patrol_path_index = 0
