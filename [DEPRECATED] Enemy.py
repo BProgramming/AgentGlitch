@@ -1,3 +1,4 @@
+## REFACTORED AS NonPlayer.py ##
 import math
 import pygame
 from Actor import Actor, MovementState
@@ -171,4 +172,5 @@ class Enemy(Actor):
                 else:
                     vision = self.vision["hidden"][self.facing]
                 win.blit(pygame.transform.scale(vision, (self.__adj_spot_range__(), self.rect.height // 4)), (adj_x_image, adj_y_image))
+
         super().output(win, offset_x, offset_y, master_volume, fps)
