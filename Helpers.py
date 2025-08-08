@@ -117,7 +117,7 @@ def make_image_from_text(width, height, header, body, border=5) -> pygame.Surfac
 
 
 def load_images(dir1, dir2) -> dict:
-    path = join("Assets", dir1, dir2)
+    path = join("Assets", dir1, dir2) if dir2 is not None else join("Assets", dir1)
     if isdir(path):
         images = [f for f in listdir(path) if isfile(join(path, f)) and f[-4:].lower()==".png"]
 
@@ -273,10 +273,11 @@ def load_text_from_file(file) -> list:
         handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
 
 
-def display_text(output: list | str, win, controller, type=True, min_pause_time=80, should_sleep=True, audio=None) -> None:
+def display_text(output: list | str, controller, type=False, min_pause_time=80, should_sleep=True, audio=None) -> None:
     if output is None or output == "":
         return
     else:
+        win = controller.win
         if not isinstance(output, list):
             output = [output]
         clear = pygame.display.get_surface().copy()

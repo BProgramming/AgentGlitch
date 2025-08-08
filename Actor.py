@@ -52,6 +52,7 @@ class Actor(Object):
 
     def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, can_shoot=False, can_resize=False, width=SIZE, height=SIZE, attack_damage=ATTACK_DAMAGE, sprite=None, proj_sprite=None, name=None):
         super().__init__(level, controller, x, y, width, height, name=name)
+        self.is_hostile = False
         self.patrol_path = None
         self.x_vel = self.y_vel = 0.0
         self.push_x = self.push_y = 0.0
@@ -224,7 +225,13 @@ class Actor(Object):
     def get_collisions(self) -> bool:
         collided = False
 
-        for obj in self.level.get_objects_in_range((self.rect.x, self.rect.y)) if self == self.level.get_player() else [self.level.get_player()] + self.level.get_objects_in_range((self.rect.x, self.rect.y), blocks_only=True):
+        if self == self.level.get_player():
+            objs = self.level.get_objects_in_range((self.rect.x, self.rect.y))
+        elif self.is_hostile:
+            objs = [self.level.get_player()] + self.level.get_objects_in_range((self.rect.x, self.rect.y), blocks_only=True)
+        else:
+            objs = self.level.get_objects_in_range((self.rect.x, self.rect.y), blocks_only=True)
+        for obj in objs:
             if pygame.sprite.collide_rect(self, obj):
                 if pygame.sprite.collide_mask(self, obj):
                     if isinstance(obj, Actor) or isinstance(obj, Objective):
@@ -247,12 +254,13 @@ class Actor(Object):
                         if overlap.width <= overlap.height and (self.x_vel == 0 or self.direction == (MovementDirection.RIGHT if self.x_vel >= 0 else MovementDirection.LEFT)):
                             if self.can_move_blocks and isinstance(obj, MovableBlock) and obj.should_move_horiz and self.direction == (MovementDirection.RIGHT if obj.rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT):
                                 obj.push_x = self.x_vel * self.size
-                            if self.x_vel <= 0 and self.rect.centerx > obj.rect.centerx:
-                                self.rect.left = obj.rect.right - (self.rect.width // 5)
-                                self.x_vel = 0.0
-                            elif self.x_vel >= 0 and self.rect.centerx <= obj.rect.centerx:
-                                self.rect.right = obj.rect.left + (self.rect.width // 5)
-                                self.x_vel = 0.0
+                            if (isinstance(obj, Actor) and obj.is_hostile) or not isinstance(obj, Actor):
+                                if self.x_vel <= 0 and self.rect.centerx > obj.rect.centerx:
+                                    self.rect.left = obj.rect.right - (self.rect.width // 5)
+                                    self.x_vel = 0.0
+                                elif self.x_vel >= 0 and self.rect.centerx <= obj.rect.centerx:
+                                    self.rect.right = obj.rect.left + (self.rect.width // 5)
+                                    self.x_vel = 0.0
                             collided = True
 
                         if overlap.width >= overlap.height:

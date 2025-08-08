@@ -4,7 +4,7 @@ from Block import Block, BreakableBlock, MovingBlock, MovableBlock, Hazard, Movi
 from Boss import Boss
 from Cinematics import CinematicsManager
 from Player import Player
-from Enemy import Enemy
+from NonPlayer import NonPlayer
 from Objectives import Objective
 from Trigger import Trigger, TriggerType
 from WeatherEffects import *
@@ -17,9 +17,7 @@ class Level:
     def __init__(self, name, levels, meta_dict, objects_dict, sprite_master, image_master, player_audios, enemy_audios, block_audios, message_audios, win, controller, block_size=BLOCK_SIZE):
         self.name = name.upper()
         self.time = 0
-        self.revert_counter = 0
-        self.objectives_collected = []
-        self.achievement = (None if meta_dict[name].get("achievement") is None else meta_dict[name]["achievement"])
+        self.achievements = (None if meta_dict[name].get("achievements") is None else meta_dict[name]["achievements"])
         self.block_size = block_size if meta_dict[name].get("block_size") is None or not meta_dict[name]["block_size"].isnumeric() else int(meta_dict[name]["block_size"])
         self.purge_queue = {"triggers": set(), "hazards": set(), "blocks": set(), "doors": set(), "enemies": set(), "objectives": set()}
         self.grayscale = (False if meta_dict[name].get("grayscale") is None else bool(meta_dict[name]["grayscale"].upper() == "TRUE"))
@@ -42,6 +40,37 @@ class Level:
         self.cinematics = (None if meta_dict[name].get("cinematics") is None else CinematicsManager(meta_dict[name]["cinematics"], controller))
         self.get_player().been_hit_this_level = False
         self.get_player().been_seen_this_level = False
+        self.get_player().deaths_this_level = 0
+        self.get_player().kills_this_level = 0
+        self.target_time = (None if meta_dict[name].get("target_time") is None else meta_dict[name]["target_time"])
+        self.objectives_collected = []
+        self.objectives_available = len(self.objectives)
+        self.enemies_available = len(self.enemies)
+
+    def award_achievements(self, steamworks):
+        unlocked_achievements = []
+        if self.target_time is not None and self.get_formatted_time() <= self.target_time and self.achievements.get("target_time") is not None and self.achievements["target_time"].upper() != "NONE":
+            unlocked_achievements.append(self.achievements["target_time"])
+        if 0 < self.objectives_available == len(self.objectives_collected) and self.achievements.get("all_objectives") is not None and self.achievements["all_objectives"].upper() != "NONE":
+            unlocked_achievements.append(self.achievements["all_objectives"])
+        if self.get_player().kills_this_level == 0 and self.achievements.get("no_kills") is not None and self.achievements["no_kills"].upper() != "NONE":
+            unlocked_achievements.append(self.achievements["no_kills"])
+        elif self.get_player().kills_this_level == self.enemies_available and self.achievements.get("all_kills") is not None and self.achievements["all_kills"].upper() != "NONE":
+            unlocked_achievements.append(self.achievements["all_kills"])
+        if self.get_player().deaths_this_level == 0 and self.achievements.get("no_death") is not None and self.achievements["no_death"].upper() != "NONE":
+            unlocked_achievements.append(self.achievements["no_death"])
+        if not self.get_player().been_hit_this_level and self.achievements.get("no_hit") is not None and self.achievements["no_hit"].upper() != "NONE":
+            unlocked_achievements.append(self.achievements["no_hit"])
+        if not self.get_player().been_seen_this_level and self.achievements.get("no_seen") is not None and self.achievements["no_seen"].upper() != "NONE":
+            unlocked_achievements.append(self.achievements["no_seen"])
+
+        if len(unlocked_achievements) > 0 and steamworks is not None:
+            for achievement in unlocked_achievements:
+                if not steamworks.UserStats.GetAchievement(achievement):
+                    steamworks.UserStats.SetAchievement(achievement)
+            return True
+        else:
+            return False
 
     def get_formatted_time(self) -> str:
         minutes = self.time // 60000
@@ -51,12 +80,19 @@ class Level:
 
     def get_recap_text(self) -> list:
         text = ["Mission time: " + self.get_formatted_time() + ".",
-                "Packets collected: " + str(len(self.objectives_collected)) + " of " + str(len(self.objectives)) + "(" + str(len(self.objectives_collected) // len(self.objectives)) + "%).",
-                "Deaths: " + str(self.revert_counter) + "."]
+                "Packets collected: " + str(len(self.objectives_collected)) + " of " + str(self.objectives_available) + " (" + str(100 * len(self.objectives_collected) // self.objectives_available) + "%)."]
+        if self.get_player().kills_this_level == 0:
+            text.append("Nonlethal: You didn't dispatch any enemies.")
+        else:
+            text.append("Enemies dispatched: " + str(self.get_player().kills_this_level) + " of " + str(self.enemies_available) + " (" + str(100 * self.get_player().kills_this_level // self.enemies_available) + "%).")
+        if self.get_player().deaths_this_level == 0:
+            text.append("Survivor: You never died.")
+        else:
+            text.append("Deaths: " + str(self.get_player().deaths_this_level) + ".")
         if not self.get_player().been_hit_this_level:
             text.append("Untouchable: You never got hit.")
         if not self.get_player().been_seen_this_level:
-            text.append("Shadow: You were never even spotted!")
+            text.append("Shadow: You were never even seen!")
         return text
 
     def get_player(self) -> Player:
@@ -106,7 +142,7 @@ class Level:
             self.purge_queue["hazards"].add(obj)
         elif isinstance(obj, Block):
             self.purge_queue["blocks"].add(obj)
-        elif isinstance(obj, Enemy):
+        elif isinstance(obj, NonPlayer):
             self.purge_queue["enemies"].add(obj)
         elif isinstance(obj, Objective):
             self.purge_queue["objectives"].add(obj)
@@ -211,84 +247,87 @@ class Level:
             bar = pygame.Surface((int(win.get_width() * ((i + 1) / len(layout))), 10), pygame.SRCALPHA)
             bar.fill((255, 255, 255))
             win.blit(bar, (0, win.get_height() - 12))
-            display_text("Building level." + ("." if i%3 <= 1 else " ") + ("." if i%3 <= 2 else " ") + "[" + str(i + 1) + "/" + str(len(layout)) + "]", win, controller, type=False, min_pause_time=0, should_sleep=False)
+            display_text("Building level." + ("." if i%3 <= 1 else " ") + ("." if i%3 <= 2 else " ") + "[" + str(i + 1) + "/" + str(len(layout)) + "]", controller, min_pause_time=0, should_sleep=False)
             static_blocks.append([])
             for j in range(len(layout[i])):
                 static_blocks[-1].append(None)
-                element = str(layout[i][j])
-                if len(element) > 0 and objects_dict.get(element) is not None:
-                    entry = objects_dict[element]
-                    data = entry["data"]
-                    match entry["type"].upper():
-                        case "PLAYER":
-                            player_start = ((j * block_size), (i * block_size))
-                        case "OBJECTIVE":
-                            objectives.append(Objective(level, controller, j * block_size, i * block_size, block_size, block_size, sprite_master, block_audios, sprite=data["sprite"], sound=("objective" if data.get("sound") is None else data["sound"].lower()), is_blocking=bool(data.get("is_blocking") is not None and data["is_blocking"].upper() == "TRUE"), achievement=(None if data.get("achievement") is None else data["achievement"]),  name=(element if data.get("name") is None else data["name"])))
-                        case "BLOCK":
-                            if i > 0 and len(str(layout[i - 1][j])) > 0 and objects_dict.get(str(layout[i - 1][j])) is not None and objects_dict[str(layout[i - 1][j])]["type"] in ["Block"]:
-                                is_stacked = True
-                            else:
+                elements_at_point = layout[i][j]
+                if not isinstance(elements_at_point, list):
+                    elements_at_point = [elements_at_point]
+                for element in [str(e) for e in elements_at_point]:
+                    if len(element) > 0 and objects_dict.get(element) is not None:
+                        entry = objects_dict[element]
+                        data = entry["data"]
+                        match entry["type"].upper():
+                            case "PLAYER":
+                                player_start = ((j * block_size), (i * block_size))
+                            case "OBJECTIVE":
+                                objectives.append(Objective(level, controller, j * block_size, i * block_size, block_size, block_size, sprite_master, block_audios, sprite=data["sprite"], sound=("objective" if data.get("sound") is None else data["sound"].lower()), is_blocking=bool(data.get("is_blocking") is not None and data["is_blocking"].upper() == "TRUE"), achievement=(None if data.get("achievement") is None else data["achievement"]),  name=(element if data.get("name") is None else data["name"])))
+                            case "BLOCK":
+                                if i > 0 and len(str(layout[i - 1][j])) > 0 and objects_dict.get(str(layout[i - 1][j])) is not None and objects_dict[str(layout[i - 1][j])]["type"] in ["Block"]:
+                                    is_stacked = True
+                                else:
+                                    is_stacked = False
+                                block = Block(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, coord_x=data["coord_x"], coord_y=data["coord_y"], is_blocking=bool(data.get("is_blocking") is None or data["is_blocking"].upper() == "TRUE"), name=(element if data.get("name") is None else data["name"]))
+                                blocks.append(block)
+                                static_blocks[-1][-1] = block
+                            case "BREAKABLEBLOCK":
+                                if i > 0 and len(str(layout[i - 1][j])) > 0 and objects_dict.get(str(layout[i - 1][j])) is not None and objects_dict[str(layout[i - 1][j])]["type"] in ["Block"]:
+                                    is_stacked = True
+                                else:
+                                    is_stacked = False
+                                block = BreakableBlock(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, coord_x=data["coord_x"], coord_y=data["coord_y"], coord_x2=data["coord_x2"], coord_y2=data["coord_y2"], name=(element if data.get("name") is None else data["name"]))
+                                blocks.append(block)
+                                static_blocks[-1][-1] = block
+                            case "MOVINGBLOCK":
+                                if data["path"].upper() == "NONE":
+                                    path = None
+                                else:
+                                    path = load_path(list(map(int, data["path"].split(' '))), i, j, block_size)
                                 is_stacked = False
-                            block = Block(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, coord_x=data["coord_x"], coord_y=data["coord_y"], is_blocking=bool(data.get("is_blocking") is None or data["is_blocking"].upper() == "TRUE"), name=(element if data.get("name") is None else data["name"]))
-                            blocks.append(block)
-                            static_blocks[-1][-1] = block
-                        case "BREAKABLEBLOCK":
-                            if i > 0 and len(str(layout[i - 1][j])) > 0 and objects_dict.get(str(layout[i - 1][j])) is not None and objects_dict[str(layout[i - 1][j])]["type"] in ["Block"]:
+                                block = MovingBlock(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, speed=data["speed"], path=path, coord_x=data["coord_x"], coord_y=data["coord_y"], is_blocking=bool(data.get("is_blocking") is None or data["is_blocking"].upper() == "TRUE"), name=(element if data.get("name") is None else data["name"]))
+                                blocks.append(block)
+                                dynamic_blocks.append(block)
+                            case "DOOR":
                                 is_stacked = True
-                            else:
+                                block = Door(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, speed=data["speed"], direction=data["direction"], is_locked=bool(data.get("is_locked") is not None and data["is_locked"].upper() == "TRUE"), coord_x=data["coord_x"], coord_y=data["coord_y"], name=(element if data.get("name") is None else data["name"]))
+                                blocks.append(block)
+                                if doors.get(j) is None:
+                                    doors[j] = [block]
+                                else:
+                                    doors[j].append(block)
+                            case "MOVABLEBLOCK":
                                 is_stacked = False
-                            block = BreakableBlock(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, coord_x=data["coord_x"], coord_y=data["coord_y"], coord_x2=data["coord_x2"], coord_y2=data["coord_y2"], name=(element if data.get("name") is None else data["name"]))
-                            blocks.append(block)
-                            static_blocks[-1][-1] = block
-                        case "MOVINGBLOCK":
-                            if data["path"].upper() == "NONE":
-                                path = None
-                            else:
-                                path = load_path(list(map(int, data["path"].split(' '))), i, j, block_size)
-                            is_stacked = False
-                            block = MovingBlock(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, speed=data["speed"], path=path, coord_x=data["coord_x"], coord_y=data["coord_y"], is_blocking=bool(data.get("is_blocking") is None or data["is_blocking"].upper() == "TRUE"), name=(element if data.get("name") is None else data["name"]))
-                            blocks.append(block)
-                            dynamic_blocks.append(block)
-                        case "DOOR":
-                            is_stacked = True
-                            block = Door(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, speed=data["speed"], direction=data["direction"], is_locked=bool(data.get("is_locked") is not None and data["is_locked"].upper() == "TRUE"), coord_x=data["coord_x"], coord_y=data["coord_y"], name=(element if data.get("name") is None else data["name"]))
-                            blocks.append(block)
-                            if doors.get(j) is None:
-                                doors[j] = [block]
-                            else:
-                                doors[j].append(block)
-                        case "MOVABLEBLOCK":
-                            is_stacked = False
-                            block = MovableBlock(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, coord_x=data["coord_x"], coord_y=data["coord_y"], name=(element if data.get("name") is None else data["name"]))
-                            blocks.append(block)
-                            dynamic_blocks.append(block)
-                        case "HAZARD":
-                            hazards.append(Hazard(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, block_audios, controller.difficulty, hit_sides=("UDLR" if data.get("hit_sides") is None else data["hit_sides"].upper()), sprite=data["sprite"], coord_x=data["coord_x"], coord_y=data["coord_y"], name=(element if data.get("name") is None else data["name"])))
-                        case "MOVINGHAZARD":
-                            if data["path"].upper() == "NONE":
-                                path = None
-                            else:
-                                path = load_path(list(map(int, data["path"].split(' '))), i, j, block_size)
-                            is_stacked = False
-                            hazards.append(MovingHazard(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, block_audios, controller.difficulty, is_stacked, speed=data["speed"], path=path, hit_sides=("UDLR" if data.get("hit_sides") is None else data["hit_sides"].upper()), sprite=data["sprite"], coord_x=data["coord_x"], coord_y=data["coord_y"], name=(element if data.get("name") is None else data["name"])))
-                        case "FALLINGHAZARD":
-                            hazards.append(FallingHazard(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, block_audios, controller.difficulty, drop_x=data["drop_x"] * block_size, drop_y=data["drop_y"] * block_size, fire_once=bool(data.get("fire_once") is not None and data["fire_once"].upper() == "TRUE"), hit_sides=("UDLR" if data.get("hit_sides") is None else data["hit_sides"].upper()), sprite=data["sprite"], coord_x=data["coord_x"], coord_y=data["coord_y"], name=(element if data.get("name") is None else data["name"])))
-                        case "ENEMY":
-                            if data["path"].upper() == "NONE":
-                                path = None
-                            else:
-                                path = load_path(list(map(int, data["path"].split(' '))), i, j, block_size)
-                            enemies.append(Enemy(level, controller, j * block_size, i * block_size, sprite_master, enemy_audios, controller.difficulty, block_size, path=path, hp=data["hp"], can_shoot=bool(data.get("can_shoot") is not None and data["can_shoot"].upper() == "TRUE"), sprite=data["sprite"], proj_sprite=(None if data.get("proj_sprite") is None or data["proj_sprite"].upper() == "NONE" else data["proj_sprite"]), name=(element if data.get("name") is None else data["name"])))
-                        case "BOSS":
-                            if data["path"].upper() == "NONE":
-                                path = None
-                            else:
-                                path = load_path(list(map(int, data["path"].split(' '))), i, j, block_size)
-                            enemies.append(Boss(level, controller, j * block_size, i * block_size, sprite_master, enemy_audios, controller.difficulty, block_size, music=(None if data.get("music") is None or data["music"].upper() == "NONE" else data["music"]), death_triggers=(None if data.get("death_triggers") is None else data["death_triggers"]), path=path, hp=data["hp"], can_shoot=bool(data.get("can_shoot") is not None and data["can_shoot"].upper() == "TRUE"), sprite=data["sprite"], proj_sprite=(None if data.get("proj_sprite") is None or data["proj_sprite"].upper() == "NONE" else data["proj_sprite"]), name=(element if data.get("name") is None else data["name"])))
-                        case "TRIGGER":
-                            triggers.append(Trigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, win, objects_dict, sprite_master, enemy_audios, block_audios, message_audios, image_master, block_size, fire_once=bool(data.get("fire_once") is not None and data["fire_once"].upper() == "TRUE"), type=TriggerType(data["type"]), input=data["input"], name=(element if data.get("name") is None else data["name"])))
-                        case _:
-                            pass
+                                block = MovableBlock(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, coord_x=data["coord_x"], coord_y=data["coord_y"], name=(element if data.get("name") is None else data["name"]))
+                                blocks.append(block)
+                                dynamic_blocks.append(block)
+                            case "HAZARD":
+                                hazards.append(Hazard(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, block_audios, controller.difficulty, hit_sides=("UDLR" if data.get("hit_sides") is None else data["hit_sides"].upper()), sprite=data["sprite"], coord_x=data["coord_x"], coord_y=data["coord_y"], name=(element if data.get("name") is None else data["name"])))
+                            case "MOVINGHAZARD":
+                                if data["path"].upper() == "NONE":
+                                    path = None
+                                else:
+                                    path = load_path(list(map(int, data["path"].split(' '))), i, j, block_size)
+                                is_stacked = False
+                                hazards.append(MovingHazard(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, block_audios, controller.difficulty, is_stacked, speed=data["speed"], path=path, hit_sides=("UDLR" if data.get("hit_sides") is None else data["hit_sides"].upper()), sprite=data["sprite"], coord_x=data["coord_x"], coord_y=data["coord_y"], name=(element if data.get("name") is None else data["name"])))
+                            case "FALLINGHAZARD":
+                                hazards.append(FallingHazard(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, block_audios, controller.difficulty, drop_x=data["drop_x"] * block_size, drop_y=data["drop_y"] * block_size, fire_once=bool(data.get("fire_once") is not None and data["fire_once"].upper() == "TRUE"), hit_sides=("UDLR" if data.get("hit_sides") is None else data["hit_sides"].upper()), sprite=data["sprite"], coord_x=data["coord_x"], coord_y=data["coord_y"], name=(element if data.get("name") is None else data["name"])))
+                            case "ENEMY":
+                                if data["path"].upper() == "NONE":
+                                    path = None
+                                else:
+                                    path = load_path(list(map(int, data["path"].split(' '))), i, j, block_size)
+                                enemies.append(NonPlayer(level, controller, j * block_size, i * block_size, sprite_master, enemy_audios, controller.difficulty, block_size, path=path, is_hostile=bool(data.get("is_hostile") is None or data["is_hostile"].upper() != "FALSE"), collision_message=(None if data.get("collision_message") is None else data["collision_message"]), hp=data["hp"], can_shoot=bool(data.get("can_shoot") is not None and data["can_shoot"].upper() == "TRUE"), sprite=data["sprite"], proj_sprite=(None if data.get("proj_sprite") is None or data["proj_sprite"].upper() == "NONE" else data["proj_sprite"]), name=(element if data.get("name") is None else data["name"])))
+                            case "BOSS":
+                                if data["path"].upper() == "NONE":
+                                    path = None
+                                else:
+                                    path = load_path(list(map(int, data["path"].split(' '))), i, j, block_size)
+                                enemies.append(Boss(level, controller, j * block_size, i * block_size, sprite_master, enemy_audios, controller.difficulty, block_size, music=(None if data.get("music") is None or data["music"].upper() == "NONE" else data["music"]), death_triggers=(None if data.get("death_triggers") is None else data["death_triggers"]), path=path, hp=data["hp"], can_shoot=bool(data.get("can_shoot") is not None and data["can_shoot"].upper() == "TRUE"), sprite=data["sprite"], proj_sprite=(None if data.get("proj_sprite") is None or data["proj_sprite"].upper() == "NONE" else data["proj_sprite"]), name=(element if data.get("name") is None else data["name"])))
+                            case "TRIGGER":
+                                triggers.append(Trigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, win, objects_dict, sprite_master, enemy_audios, block_audios, message_audios, image_master, block_size, fire_once=bool(data.get("fire_once") is not None and data["fire_once"].upper() == "TRUE"), type=TriggerType(data["type"]), input=data["input"], name=(element if data.get("name") is None else data["name"])))
+                            case _:
+                                pass
 
         player = Player(level, controller, player_start[0], player_start[1], sprite_master, player_audios, controller.difficulty, block_size, sprite=(player_sprite if player_sprite is not None else controller.player_sprite_selected[0]), retro_sprite=(player_sprite if player_sprite is not None else controller.player_sprite_selected[1]))
 

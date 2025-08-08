@@ -13,6 +13,7 @@ from Controls import Controller
 from Helpers import load_json_dict, load_levels, load_audios, display_text, glitch, DifficultyScale, handle_exception, load_text_from_file
 from Level import Level
 from HUD import HUD
+from NonPlayer import NonPlayer
 import SteamworksConnection
 
 pygame.init()
@@ -135,7 +136,7 @@ def draw(background, bg_image, fg_image, level, hud, offset_x, offset_y, master_
     if fg_image is not None:
         win.blit(fg_image.subsurface(screen), (0, 0))
 
-    hud.output()
+    hud.output(level.get_formatted_time())
 
     if glitches is not None:
         for spot in glitches:
@@ -179,7 +180,7 @@ def save(level, hud):
     if hud is not None:
         hud.save_icon_timer = 1.0
 
-    data = {"level": level.name}
+    data = {"level": level.name, "time": level.time}
     for obj in [level.get_player()] + level.get_objects() + level.objectives_collected:
         obj_data = obj.save()
         if obj_data is not None:
@@ -202,6 +203,7 @@ def load_part2(data, level):
     if data is None or level is None:
         return False
     else:
+        level.time = data["time"]
         for obj in [level.get_player()] + level.get_objects():
             obj_data = data.get(obj.name)
             if obj_data is not None:
@@ -277,7 +279,7 @@ def main(win):
         while True:
             # THIS PART LOADS EVERYTHING: #
             win.fill((0, 0, 0))
-            display_text("Loading mission.   [1/3]", win, controller, type=False, min_pause_time=0, should_sleep=False)
+            display_text("Loading mission.   [1/3]", controller, min_pause_time=0, should_sleep=False)
             should_load = False
             if new_game:
                 cur_level = "__START__"
@@ -295,16 +297,16 @@ def main(win):
                 controller.level_selected = None
             controller.goto_load = False
             win.fill((0, 0, 0))
-            display_text("Loading mission..  [2/3]", win, controller, type=False, min_pause_time=0, should_sleep=False)
+            display_text("Loading mission..  [2/3]", controller, min_pause_time=0, should_sleep=False)
             player_audio = enemy_audio = load_audios("Actors")
             block_audio = load_audios("Blocks")
             message_audio = load_audios("Messages", dir2=cur_level)
             win.fill((0, 0, 0))
-            display_text("Loading mission... [3/3]", win, controller, type=False, min_pause_time=0, should_sleep=False)
+            display_text("Loading mission... [3/3]", controller, min_pause_time=0, should_sleep=False)
             controller.level = level = Level(cur_level, levels, meta_dict, objects_dict, sprite_master, image_master, player_audio, enemy_audio, block_audio, message_audio, win, controller)
 
             win.fill((0, 0, 0))
-            display_text("Loading agent...", win, controller, type=False, min_pause_time=0, should_sleep=False)
+            display_text("Loading agent...", controller, min_pause_time=0, should_sleep=False)
             if controller.player_abilities is not None:
                 for key in controller.player_abilities:
                     setattr(level.get_player(), key, controller.player_abilities[key])
@@ -312,7 +314,7 @@ def main(win):
                 controller.player_abilities = {"can_wall_jump": level.get_player().can_wall_jump, "can_teleport": level.get_player().can_teleport, "can_bullet_time": level.get_player().can_bullet_time, "can_resize": level.get_player().can_resize, "can_heal": level.get_player().can_heal, "max_jumps": level.get_player().max_jumps}
 
             win.fill((0, 0, 0))
-            display_text("Initializing controls...", win, controller, type=False, min_pause_time=0, should_sleep=False)
+            display_text("Initializing controls...", controller, min_pause_time=0, should_sleep=False)
             controller.hud = hud = HUD(level.get_player(), win, grayscale=level.grayscale)
 
             if should_load:
@@ -322,7 +324,7 @@ def main(win):
 
             win.fill((0, 0, 0))
             funny_loading_text = ["Applying finishing touches", "Applying one last coat of paint", "Almost done", "Any minute now", "Nearly there", "One more thing", "Tidying up", "Training agent", "Catching the train", "Finishing lunch", "Folding laundry"]
-            display_text(funny_loading_text[random.randint(0, len(funny_loading_text) - 1)] + "...", win, controller, type=False, min_pause_time=0, should_sleep=False)
+            display_text(funny_loading_text[random.randint(0, len(funny_loading_text) - 1)] + "...", controller, min_pause_time=0, should_sleep=False)
             background, bg_image = get_background(level)
             fg_image = get_foreground(level)
             offset_x = offset_y = 0
@@ -342,10 +344,9 @@ def main(win):
 
             fade_in(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller)
             if level.start_message is not None:
-                display_text(load_text_from_file(level.start_message), win, controller)
+                display_text(load_text_from_file(level.start_message), controller, type=True)
     
             dtime_offset = 0
-            level.time = 0
             glitch_timer = 0
             glitches = None
             next_level = None
@@ -354,7 +355,9 @@ def main(win):
             # MAIN GAME LOOP: #
             while True:
                 dtime = clock.tick(FPS_TARGET) - dtime_offset
+                dtime_offset = 0
                 level.time += dtime
+
                 if hud.save_icon_timer > 0:
                     hud.save_icon_timer -= dtime / 250
                 if glitch_timer > 0:
@@ -362,7 +365,6 @@ def main(win):
                     if glitch_timer <= 0:
                         glitch_timer = 0
                         glitches = None
-                dtime_offset = 0
 
                 while len(level.cinematics.queued) > 0:
                     dtime_offset += level.cinematics.play_queue(win)
@@ -411,6 +413,8 @@ def main(win):
                         if hasattr(obj, "patrol") and callable(obj.patrol):
                             obj.patrol(dtime)
                         obj.loop(FPS_TARGET, dtime)
+                        if isinstance(obj, NonPlayer) and obj.queued_message is not None:
+                            dtime_offset += obj.play_queued_message()
 
                 level.purge()
 
@@ -429,14 +433,12 @@ def main(win):
                 pygame.mixer.music.fadeout(1000)
                 pygame.mixer.music.unload()
 
-            if level.achievement is not None and controller.steamworks is not None and not controller.steamworks.UserStats.GetAchievement(level.achievement):
-                controller.steamworks.UserStats.SetAchievement(level.achievement)
-                controller.should_store_steam_stats = True
+            controller.should_store_steam_stats = bool(controller.should_store_steam_stats or level.award_achievements(controller.steamworks))
 
             if controller.should_store_steam_stats and controller.steamworks is not None:
                 controller.should_store_steam_stats = False
                 win.fill((0, 0, 0))
-                display_text("Updating your steam achievements...", win, controller, type=False, min_pause_time=0, should_sleep=False)
+                display_text("Updating your steam achievements...", controller, min_pause_time=0, should_sleep=False)
                 while True:
                     if controller.steamworks.UserStats.StoreStats():
                         break
@@ -451,7 +453,7 @@ def main(win):
                 break
             elif next_level is not None:
                 if level.end_message is not None:
-                    display_text(load_text_from_file(level.end_message), win, controller)
+                    display_text(load_text_from_file(level.end_message), controller, type=True)
                 save_player_profile(controller, level)
                 fade_out(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller)
                 if level.end_cinematic is not None:

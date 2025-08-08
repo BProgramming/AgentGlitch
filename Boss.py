@@ -3,11 +3,11 @@ import asyncio
 import pygame
 import random
 from Actor import MovementState
-from Enemy import Enemy
+from NonPlayer import NonPlayer
 from Helpers import set_property, validate_file_list
 
 
-class Boss(Enemy):
+class Boss(NonPlayer):
     PLAYER_SPOT_RANGE = 6
     PLAYER_SPOT_COOLDOWN = 3
     VELOCITY_TARGET = 0.5

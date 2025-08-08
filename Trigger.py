@@ -6,7 +6,7 @@ from Helpers import display_text, load_text_from_file, load_path, set_property
 from Object import Object
 from Block import Block, BreakableBlock, MovableBlock, Hazard, MovingBlock, MovingHazard, Door, FallingHazard
 from Objectives import Objective
-from Enemy import Enemy
+from NonPlayer import NonPlayer
 from Boss import Boss
 
 
@@ -101,7 +101,7 @@ class Trigger(Object):
                             path = None
                         else:
                             path = load_path(list(map(int, data["path"].split(' '))), i, j, block_size)
-                        return Enemy(self.level, self.controller, j * block_size, i * block_size, sprite_master, enemy_audios, self.controller.difficulty, block_size, path=path, hp=data["hp"], can_shoot=bool(data.get("can_shoot") is not None and data["can_shoot"].upper() == "TRUE"), sprite=data["sprite"], proj_sprite=(None if data.get("proj_sprite") is None or data["proj_sprite"].upper() == "NONE" else data["proj_sprite"]), name=(element if data.get("name") is None else data["name"]))
+                        return NonPlayer(self.level, self.controller, j * block_size, i * block_size, sprite_master, enemy_audios, self.controller.difficulty, block_size, path=path, is_hostile=bool(data.get("is_hostile") is None or data["is_hostile"].upper() != "FALSE"), collision_message=(None if data.get("collision_message") is None else data["collision_message"]), hp=data["hp"], can_shoot=bool(data.get("can_shoot") is not None and data["can_shoot"].upper() == "TRUE"), sprite=data["sprite"], proj_sprite=(None if data.get("proj_sprite") is None or data["proj_sprite"].upper() == "NONE" else data["proj_sprite"]), name=(element if data.get("name") is None else data["name"]))
                     case "BOSS":
                         if data["path"].upper() == "NONE":
                             path = None
@@ -135,9 +135,9 @@ class Trigger(Object):
 
         if self.type == TriggerType.TEXT:
             if type(self.value) == dict and self.value.get("text") is not None and self.value.get("audio") is not None:
-                display_text(self.value["text"], self.win, self.controller, audio=self.value["audio"])
+                display_text(self.value["text"], self.controller, audio=self.value["audio"], type=True)
             else:
-                display_text(self.value, self.win, self.controller)
+                display_text(self.value, self.controller, type=True)
         elif self.type == TriggerType.SOUND:
             if self.value is not None:
                 pygame.mixer.find_channel(force=True).play(self.value)
@@ -145,7 +145,7 @@ class Trigger(Object):
             if self.value is not None:
                 if isinstance(self.value, Trigger):
                     self.level.triggers.append(self.value)
-                elif isinstance(self.value, Enemy):
+                elif isinstance(self.value, NonPlayer):
                     self.level.enemies.append(self.value)
                 elif isinstance(self.value, Hazard):
                     self.level.hazards.append(self.value)

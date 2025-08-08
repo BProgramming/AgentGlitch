@@ -3,7 +3,7 @@ import time
 import pygame
 from Actor import Actor, MovementState
 from Object import Object
-from Enemy import Enemy
+from NonPlayer import NonPlayer
 from Block import BreakableBlock
 from Helpers import MovementDirection, load_sprite_sheets, display_text
 
@@ -45,6 +45,8 @@ class Player(Actor):
         self.max_hp = self.hp = self.cached_hp = 100 / self.difficulty
         self.been_hit_this_level = False
         self.been_seen_this_level = False
+        self.deaths_this_level = 0
+        self.kills_this_level = 0
 
     def toggle_retro(self) -> None:
         if self.is_retro:
@@ -56,7 +58,12 @@ class Player(Actor):
 
     def save(self) -> dict:
         data = super().save()
-        data[self.name].update({"can_teleport": self.can_teleport, "can_bullet_time": self.can_bullet_time, "been_hit_this_level": self.been_hit_this_level, "been_seen_this_level": self.been_seen_this_level})
+        data[self.name].update({"can_teleport": self.can_teleport,
+                                "can_bullet_time": self.can_bullet_time,
+                                "been_hit_this_level": self.been_hit_this_level,
+                                "been_seen_this_level": self.been_seen_this_level,
+                                "deaths_this_level": self.deaths_this_level,
+                                "kills_this_level": self.kills_this_level})
         return data
 
     def load(self, obj) -> None:
@@ -64,6 +71,8 @@ class Player(Actor):
         self.load_attribute(obj, "can_bullet_time")
         self.load_attribute(obj, "been_hit_this_level")
         self.load_attribute(obj, "been_seen_this_level")
+        self.load_attribute(obj, "deaths_this_level")
+        self.load_attribute(obj, "kills_this_level")
         super().load(obj)
 
     def set_difficulty(self, scale) -> None:
@@ -91,7 +100,7 @@ class Player(Actor):
                 self.cooldowns["block"] = block_cd
 
     def get_hit(self, obj, block_cd=BLOCK_COOLDOWN, _=None) -> None:
-        if isinstance(obj, Enemy) and self.cooldowns["block"] <= 0 and self.is_blocking:
+        if isinstance(obj, NonPlayer) and self.cooldowns["block"] <= 0 and self.is_blocking:
             self.cooldowns["block"] = block_cd
             self.is_blocking = False
         else:
@@ -111,14 +120,14 @@ class Player(Actor):
     def revert(self) -> int:
         start = time.perf_counter_ns()
         text = ["Careful!", "You died.", "Watch out!", "OUCH!", "Don't try that again!", "Agent? Agent?!", "Initiating respawn...", "Reverting time..."]
-        display_text(text[random.randrange(len(text))], self.controller.win, self.controller, type=False, min_pause_time=0, should_sleep=True)
+        display_text(text[random.randrange(len(text))], self.controller, min_pause_time=0, should_sleep=True)
         self.should_move_vert = False
         self.rect.x, self.rect.y = self.cached_x, self.cached_y
         self.hp = self.cached_hp
         self.size = self.cached_size
         self.size_target = self.cached_size_target
         self.cooldowns = self.cached_cooldowns
-        self.level.revert_counter += 1
+        self.deaths_this_level += 1
         return (time.perf_counter_ns() - start) // 1000000
 
     def teleport(self, vel=(VELOCITY_TARGET * MULTIPLIER_TELEPORT), delay=TELEPORT_DELAY, cd=TELEPORT_COOLDOWN) -> None:
@@ -140,7 +149,7 @@ class Player(Actor):
         if self.state in [MovementState.IDLE, MovementState.CROUCH, MovementState.RUN, MovementState.FALL, MovementState.JUMP, MovementState.DOUBLE_JUMP, MovementState.IDLE_ATTACK, MovementState.CROUCH_ATTACK, MovementState.RUN_ATTACK, MovementState.FALL_ATTACK, MovementState.JUMP_ATTACK, MovementState.DOUBLE_JUMP_ATTACK]:
             self.is_attacking = True
             for obj in self.level.get_objects_in_range((self.rect.x, self.rect.y)):
-                if isinstance(obj, Enemy) and pygame.sprite.collide_rect(self, obj) and self.facing == (MovementDirection.RIGHT if obj.rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT):
+                if isinstance(obj, NonPlayer) and obj.is_hostile and pygame.sprite.collide_rect(self, obj) and self.facing == (MovementDirection.RIGHT if obj.rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT):
                     obj.get_hit(self)
                     if obj.patrol_path is not None:
                         obj.push_x -= self.direction * int(push)
