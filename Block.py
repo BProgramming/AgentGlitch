@@ -66,9 +66,10 @@ class MovingBlock(Block):
     VELOCITY_TARGET = 0.5
     PATH_STOP_TIME = 0.5
 
-    def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, speed=VELOCITY_TARGET, path=None, coord_x=0, coord_y=0, is_blocking=True, name="MovingBlock"):
+    def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, hold_for_collision=False, speed=VELOCITY_TARGET, path=None, coord_x=0, coord_y=0, is_blocking=True, name="MovingBlock"):
         super().__init__(level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=coord_x, coord_y=coord_y, is_blocking=is_blocking, name=name)
         self.speed = speed
+        self.hold = hold_for_collision
         self.patrol_path = path
         self.patrol_path_index = 0
         if self.patrol_path is not None:
@@ -112,6 +113,8 @@ class MovingBlock(Block):
                 self.increment_patrol_index()
 
     def collide(self, obj) -> bool:
+        if self.hold and obj == self.level.get_player():
+            self.hold = False
         if hasattr(obj, "push_x"):
             obj.push_x = self.x_vel
         if hasattr(obj, "push_y"):
@@ -146,20 +149,21 @@ class MovingBlock(Block):
     def loop(self, fps, dtime) -> None:
         super().loop(fps, dtime)
 
-        if self.should_move_horiz:
-            self.x_vel *= dtime
-        else:
-            self.x_vel = 0.0
+        if not self.hold:
+            if self.should_move_horiz:
+                self.x_vel *= dtime
+            else:
+                self.x_vel = 0.0
 
-        if not self.should_move_vert:
-            self.y_vel = 0.0
+            if not self.should_move_vert:
+                self.y_vel = 0.0
 
-        if self.x_vel != 0 or self.y_vel != 0:
-            if self.level.get_player().is_slow_time:
-                self.x_vel /= 2
-                self.y_vel /= 2
+            if self.x_vel != 0 or self.y_vel != 0:
+                if self.level.get_player().is_slow_time:
+                    self.x_vel /= 2
+                    self.y_vel /= 2
 
-            self.move(self.x_vel, self.y_vel * dtime)
+                self.move(self.x_vel, self.y_vel * dtime)
 
 
 class Door(MovingBlock):
@@ -347,7 +351,7 @@ class MovingHazard(MovingBlock, Hazard):
     ATTACK_DAMAGE = 99
 
     def __init__(self, level, controller, x, y, width, height, image_master, sprite_master, audios, difficulty, is_stacked, speed=VELOCITY_TARGET, path=None, hit_sides="UDLR", sprite=None, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="MovingHazard"):
-        MovingBlock.__init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, speed=speed, path=path, coord_x=coord_x, coord_y=coord_y, name=name)
+        MovingBlock.__init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, hold_for_collision=False, speed=speed, path=path, coord_x=coord_x, coord_y=coord_y, name=name)
         self.attack_damage = attack_damage * difficulty
         self.is_attacking = True
         self.hit_sides = hit_sides.upper()
@@ -377,6 +381,7 @@ class FallingHazard(Hazard):
         self.drop_y = drop_y
         self.fire_once = fire_once
         self.has_fired = False
+        self.should_fire = False
         self.y_vel = 0
         self.cooldowns = {"reset_time": 0}
 
@@ -397,6 +402,9 @@ class FallingHazard(Hazard):
     def loop(self, fps, dtime, grav=GRAVITY, cd=RESET_DELAY) -> bool:
         if not self.has_fired:
             if abs(self.level.get_player().rect.x - self.rect.x) <= self.drop_x and self.level.get_player().rect.top >= self.rect.bottom and abs(self.level.get_player().rect.y - self.rect.y) <= self.drop_y:
+                self.should_fire = True
+
+            if self.should_fire:
                 self.has_fired = True
                 self.play_sound("block_drop")
             else:
@@ -408,6 +416,7 @@ class FallingHazard(Hazard):
         should_reset = should_reset and bool(self.cooldowns["reset_time"] <= 0)
 
         if should_reset:
+            should_fire = False
             if self.fire_once:
                 self.hp = 0
                 return True
@@ -420,13 +429,23 @@ class FallingHazard(Hazard):
         collided = False
         if self.has_fired and self.cooldowns["reset_time"] <= 0:
             self.y_vel += dtime * grav
-            for obj in self.level.get_objects_in_range((self.rect.x, self.rect.y + self.y_vel), blocks_only=True):
-                if pygame.sprite.collide_rect(self, obj) and pygame.sprite.collide_mask(self, obj):
+
+            objs = self.level.get_objects_in_range((self.rect.x, self.rect.y + self.y_vel), blocks_only=True)
+            # this part lets falling hazards hit each other and cause those to fall too
+            x = int(self.rect.x / self.level.block_size)
+            if self.level.falling_hazards.get(x) is not None:
+                objs += self.level.falling_hazards[x]
+
+            for obj in objs:
+                if obj != self and pygame.sprite.collide_rect(self, obj) and pygame.sprite.collide_mask(self, obj):
                     self.rect.bottom = obj.rect.top
                     self.y_vel = 0
-                    self.cooldowns["reset_time"] += cd
                     collided = True
                     self.play_sound("block_land")
+                    if isinstance(obj, FallingHazard):
+                        obj.should_fire = True
+                    else:
+                        self.cooldowns["reset_time"] += cd
                     break
 
             self.rect.y += self.y_vel
