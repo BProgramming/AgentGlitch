@@ -8,8 +8,6 @@ from Block import Hazard, MovableBlock, MovingBlock
 from Objectives import Objective
 from Helpers import load_sprite_sheets, MovementDirection, set_sound_source
 
-#test
-
 class MovementState(Enum):
     IDLE = 0
     RUN = 1
