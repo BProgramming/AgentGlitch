@@ -231,7 +231,7 @@ class Actor(Object):
         else:
             objs = self.level.get_objects_in_range((self.rect.x, self.rect.y), blocks_only=True)
         for obj in objs:
-            if pygame.sprite.collide_rect(self, obj):
+            if self.rect.colliderect(obj.rect):
                 if pygame.sprite.collide_mask(self, obj):
                     if isinstance(obj, Actor) or isinstance(obj, Objective):
                         overlap = self.mask.overlap_mask(obj.mask, (0, 0)).get_rect()
@@ -274,9 +274,10 @@ class Actor(Object):
                             self.y_vel = min(self.y_vel, 0.0)
                             self.jump_count = 0
                             self.is_wall_jumping = True
-
+                elif isinstance(obj, Objective) and self == self.level.get_player() and obj.sprite is None:
+                    obj.get_hit(self)
             elif obj.rect.top <= self.rect.bottom <= obj.rect.bottom and self.rect.left + (self.rect.width // 4) <= obj.rect.right and self.rect.right - (self.rect.width // 4) >= obj.rect.left:
-                if isinstance(obj, MovingBlock) or isinstance(obj, MovableBlock):
+                if isinstance(obj, MovingBlock) or isinstance(obj, MovableBlock) :
                     obj.collide(self)
                 if self.rect.centerx != obj.rect.centerx:
                     if math.degrees(math.atan(abs(self.rect.centery - obj.rect.centery) / abs(self.rect.centerx - obj.rect.centerx))) >= 45:

@@ -14,7 +14,7 @@ from Helpers import load_path, validate_file_list, display_text
 class Level:
     BLOCK_SIZE = 96
 
-    def __init__(self, name, levels, meta_dict, objects_dict, sprite_master, image_master, player_audios, enemy_audios, block_audios, message_audios, win, controller, block_size=BLOCK_SIZE):
+    def __init__(self, name, levels, meta_dict, objects_dict, sprite_master, image_master, player_audios, enemy_audios, block_audios, message_audios, win, controller, block_size=BLOCK_SIZE, show_build_messages=True):
         self.name = name.upper()
         self.time = 0
         self.achievements = (None if meta_dict[name].get("achievements") is None else meta_dict[name]["achievements"])
@@ -33,7 +33,7 @@ class Level:
         self.start_message = (None if meta_dict[name].get("start_message") is None else meta_dict[name]["start_message"])
         self.end_message = (None if meta_dict[name].get("end_message") is None else meta_dict[name]["end_message"])
         self.music = (None if meta_dict[name].get("music") is None else validate_file_list("Music", list(meta_dict[name]["music"].split(' ')), "mp3"))
-        self.level_bounds, self.player, self.triggers, self.blocks, self.dynamic_blocks, self.doors, self.static_blocks, self.hazards, self.falling_hazards, self.enemies, self.objectives = self.build_level(self, levels[self.name], sprite_master, image_master, objects_dict, player_audios, enemy_audios, block_audios, message_audios, win, controller, None if meta_dict[name].get("player_sprite") is None or meta_dict[name]["player_sprite"].upper() == "NONE" else meta_dict[name]["player_sprite"], self.block_size)
+        self.level_bounds, self.player, self.triggers, self.blocks, self.dynamic_blocks, self.doors, self.static_blocks, self.hazards, self.falling_hazards, self.enemies, self.objectives = self.build_level(self, levels[self.name], sprite_master, image_master, objects_dict, player_audios, enemy_audios, block_audios, message_audios, win, controller, None if meta_dict[name].get("player_sprite") is None or meta_dict[name]["player_sprite"].upper() == "NONE" else meta_dict[name]["player_sprite"], self.block_size, show_messages=show_build_messages)
         self.weather = (None if meta_dict[name].get("weather") is None else self.get_weather(meta_dict[name]["weather"].upper()))
         if meta_dict[name].get("abilities") is not None:
             self.set_player_abilities(meta_dict[name]["abilities"])
@@ -46,6 +46,7 @@ class Level:
         self.objectives_collected = []
         self.objectives_available = len(self.objectives)
         self.enemies_available = len(self.enemies)
+        self.hot_swap_level = (None if meta_dict.get("hot_swap_level") is None else Level(meta_dict["hot_swap_level"], levels, meta_dict, objects_dict, sprite_master, image_master, player_audios, enemy_audios, block_audios, message_audios, win, controller, show_build_messages=False))
 
     def award_achievements(self, steamworks):
         unlocked_achievements = []
@@ -237,7 +238,7 @@ class Level:
             self.weather.draw(win, offset_x, offset_y)
 
     @staticmethod
-    def build_level(level, layout, sprite_master, image_master, objects_dict, player_audios, enemy_audios, block_audios, message_audios, win, controller, player_sprite, block_size) -> tuple:
+    def build_level(level, layout, sprite_master, image_master, objects_dict, player_audios, enemy_audios, block_audios, message_audios, win, controller, player_sprite, block_size, show_messages=True) -> tuple:
         width = len(layout[-1]) * block_size
         height = len(layout) * block_size
         level_bounds = [(0, 0), (width, height)]
@@ -257,7 +258,8 @@ class Level:
             bar = pygame.Surface((int(win.get_width() * ((i + 1) / len(layout))), 10), pygame.SRCALPHA)
             bar.fill((255, 255, 255))
             win.blit(bar, (0, win.get_height() - 12))
-            display_text("Building level." + ("." if i%3 <= 1 else " ") + ("." if i%3 <= 2 else " ") + "[" + str(i + 1) + "/" + str(len(layout)) + "]", controller, min_pause_time=0, should_sleep=False)
+            if show_messages:
+                display_text("Building level." + ("." if i%3 <= 1 else " ") + ("." if i%3 <= 2 else " ") + "[" + str(i + 1) + "/" + str(len(layout)) + "]", controller, min_pause_time=0, should_sleep=False)
             static_blocks.append([])
             for j in range(len(layout[i])):
                 static_blocks[-1].append(None)
@@ -269,7 +271,7 @@ class Level:
                             case "PLAYER":
                                 player_start = ((j * block_size), (i * block_size))
                             case "OBJECTIVE":
-                                objectives.append(Objective(level, controller, j * block_size, i * block_size, block_size, block_size, sprite_master, block_audios, sprite=data["sprite"], sound=("objective" if data.get("sound") is None else data["sound"].lower()), is_blocking=bool(data.get("is_blocking") is not None and data["is_blocking"].upper() == "TRUE"), achievement=(None if data.get("achievement") is None else data["achievement"]),  name=(element if data.get("name") is None else data["name"])))
+                                objectives.append(Objective(level, controller, j * block_size, i * block_size, block_size, block_size, sprite_master, block_audios, is_active=bool(data.get("is_active") is not None and data["is_active"].upper() == "TRUE"), sprite=(None if data.get("sprite") is None else data["sprite"]), sound=("objective" if data.get("sound") is None else data["sound"].lower()), is_blocking=bool(data.get("is_blocking") is not None and data["is_blocking"].upper() == "TRUE"), achievement=(None if data.get("achievement") is None else data["achievement"]),  name=(element if data.get("name") is None else data["name"])))
                             case "BLOCK":
                                 if i > 0 and len(str(layout[i - 1][j])) > 0 and objects_dict.get(str(layout[i - 1][j])) is not None and objects_dict[str(layout[i - 1][j])]["type"] in ["Block"]:
                                     is_stacked = True
