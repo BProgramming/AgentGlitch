@@ -206,7 +206,7 @@ def load_part2(data, level):
     if data is None or level is None:
         return False
     else:
-        level.time = data["time"]
+        level.time = (0 if data.get("time") is None else data["time"])
         for obj in [level.get_player()] + level.get_objects():
             obj_data = data.get(obj.name)
             if obj_data is not None:
@@ -434,7 +434,16 @@ def main(win):
 
                 if controller.should_hot_swap_level:
                     controller.should_hot_swap_level = False
-                    level = level.hot_swap_level
+                    if level.hot_swap_level is not None:
+                        cur_time = level.time
+                        cur_achievements = level.achievements
+                        cur_target_time = level.target_time
+                        cur_objectives_collected = level.objectives_collected
+                        controller.level = level = level.hot_swap_level
+                        level.time += cur_time
+                        level.achievements.update(cur_achievements)
+                        level.target_time += cur_target_time
+                        level.objectives_collected += cur_objectives_collected
 
             if controller.music is not None:
                 pygame.mixer.music.fadeout(1000)

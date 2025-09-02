@@ -44,7 +44,7 @@ class Trigger(Object):
 
     # THIS CAN RETURN SO MANY DIFFERENT THINGS, SO IT DOESN'T HAVE A TYPE HINT. #
     def __load_input__(self, input, objects_dict, sprite_master, enemy_audios, block_audios, message_audios, image_master, block_size):
-        if input is None or self.type is None:
+        if (input is None and self.type != TriggerType.HOT_SWAP_LEVEL) or self.type is None:
             return None
         elif self.type == TriggerType.TEXT:
             if type(input) == dict and input.get("text") is not None and input.get("audio") is not None:
@@ -111,7 +111,7 @@ class Trigger(Object):
                             path = load_path([int(i) for i in data["path"].split(' ')], i, j, block_size)
                         return Boss(self.level, self.controller, j * block_size, i * block_size, sprite_master, enemy_audios, self.controller.difficulty, block_size, music=(None if data.get("music") is None or data["music"].upper() == "NONE" else data["music"]), death_triggers=(None if data.get("death_triggers") is None else data["death_triggers"]), path=path, hp=data["hp"], can_shoot=bool(data.get("can_shoot") is not None and data["can_shoot"].upper() == "TRUE"), sprite=data["sprite"], proj_sprite=(None if data.get("proj_sprite") is None or data["proj_sprite"].upper() == "NONE" else data["proj_sprite"]), name=(element if data.get("name") is None else data["name"]))
                     case "TRIGGER":
-                        return Trigger(self.level, self.controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, self.win, objects_dict, sprite_master, enemy_audios, block_audios, message_audios, image_master, block_size, fire_once=bool(data.get("fire_once") is not None and data["fire_once"].upper() == "TRUE"), type=TriggerType(data["type"]), input=data["input"], name=(element if data.get("name") is None else data["name"]))
+                        return Trigger(self.level, self.controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, self.win, objects_dict, sprite_master, enemy_audios, block_audios, message_audios, image_master, block_size, fire_once=bool(data.get("fire_once") is not None and data["fire_once"].upper() == "TRUE"), type=TriggerType(data["type"]), input=(None if data.get("input") is None else data["input"]), name=(element if data.get("name") is None else data["name"]))
                     case _:
                         pass
             return None
@@ -130,7 +130,7 @@ class Trigger(Object):
         elif self.type == TriggerType.SET_ACHIEVEMENT:
             return input
         elif self.type == TriggerType.HOT_SWAP_LEVEL:
-            return None
+            return True
         else:
             return None
 

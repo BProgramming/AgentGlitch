@@ -6,6 +6,7 @@ from Object import Object
 from NonPlayer import NonPlayer
 from Block import BreakableBlock
 from Helpers import MovementDirection, load_sprite_sheets, display_text
+from VisualEffects import VisualEffect
 
 
 class Player(Actor):
@@ -16,6 +17,7 @@ class Player(Actor):
     MULTIPLIER_TELEPORT = 384
     TELEPORT_COOLDOWN = 3
     TELEPORT_DELAY = 0.4
+    TELEPORT_EFFECT_TRAIL = 0.2
     BLOCK_COOLDOWN = 3
     BLOCK_TIME_ACTIVE = 2
     BULLET_TIME_COOLDOWN = 3
@@ -28,7 +30,7 @@ class Player(Actor):
         if self.level.grayscale:
             self.toggle_retro()
             self.update_sprite(1)
-        self.cooldowns.update({"teleport": 0, "teleport_delay": 0, "block": 0, "block_attempt": 0, "bullet_time": 0, "bullet_time_active": 0})
+        self.cooldowns.update({"teleport": 0, "teleport_delay": 0, "teleport_effect_trail": 0, "block": 0, "block_attempt": 0, "bullet_time": 0, "bullet_time_active": 0})
         self.cached_cooldowns = self.cooldowns.copy()
         self.can_open_doors = True
         self.can_move_blocks = True
@@ -191,12 +193,17 @@ class Player(Actor):
             self.animation_count += dtime
             if self.cooldowns["teleport_delay"] <= 0:
                 self.move(self.teleport_distance, 0)
+                self.cooldowns["teleport_effect_trail"] = Player.TELEPORT_EFFECT_TRAIL
+                if self.level.visual_effects_manager.images.get("DASHCLOUD") is not None:
+                    self.active_visual_effects["teleport_effect_trail"] = VisualEffect(self.rect, self.level.visual_effects_manager.images["DASHCLOUD"], str(self.direction), offset=(self.rect.width // 2, 0), scale=(abs(self.teleport_distance), self.rect.height * 0.8))
                 self.teleport_distance = 0
             self.update_cooldowns(dtime)
             self.update_state()
         else:
             if self.is_slow_time and self.cooldowns["bullet_time_active"] <= 0:
                 self.is_slow_time = False
+            if self.active_visual_effects.get("teleport_effect_trail") is not None and self.cooldowns["teleport_effect_trail"] <= 0:
+                del self.active_visual_effects["teleport_effect_trail"]
             super().loop(fps, dtime, target=target, drag=drag, grav=grav)
 
         return self.get_triggers()

@@ -7,6 +7,7 @@ from Player import Player
 from NonPlayer import NonPlayer
 from Objectives import Objective
 from Trigger import Trigger, TriggerType
+from VisualEffects import VisualEffectsManager
 from WeatherEffects import *
 from Helpers import load_path, validate_file_list, display_text
 
@@ -14,14 +15,15 @@ from Helpers import load_path, validate_file_list, display_text
 class Level:
     BLOCK_SIZE = 96
 
-    def __init__(self, name, levels, meta_dict, objects_dict, sprite_master, image_master, player_audios, enemy_audios, block_audios, message_audios, win, controller, block_size=BLOCK_SIZE, show_build_messages=True):
+    def __init__(self, name, levels, meta_dict, objects_dict, sprite_master, image_master, player_audios, enemy_audios, block_audios, message_audios, win, controller, block_size=BLOCK_SIZE):
         self.name = name.upper()
         self.time = 0
-        self.achievements = (None if meta_dict[name].get("achievements") is None else meta_dict[name]["achievements"])
+        self.achievements = ({} if meta_dict[name].get("achievements") is None else meta_dict[name]["achievements"])
         self.block_size = block_size if meta_dict[name].get("block_size") is None or not meta_dict[name]["block_size"].isnumeric() else int(meta_dict[name]["block_size"])
         self.purge_queue = {"triggers": set(), "hazards": set(), "blocks": set(), "doors": set(), "enemies": set(), "objectives": set()}
         self.grayscale = (False if meta_dict[name].get("grayscale") is None else bool(meta_dict[name]["grayscale"].upper() == "TRUE"))
         self.can_glitch = (False if meta_dict[name].get("can_glitch") is None else bool(meta_dict[name]["can_glitch"].upper() == "TRUE"))
+        self.visual_effects_manager = VisualEffectsManager(controller)
         self.background = (None if meta_dict[name].get("background") is None else meta_dict[name]["background"])
         self.foreground = (None if meta_dict[name].get("foreground") is None else meta_dict[name]["foreground"])
         self.start_cinematic = (None if meta_dict[name].get("start_cinematic") is None else meta_dict[name]["start_cinematic"])
@@ -33,24 +35,24 @@ class Level:
         self.start_message = (None if meta_dict[name].get("start_message") is None else meta_dict[name]["start_message"])
         self.end_message = (None if meta_dict[name].get("end_message") is None else meta_dict[name]["end_message"])
         self.music = (None if meta_dict[name].get("music") is None else validate_file_list("Music", list(meta_dict[name]["music"].split(' ')), "mp3"))
-        self.level_bounds, self.player, self.triggers, self.blocks, self.dynamic_blocks, self.doors, self.static_blocks, self.hazards, self.falling_hazards, self.enemies, self.objectives = self.build_level(self, levels[self.name], sprite_master, image_master, objects_dict, player_audios, enemy_audios, block_audios, message_audios, win, controller, None if meta_dict[name].get("player_sprite") is None or meta_dict[name]["player_sprite"].upper() == "NONE" else meta_dict[name]["player_sprite"], self.block_size, show_messages=show_build_messages)
+        self.level_bounds, self.player, self.triggers, self.blocks, self.dynamic_blocks, self.doors, self.static_blocks, self.hazards, self.falling_hazards, self.enemies, self.objectives = self.build_level(self, levels[self.name], sprite_master, image_master, objects_dict, player_audios, enemy_audios, block_audios, message_audios, win, controller, None if meta_dict[name].get("player_sprite") is None or meta_dict[name]["player_sprite"].upper() == "NONE" else meta_dict[name]["player_sprite"], self.block_size)
         self.weather = (None if meta_dict[name].get("weather") is None else self.get_weather(meta_dict[name]["weather"].upper()))
         if meta_dict[name].get("abilities") is not None:
             self.set_player_abilities(meta_dict[name]["abilities"])
         self.cinematics = (None if meta_dict[name].get("cinematics") is None else CinematicsManager(meta_dict[name]["cinematics"], controller))
-        self.get_player().been_hit_this_level = False
-        self.get_player().been_seen_this_level = False
-        self.get_player().deaths_this_level = 0
-        self.get_player().kills_this_level = 0
-        self.target_time = (None if meta_dict[name].get("target_time") is None else meta_dict[name]["target_time"])
+        self.player.been_hit_this_level = False
+        self.player.been_seen_this_level = False
+        self.player.deaths_this_level = 0
+        self.player.kills_this_level = 0
+        self.target_time = (0 if meta_dict[name].get("target_time") is None else meta_dict[name]["target_time"])
         self.objectives_collected = []
         self.objectives_available = len(self.objectives)
         self.enemies_available = len(self.enemies)
-        self.hot_swap_level = (None if meta_dict.get("hot_swap_level") is None else Level(meta_dict["hot_swap_level"], levels, meta_dict, objects_dict, sprite_master, image_master, player_audios, enemy_audios, block_audios, message_audios, win, controller, show_build_messages=False))
+        self.hot_swap_level = (None if meta_dict[name].get("hot_swap_level") is None or meta_dict.get(meta_dict[name]["hot_swap_level"]) is None else Level(meta_dict[name]["hot_swap_level"], levels, meta_dict, objects_dict, sprite_master, image_master, player_audios, enemy_audios, block_audios, message_audios, win, controller))
 
     def award_achievements(self, steamworks):
         unlocked_achievements = []
-        if self.target_time is not None and self.get_formatted_time() <= self.target_time and self.achievements.get("target_time") is not None and self.achievements["target_time"].upper() != "NONE":
+        if self.target_time is not None and self.target_time > 0 and self.get_formatted_time() <= self.target_time and self.achievements.get("target_time") is not None and self.achievements["target_time"].upper() != "NONE":
             unlocked_achievements.append(self.achievements["target_time"])
         if 0 < self.objectives_available == len(self.objectives_collected) and self.achievements.get("all_objectives") is not None and self.achievements["all_objectives"].upper() != "NONE":
             unlocked_achievements.append(self.achievements["all_objectives"])
@@ -238,7 +240,7 @@ class Level:
             self.weather.draw(win, offset_x, offset_y)
 
     @staticmethod
-    def build_level(level, layout, sprite_master, image_master, objects_dict, player_audios, enemy_audios, block_audios, message_audios, win, controller, player_sprite, block_size, show_messages=True) -> tuple:
+    def build_level(level, layout, sprite_master, image_master, objects_dict, player_audios, enemy_audios, block_audios, message_audios, win, controller, player_sprite, block_size) -> tuple:
         width = len(layout[-1]) * block_size
         height = len(layout) * block_size
         level_bounds = [(0, 0), (width, height)]
@@ -258,8 +260,7 @@ class Level:
             bar = pygame.Surface((int(win.get_width() * ((i + 1) / len(layout))), 10), pygame.SRCALPHA)
             bar.fill((255, 255, 255))
             win.blit(bar, (0, win.get_height() - 12))
-            if show_messages:
-                display_text("Building level." + ("." if i%3 <= 1 else " ") + ("." if i%3 <= 2 else " ") + "[" + str(i + 1) + "/" + str(len(layout)) + "]", controller, min_pause_time=0, should_sleep=False)
+            display_text("Building level." + ("." if i%3 <= 1 else " ") + ("." if i%3 <= 2 else " ") + "[" + str(i + 1) + "/" + str(len(layout)) + "]", controller, min_pause_time=0, should_sleep=False)
             static_blocks.append([])
             for j in range(len(layout[i])):
                 static_blocks[-1].append(None)
@@ -339,7 +340,7 @@ class Level:
                                     path = load_path([int(i) for i in data["path"].split(' ')], i, j, block_size)
                                 enemies.append(Boss(level, controller, j * block_size, i * block_size, sprite_master, enemy_audios, controller.difficulty, block_size, music=(None if data.get("music") is None or data["music"].upper() == "NONE" else data["music"]), death_triggers=(None if data.get("death_triggers") is None else data["death_triggers"]), path=path, hp=data["hp"], can_shoot=bool(data.get("can_shoot") is not None and data["can_shoot"].upper() == "TRUE"), sprite=data["sprite"], proj_sprite=(None if data.get("proj_sprite") is None or data["proj_sprite"].upper() == "NONE" else data["proj_sprite"]), name=(element if data.get("name") is None else data["name"])))
                             case "TRIGGER":
-                                triggers.append(Trigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, win, objects_dict, sprite_master, enemy_audios, block_audios, message_audios, image_master, block_size, fire_once=bool(data.get("fire_once") is not None and data["fire_once"].upper() == "TRUE"), type=TriggerType(data["type"]), input=data["input"], name=(element if data.get("name") is None else data["name"])))
+                                triggers.append(Trigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, win, objects_dict, sprite_master, enemy_audios, block_audios, message_audios, image_master, block_size, fire_once=bool(data.get("fire_once") is not None and data["fire_once"].upper() == "TRUE"), type=TriggerType(data["type"]), input=(None if data.get("input") is None else data["input"]), name=(element if data.get("name") is None else data["name"])))
                             case _:
                                 pass
 

@@ -16,6 +16,7 @@ class Object(pygame.sprite.Sprite):
         self.max_hp = self.hp = 100
         self.is_stacked = False # this property is only used by blocks, but needed here for generic checks
         self.cooldowns = None
+        self.active_visual_effects = {}
 
     def save(self) -> dict:
         return {self.name: {"hp": self.hp}}
@@ -44,6 +45,8 @@ class Object(pygame.sprite.Sprite):
         adj_x = self.rect.x - offset_x
         adj_y = self.rect.y - offset_y
         if -self.rect.width < adj_x <= win.get_width() and -self.rect.height < adj_y <= win.get_height():
+            for effect in self.active_visual_effects.keys():
+                self.active_visual_effects[effect].output(win, offset_x, offset_y, master_volume, fps)
             win.blit(self.sprite, (adj_x, adj_y))
 
     def collide(self, obj) -> bool:

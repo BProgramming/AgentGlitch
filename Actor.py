@@ -490,6 +490,8 @@ class Actor(Object):
             for proj in self.active_projectiles:
                 proj.output(win, offset_x, offset_y, master_volume, fps)
         if self == self.level.get_player() or -self.rect.width < adj_x_image <= window_width and -self.rect.height < adj_y_image <= window_height:
+            for effect in self.active_visual_effects.keys():
+                self.active_visual_effects[effect].output(win, offset_x, offset_y, master_volume, fps)
             self.update_sprite(fps)
             self.__update_geo__()
             win.blit(self.sprite, (adj_x_image, adj_y_image))
