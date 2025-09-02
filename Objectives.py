@@ -8,20 +8,32 @@ from Helpers import handle_exception, set_sound_source, load_sprite_sheets
 
 class Objective(Object):
     ANIMATION_DELAY = 0.3
+    if not isfile(join("Assets", "Icons", "Pointer", "pointer.png")):
+        handle_exception("File " + str(FileNotFoundError(join("Assets", "Icons", "Pointer", "pointer.png"))) + " not found.")
+    else:
+        POINTER_SPRITE: pygame.Surface = pygame.transform.scale2x(pygame.image.load(join("Assets", "Icons", "Pointer", "pointer.png")).convert_alpha())
+        POINTER_SPRITE_GRAYSCALE: pygame.Surface = pygame.transform.grayscale(POINTER_SPRITE)
+        POINTER_SPRITE_HEIGHT: int = POINTER_SPRITE.get_height()
+        POINTER_SPRITE_WIDTH: int = POINTER_SPRITE.get_width()
 
-    def __init__(self, level, controller, x, y, width, height, sprite_master, audios, sprite=None, sound="objective", is_blocking=False, achievement=None, name="Objective"):
+    def __init__(self, level, controller, x, y, width, height, sprite_master, audios, is_active=False, sprite=None, sound="objective", is_blocking=False, achievement=None, name="Objective"):
         super().__init__(level, controller, x, y, width, height, is_blocking=is_blocking, name=name)
         if sprite is not None:
             self.sprites = load_sprite_sheets("Sprites", sprite, sprite_master, direction=False, grayscale=self.level.grayscale)["ANIMATE"]
         else:
-            self.sprites = [self.sprite]
+            self.sprites = None
         self.animation_count = 0
         self.sprite = None
-        self.update_sprite(1)
-        self.update_geo()
+        if self.sprites is not None:
+            self.update_sprite(1)
+            self.update_geo()
         self.audios = audios
-        self.sound = sound
+        self.sound = None if sound == "none" else sound
         self.achievement = achievement
+        self.name = name
+        self.is_active = is_active
+        self.pointer = (Objective.POINTER_SPRITE_GRAYSCALE if self.level.grayscale == True else Objective.POINTER_SPRITE)
+        self.pointer_offset = ((self.rect.width - Objective.POINTER_SPRITE_WIDTH) / 2, (-(Objective.POINTER_SPRITE_HEIGHT + 2), -(self.rect.height - Objective.POINTER_SPRITE_HEIGHT / 2)))
 
     def collide(self, obj) -> bool:
         return False
@@ -44,10 +56,12 @@ class Objective(Object):
             self.level.queue_purge(self)
 
     def __collect__(self) -> None:
+        if self.is_active:
+            self.is_active = False
         self.level.objectives_collected.append(self)
 
     def play_sound(self, name) -> None:
-        if self.audios.get(name.upper()) is not None:
+        if self.sound is not None and self.audios.get(name.upper()) is not None:
             active_audio_channel = pygame.mixer.find_channel(force=True)
             if active_audio_channel is not None:
                 active_audio_channel.play(self.audios[name.upper()][random.randrange(len(self.audios[name.upper()]))])
@@ -72,7 +86,31 @@ class Objective(Object):
     def output(self, win, offset_x, offset_y, master_volume, fps) -> None:
         adj_x = self.rect.x - offset_x
         adj_y = self.rect.y - offset_y
-        if -self.rect.width < adj_x <= win.get_width() and -self.rect.height < adj_y <= win.get_height():
+        if self.sprite is not None and -self.rect.width < adj_x <= win.get_width() and -self.rect.height < adj_y <= win.get_height():
             self.update_sprite(fps)
             self.update_geo()
             win.blit(self.sprite, (adj_x, adj_y))
+
+        if self.is_active:
+            NICE_BORDER_DISTANCE = 64
+
+            if NICE_BORDER_DISTANCE - self.rect.width < adj_x + self.pointer_offset[0] <= (win.get_width() - Objective.POINTER_SPRITE_WIDTH - NICE_BORDER_DISTANCE) and NICE_BORDER_DISTANCE - self.rect.height < adj_y + self.pointer_offset[1][1] <= (win.get_height() - Objective.POINTER_SPRITE_HEIGHT - NICE_BORDER_DISTANCE):
+                win.blit(self.pointer, (adj_x + self.pointer_offset[0], adj_y + self.pointer_offset[1][0]))
+            else:
+                if adj_x < NICE_BORDER_DISTANCE:
+                    pointer_x = NICE_BORDER_DISTANCE
+                elif adj_x > win.get_width() - (NICE_BORDER_DISTANCE + Objective.POINTER_SPRITE_WIDTH):
+                    pointer_x = win.get_width() - (NICE_BORDER_DISTANCE + Objective.POINTER_SPRITE_WIDTH)
+                else:
+                    pointer_x = adj_x + self.pointer_offset[0]
+
+                if adj_y < NICE_BORDER_DISTANCE:
+                    pointer_y = NICE_BORDER_DISTANCE
+                elif adj_y > win.get_height() - (NICE_BORDER_DISTANCE + Objective.POINTER_SPRITE_HEIGHT):
+                    pointer_y = win.get_height() - (NICE_BORDER_DISTANCE + Objective.POINTER_SPRITE_HEIGHT)
+                else:
+                    pointer_y = adj_y + self.pointer_offset[1][1]
+
+                rotation = math.degrees(math.atan2(self.rect.x - self.level.get_player().rect.x, self.rect.y - self.level.get_player().rect.y))
+
+                win.blit(pygame.transform.rotate(self.pointer, rotation), (pointer_x, pointer_y))

@@ -373,7 +373,7 @@ def load_path(path_in, i, j, block_size) -> list:
     return path
 
 
-def set_property(entity, input) -> None:
+def set_property(triggering_entity, input) -> None:
     if input is not None:
         target, property, value = input["target"], input["property"], input["value"]
         if len(target) == len(property) == len(value):
@@ -385,8 +385,8 @@ def set_property(entity, input) -> None:
                         value[i] = float(value[i])
                         if value[i] == int(value[i]):
                             value[i] = int(value[i])
-                for obj in [entity.level.get_player()] + entity.level.get_objects():
-                    if obj.name.split()[0] == target[i] and hasattr(obj, property[i]):
+                for obj in [triggering_entity.level.get_player()] + triggering_entity.level.get_objects():
+                    if (obj.name.split()[0] == target[i] or obj.name == target[i]) and hasattr(obj, property[i]):
                         setattr(obj, property[i], value[i])
-                        if entity.controller.player_abilities.get(property[i]) is not None:
-                            entity.controller.player_abilities[property[i]] = value[i]
+                        if triggering_entity.controller.player_abilities.get(property[i]) is not None:
+                            triggering_entity.controller.player_abilities[property[i]] = value[i]

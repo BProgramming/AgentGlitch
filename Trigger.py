@@ -20,6 +20,8 @@ class TriggerType(Enum):
     SET_PROPERTY = 7
     CINEMATIC = 8
     SET_ACHIEVEMENT = 9
+    SET_OBJECTIVE = 10
+    HOT_SWAP_LEVEL = 11
 
 
 class Trigger(Object):
@@ -42,7 +44,7 @@ class Trigger(Object):
 
     # THIS CAN RETURN SO MANY DIFFERENT THINGS, SO IT DOESN'T HAVE A TYPE HINT. #
     def __load_input__(self, input, objects_dict, sprite_master, enemy_audios, block_audios, message_audios, image_master, block_size):
-        if input is None or self.type is None:
+        if (input is None and self.type != TriggerType.HOT_SWAP_LEVEL) or self.type is None:
             return None
         elif self.type == TriggerType.TEXT:
             if type(input) == dict and input.get("text") is not None and input.get("audio") is not None:
@@ -65,7 +67,7 @@ class Trigger(Object):
                 data = entry["data"]
                 match entry["type"].upper():
                     case "OBJECTIVE":
-                        return Objective(self.level, self.controller, j * block_size, i * block_size, block_size, block_size, sprite_master, block_audios, sprite=data["sprite"], sound=("objective" if data.get("sound") is None else data["sound"].lower()), is_blocking=bool(data.get("is_blocking") is not None and data["is_blocking"].upper() == "TRUE"), achievement=(None if data.get("achievement") is None else data["achievement"]), name=(element if data.get("name") is None else data["name"]))
+                        return Objective(self.level, self.controller, j * block_size, i * block_size, block_size, block_size, sprite_master, block_audios, is_active=bool(data.get("is_active") is not None and data["is_active"].upper() == "TRUE"), sprite=(None if data.get("sprite") is None else data["sprite"]), sound=("objective" if data.get("sound") is None else data["sound"].lower()), is_blocking=bool(data.get("is_blocking") is not None and data["is_blocking"].upper() == "TRUE"), achievement=(None if data.get("achievement") is None else data["achievement"]), name=(element if data.get("name") is None else data["name"]))
                     case "BLOCK":
                         is_stacked = False
                         return Block(self.level, self.controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, coord_x=data["coord_x"], coord_y=data["coord_y"], is_blocking=bool(data.get("is_blocking") is None or data["is_blocking"].upper() == "TRUE"), name=(element if data.get("name") is None else data["name"]))
@@ -109,7 +111,7 @@ class Trigger(Object):
                             path = load_path([int(i) for i in data["path"].split(' ')], i, j, block_size)
                         return Boss(self.level, self.controller, j * block_size, i * block_size, sprite_master, enemy_audios, self.controller.difficulty, block_size, music=(None if data.get("music") is None or data["music"].upper() == "NONE" else data["music"]), death_triggers=(None if data.get("death_triggers") is None else data["death_triggers"]), path=path, hp=data["hp"], can_shoot=bool(data.get("can_shoot") is not None and data["can_shoot"].upper() == "TRUE"), sprite=data["sprite"], proj_sprite=(None if data.get("proj_sprite") is None or data["proj_sprite"].upper() == "NONE" else data["proj_sprite"]), name=(element if data.get("name") is None else data["name"]))
                     case "TRIGGER":
-                        return Trigger(self.level, self.controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, self.win, objects_dict, sprite_master, enemy_audios, block_audios, message_audios, image_master, block_size, fire_once=bool(data.get("fire_once") is not None and data["fire_once"].upper() == "TRUE"), type=TriggerType(data["type"]), input=data["input"], name=(element if data.get("name") is None else data["name"]))
+                        return Trigger(self.level, self.controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, self.win, objects_dict, sprite_master, enemy_audios, block_audios, message_audios, image_master, block_size, fire_once=bool(data.get("fire_once") is not None and data["fire_once"].upper() == "TRUE"), type=TriggerType(data["type"]), input=(None if data.get("input") is None else data["input"]), name=(element if data.get("name") is None else data["name"]))
                     case _:
                         pass
             return None
@@ -118,10 +120,17 @@ class Trigger(Object):
                 return None
             else:
                 return input
+        elif self.type == TriggerType.SET_OBJECTIVE:
+            if input.get("target") is None or input.get("value") is None:
+                return None
+            else:
+                return {"target": input["target"], "value": bool(input["value"].upper() == "TRUE")}
         elif self.type == TriggerType.CINEMATIC:
             return input
         elif self.type == TriggerType.SET_ACHIEVEMENT:
             return input
+        elif self.type == TriggerType.HOT_SWAP_LEVEL:
+            return True
         else:
             return None
 
@@ -159,6 +168,10 @@ class Trigger(Object):
             next_level = self.value
         elif self.type == TriggerType.SET_PROPERTY:
             set_property(self, self.value)
+        elif self.type == TriggerType.SET_OBJECTIVE:
+            for objective in self.level.objectives:
+                if self.value["target"] == objective.name:
+                    objective.is_active = self.value["value"]
         elif self.type == TriggerType.CINEMATIC:
             if self.level.cinematics is not None and self.level.cinematics.get(self.value) is not None:
                 self.level.cinematics.queue(self.value)
@@ -166,6 +179,8 @@ class Trigger(Object):
             if self.controller.steamworks is not None and not self.controller.steamworks.UserStats.GetAchievement(self.value):
                 self.controller.steamworks.UserStats.SetAchievement(self.value)
                 self.controller.should_store_steam_stats = True
+        elif self.type == TriggerType.HOT_SWAP_LEVEL:
+            self.controller.should_hot_swap_level = True
 
         return [(time.perf_counter_ns() - start) // 1000000, next_level]
 

@@ -1,26 +1,11 @@
-import math
-import random
-import time
 import pygame
-import sys
-import traceback
-import pickle
-from os.path import join, isfile
-from Actor import Actor
-from Block import BreakableBlock
-from Cinematics import *
-from Controls import Controller
-from Helpers import load_json_dict, load_levels, load_audios, display_text, glitch, DifficultyScale, handle_exception, load_text_from_file
-from Level import Level
-from HUD import HUD
-from NonPlayer import NonPlayer
 import SteamworksConnection
+from Helpers import load_json_dict, load_levels, load_audios, display_text, glitch, DifficultyScale, handle_exception, load_text_from_file
+from os.path import join, isfile
 
+
+# This stuff happens in the middle of imports because some classes require pygame display available before they can be compiled
 pygame.init()
-
-steamworks_connection = SteamworksConnection.initialize()
-steamworks_connection.UserStats.RequestCurrentStats()
-
 WIDTH, HEIGHT = 1920, 1080
 FPS_TARGET = 60
 
@@ -32,6 +17,24 @@ else:
 
 WINDOW = pygame.display.set_mode((WIDTH, HEIGHT), flags=pygame.SCALED)
 pygame.display.set_caption("AGENT GLITCH")
+
+steamworks_connection = SteamworksConnection.initialize()
+steamworks_connection.UserStats.RequestCurrentStats()
+
+
+import math
+import random
+import time
+import sys
+import traceback
+import pickle
+from Actor import Actor
+from Block import BreakableBlock
+from Cinematics import *
+from Controller import Controller
+from Level import Level
+from HUD import HUD
+from NonPlayer import NonPlayer
 
 
 def get_offset(level, offset_x, offset_y, width, height):
@@ -203,7 +206,7 @@ def load_part2(data, level):
     if data is None or level is None:
         return False
     else:
-        level.time = data["time"]
+        level.time = (0 if data.get("time") is None else data["time"])
         for obj in [level.get_player()] + level.get_objects():
             obj_data = data.get(obj.name)
             if obj_data is not None:
@@ -407,7 +410,7 @@ def main(win):
                         break
                     else:
                         dtime_offset += level.get_player().revert()
-    
+
                 for obj in level.get_objects():
                     if (not isinstance(obj, Actor) and type(obj).__name__.upper() != "BLOCK") or (isinstance(obj, Actor) and math.dist(obj.rect.topleft, level.get_player().rect.topleft) < win.get_width() * 1.5):
                         if hasattr(obj, "patrol") and callable(obj.patrol):
@@ -428,6 +431,19 @@ def main(win):
                 pygame.display.update()
 
                 offset_x, offset_y = get_offset(level, offset_x, offset_y, win.get_width(), win.get_height())
+
+                if controller.should_hot_swap_level:
+                    controller.should_hot_swap_level = False
+                    if level.hot_swap_level is not None:
+                        cur_time = level.time
+                        cur_achievements = level.achievements
+                        cur_target_time = level.target_time
+                        cur_objectives_collected = level.objectives_collected
+                        controller.level = level = level.hot_swap_level
+                        level.time += cur_time
+                        level.achievements.update(cur_achievements)
+                        level.target_time += cur_target_time
+                        level.objectives_collected += cur_objectives_collected
 
             if controller.music is not None:
                 pygame.mixer.music.fadeout(1000)
