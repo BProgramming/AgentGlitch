@@ -17,7 +17,7 @@ class Player(Actor):
     MULTIPLIER_TELEPORT = 384
     TELEPORT_COOLDOWN = 3
     TELEPORT_DELAY = 0.4
-    TELEPORT_EFFECT_TRAIL = 0.2
+    TELEPORT_EFFECT_TRAIL = 0.05
     BLOCK_COOLDOWN = 3
     BLOCK_TIME_ACTIVE = 2
     BULLET_TIME_COOLDOWN = 3
@@ -195,7 +195,7 @@ class Player(Actor):
                 self.move(self.teleport_distance, 0)
                 self.cooldowns["teleport_effect_trail"] = Player.TELEPORT_EFFECT_TRAIL
                 if self.level.visual_effects_manager.images.get("DASHCLOUD") is not None:
-                    self.active_visual_effects["teleport_effect_trail"] = VisualEffect(self.rect, self.level.visual_effects_manager.images["DASHCLOUD"], str(self.direction), offset=(self.rect.width // 2, 0), scale=(abs(self.teleport_distance), self.rect.height * 0.8))
+                    self.active_visual_effects["teleport_effect_trail"] = VisualEffect(self, self.level.visual_effects_manager.images["DASHCLOUD"], direction=str(self.direction), alpha=64, offset=(self.rect.width // 2, 0), scale=(abs(self.teleport_distance), self.rect.height * 0.8))
                 self.teleport_distance = 0
             self.update_cooldowns(dtime)
             self.update_state()

@@ -7,7 +7,6 @@ from Player import Player
 from NonPlayer import NonPlayer
 from Objectives import Objective
 from Trigger import Trigger, TriggerType
-from VisualEffects import VisualEffectsManager
 from WeatherEffects import *
 from Helpers import load_path, validate_file_list, display_text
 
@@ -15,7 +14,7 @@ from Helpers import load_path, validate_file_list, display_text
 class Level:
     BLOCK_SIZE = 96
 
-    def __init__(self, name, levels, meta_dict, objects_dict, sprite_master, image_master, player_audios, enemy_audios, block_audios, message_audios, win, controller, block_size=BLOCK_SIZE):
+    def __init__(self, name, levels, meta_dict, objects_dict, sprite_master, image_master, player_audios, enemy_audios, block_audios, message_audios, vfx, win, controller, block_size=BLOCK_SIZE):
         self.name = name.upper()
         self.time = 0
         self.achievements = ({} if meta_dict[name].get("achievements") is None else meta_dict[name]["achievements"])
@@ -23,7 +22,7 @@ class Level:
         self.purge_queue = {"triggers": set(), "hazards": set(), "blocks": set(), "doors": set(), "enemies": set(), "objectives": set()}
         self.grayscale = (False if meta_dict[name].get("grayscale") is None else bool(meta_dict[name]["grayscale"].upper() == "TRUE"))
         self.can_glitch = (False if meta_dict[name].get("can_glitch") is None else bool(meta_dict[name]["can_glitch"].upper() == "TRUE"))
-        self.visual_effects_manager = VisualEffectsManager(controller)
+        self.visual_effects_manager = vfx
         self.background = (None if meta_dict[name].get("background") is None else meta_dict[name]["background"])
         self.foreground = (None if meta_dict[name].get("foreground") is None else meta_dict[name]["foreground"])
         self.start_cinematic = (None if meta_dict[name].get("start_cinematic") is None else meta_dict[name]["start_cinematic"])
@@ -48,7 +47,7 @@ class Level:
         self.objectives_collected = []
         self.objectives_available = len(self.objectives)
         self.enemies_available = len(self.enemies)
-        self.hot_swap_level = (None if meta_dict[name].get("hot_swap_level") is None or meta_dict.get(meta_dict[name]["hot_swap_level"]) is None else Level(meta_dict[name]["hot_swap_level"], levels, meta_dict, objects_dict, sprite_master, image_master, player_audios, enemy_audios, block_audios, message_audios, win, controller))
+        self.hot_swap_level = (None if meta_dict[name].get("hot_swap_level") is None or meta_dict.get(meta_dict[name]["hot_swap_level"]) is None else Level(meta_dict[name]["hot_swap_level"], levels, meta_dict, objects_dict, sprite_master, image_master, player_audios, enemy_audios, block_audios, message_audios, vfx, win, controller))
 
     def award_achievements(self, steamworks):
         unlocked_achievements = []
