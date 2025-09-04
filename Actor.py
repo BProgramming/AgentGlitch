@@ -50,7 +50,7 @@ class Actor(Object):
     RESIZE_SCALE_LIMIT = 1.5
     RESIZE_EFFECT = 0.05
     HEAL_DELAY = 5
-    DOUBLEJUMP_EFFECT_TRAIL = 0.05
+    DOUBLEJUMP_EFFECT_TRAIL = 0.08
 
     def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, can_shoot=False, can_resize=False, width=SIZE, height=SIZE, attack_damage=ATTACK_DAMAGE, sprite=None, proj_sprite=None, name=None):
         super().__init__(level, controller, x, y, width, height, name=name)
@@ -181,11 +181,12 @@ class Actor(Object):
 
     def jump(self) -> None:
         if self.jump_count < self.max_jumps:
+            self.y_vel = -Actor.VELOCITY_JUMP
             if self.jump_count > 0:
                 self.cooldowns["doublejump_effect_trail"] = Actor.DOUBLEJUMP_EFFECT_TRAIL
-                if self.level.visual_effects_manager.images.get("JUMPCLOUD") is not None:
-                    self.active_visual_effects["doublejump_effect_trail"] = VisualEffect(self, self.level.visual_effects_manager.images["JUMPCLOUD"], direction="BOTTOM" + str(self.direction), alpha=64, scale=(self.rect.width // 2, self.rect.height // 2))
-            self.y_vel = -Actor.VELOCITY_JUMP
+                if self.level.visual_effects_manager.images.get("JUMPLINES") is not None:
+                    rotation = (self.x_vel / self.y_vel) * 30
+                    self.active_visual_effects["doublejump_effect_trail"] = VisualEffect(self, self.level.visual_effects_manager.images["JUMPLINES"], direction="BOTTOM" + str(self.direction), rotation=rotation, alpha=64, scale=(self.rect.width // 2, self.rect.height))
             self.jump_count += 1
             self.should_move_vert = True
             if self.is_wall_jumping:

@@ -11,12 +11,14 @@ class VisualEffectsManager:
 
 
 class VisualEffect:
-    def __init__(self, source, images, direction="", alpha=255, offset=(0, 0), scale=(1, 1), linked_to_source=False) -> None:
+    def __init__(self, source, images, direction="", rotation=0, alpha=255, offset=(0, 0), scale=(1, 1), linked_to_source=False) -> None:
         self.image = images["LEFT" if "LEFT" in direction else "RIGHT"]
         if scale != (1, 1):
             self.image = pygame.transform.smoothscale(self.image, scale)
         if alpha != 255:
             self.image.set_alpha(alpha)
+        if rotation != 0:
+            self.image = pygame.transform.rotate(self.image, rotation)
         self.rect = self.image.get_rect()
 
         self.is_linked_to_source = linked_to_source

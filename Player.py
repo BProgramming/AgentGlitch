@@ -95,7 +95,8 @@ class Player(Actor):
             self.cooldowns["blocking_effect"] = Player.BLOCK_EFFECT_TIME
             self.cooldowns["block"] = Player.BLOCK_COOLDOWN
             if self.level.visual_effects_manager.images.get("BLOCKSHIELD") is not None:
-                self.active_visual_effects["blocking_effect"] = VisualEffect(self, self.level.visual_effects_manager.images["BLOCKSHIELD"], alpha=64, scale=(self.rect.width * 1.1, self.rect.height * 1.1), linked_to_source=True)
+                scale = max(self.rect.width, self.rect.height)
+                self.active_visual_effects["blocking_effect"] = VisualEffect(self, self.level.visual_effects_manager.images["BLOCKSHIELD"], alpha=128, scale=(scale, scale), linked_to_source=True)
 
     def get_hit(self, obj) -> None:
         if isinstance(obj, NonPlayer) and self.cooldowns["blocking_effect"] > 0:
