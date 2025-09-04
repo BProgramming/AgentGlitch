@@ -11,7 +11,8 @@ class ParticleEffect:
         self.x_vel = x_vel
         self.y_vel = y_vel
 
-    def generate(self, width, height, amount, color, level_bounds) -> pygame.Surface:
+    @staticmethod
+    def generate(width, height, amount, color, level_bounds) -> pygame.Surface:
         points = []
         for i in range(amount):
             points.append((random.randint(0, level_bounds[1][0]), random.randint(0, level_bounds[1][1])))

@@ -7,6 +7,8 @@ from Projectile import Projectile
 from Block import Hazard, MovableBlock, MovingBlock
 from Objectives import Objective
 from Helpers import load_sprite_sheets, MovementDirection, set_sound_source
+from VisualEffects import VisualEffect
+
 
 class MovementState(Enum):
     IDLE = 0
@@ -48,9 +50,11 @@ class Actor(Object):
     RESIZE_DELAY = 0.5
     RESIZE_SCALE_LIMIT = 1.5
     HEAL_DELAY = 5
+    DOUBLEJUMP_EFFECT_TRAIL = 0.05
 
     def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, can_shoot=False, can_resize=False, width=SIZE, height=SIZE, attack_damage=ATTACK_DAMAGE, sprite=None, proj_sprite=None, name=None):
         super().__init__(level, controller, x, y, width, height, name=name)
+        self.cached_hp = self.hp
         self.is_hostile = False
         self.patrol_path = None
         self.x_vel = self.y_vel = 0.0
@@ -95,7 +99,7 @@ class Actor(Object):
         self.proj_sprite = load_sprite_sheets("Projectiles", ("Bullet" if proj_sprite is None else proj_sprite), sprite_master, grayscale=self.level.grayscale)[("Bullet" if proj_sprite is None else proj_sprite).upper()][0]
         self.active_projectiles = []
         self.cached_x, self.cached_y = x, y
-        self.cooldowns = {"get_hit": 0, "launch_projectile": 0, "resize": 0, "resize_delay": 0, "heal": 0, "attack": 0}
+        self.cooldowns = {"get_hit": 0.0, "launch_projectile": 0.0, "resize": 0.0, "resize_delay": 0.0, "heal": 0.0, "attack": 0.0, "doublejump_effect_trail": 0.0}
         self.cached_cooldowns = self.cooldowns.copy()
 
     def save(self) -> dict:
@@ -177,6 +181,10 @@ class Actor(Object):
 
     def jump(self, target=VELOCITY_JUMP) -> None:
         if self.jump_count < self.max_jumps:
+            if self.jump_count > 0:
+                self.cooldowns["doublejump_effect_trail"] = Actor.DOUBLEJUMP_EFFECT_TRAIL
+                if self.level.visual_effects_manager.images.get("JUMPCLOUD") is not None:
+                    self.active_visual_effects["doublejump_effect_trail"] = VisualEffect(self, self.level.visual_effects_manager.images["JUMPCLOUD"], direction="BOTTOM" + str(self.direction), alpha=64, scale=(self.rect.width // 2, self.rect.height // 2))
             self.y_vel = -target
             self.jump_count += 1
             self.should_move_vert = True
@@ -237,7 +245,7 @@ class Actor(Object):
                         overlap = self.mask.overlap_mask(obj.mask, (0, 0)).get_rect()
                     else:
                         overlap = self.rect.clip(obj.rect)
-                    if (isinstance(obj, Actor) and obj != self.level.get_player()):
+                    if isinstance(obj, Actor) and obj != self.level.get_player():
                         if obj.facing == (MovementDirection.RIGHT if self.rect.centerx - obj.rect.centerx >= 0 else MovementDirection.LEFT) and obj.is_attacking and self.cooldowns["get_hit"] <= 0:
                             self.get_hit(obj)
                     elif isinstance(obj, Hazard):

@@ -1,4 +1,3 @@
-import pygame
 from os.path import join
 from Block import Block, BreakableBlock, MovingBlock, MovableBlock, Hazard, MovingHazard, Door, FallingHazard
 from Boss import Boss

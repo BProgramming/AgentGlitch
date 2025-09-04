@@ -165,7 +165,7 @@ def main(win):
 
             fade_in(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller, win)
             if level.start_message is not None:
-                display_text(load_text_from_file(level.start_message), controller, type=True)
+                display_text(load_text_from_file(level.start_message), controller, should_type_text=True)
     
             dtime_offset = 0
             glitch_timer = 0
@@ -287,7 +287,7 @@ def main(win):
                 break
             elif next_level is not None:
                 if level.end_message is not None:
-                    display_text(load_text_from_file(level.end_message), controller, type=True)
+                    display_text(load_text_from_file(level.end_message), controller, should_type_text=True)
                 save_player_profile(controller, level)
                 fade_out(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller, win)
                 if level.end_cinematic is not None:

@@ -646,13 +646,13 @@ class Controller:
 
         return 1000
 
-    def handle_pause_unpause(self, input) -> int:
-        if input in self.keys_pause_unpause or (self.active_gamepad_layout is not None and self.button_pause_unpause is not None and input == self.button_pause_unpause):
+    def handle_pause_unpause(self, key) -> int:
+        if key in self.keys_pause_unpause or (self.active_gamepad_layout is not None and self.button_pause_unpause is not None and key == self.button_pause_unpause):
             return self.pause()
         else:
             return 0
 
-    def handle_anykey(self) -> bool:
+    def handle_any_key(self) -> bool:
         if any(pygame.key.get_pressed()):
             return True
         elif self.active_gamepad_layout is not None:
@@ -661,26 +661,26 @@ class Controller:
                     return True
         return False
 
-    def handle_single_input(self, input, win) -> int:
-        if input in self.keys_pause_unpause or (self.active_gamepad_layout is not None and self.button_pause_unpause is not None and input == self.button_pause_unpause):
+    def handle_single_input(self, key, win) -> int:
+        if key in self.keys_pause_unpause or (self.active_gamepad_layout is not None and self.button_pause_unpause is not None and key == self.button_pause_unpause):
             return self.pause()
-        elif input in self.keys_quicksave or (self.active_gamepad_layout is not None and self.button_quicksave is not None and input == self.button_quicksave):
+        elif key in self.keys_quicksave or (self.active_gamepad_layout is not None and self.button_quicksave is not None and key == self.button_quicksave):
             self.save(self.level, self.hud)
-        elif input in self.keys_cycle_layout:
+        elif key in self.keys_cycle_layout:
             return self.cycle_keyboard_layout(win)
-        elif input in self.keys_fullscreen_toggle:
+        elif key in self.keys_fullscreen_toggle:
             pygame.display.toggle_fullscreen()
-        elif input in self.keys_crouch_uncrouch or (self.active_gamepad_layout is not None and self.button_crouch_uncrouch is not None and input == self.button_crouch_uncrouch):
+        elif key in self.keys_crouch_uncrouch or (self.active_gamepad_layout is not None and self.button_crouch_uncrouch is not None and key == self.button_crouch_uncrouch):
             self.level.get_player().toggle_crouch()
-        elif input in self.keys_jump or (self.active_gamepad_layout is not None and self.button_jump is not None and input == self.button_jump):
+        elif key in self.keys_jump or (self.active_gamepad_layout is not None and self.button_jump is not None and key == self.button_jump):
             self.level.get_player().jump()
-        elif input in self.keys_teleport_dash or (self.active_gamepad_layout is not None and self.button_teleport_dash is not None and input == self.button_teleport_dash):
+        elif key in self.keys_teleport_dash or (self.active_gamepad_layout is not None and self.button_teleport_dash is not None and key == self.button_teleport_dash):
             self.level.get_player().teleport()
-        elif input in self.keys_bullet_time or (self.active_gamepad_layout is not None and self.button_bullet_time is not None and input == self.button_bullet_time):
+        elif key in self.keys_bullet_time or (self.active_gamepad_layout is not None and self.button_bullet_time is not None and key == self.button_bullet_time):
             self.level.get_player().bullet_time()
-        elif input in self.keys_grow or (self.active_gamepad_layout is not None and self.button_grow is not None and input == self.button_grow):
+        elif key in self.keys_grow or (self.active_gamepad_layout is not None and self.button_grow is not None and key == self.button_grow):
             self.level.get_player().grow()
-        elif input in self.keys_shrink or (self.active_gamepad_layout is not None and self.button_shrink is not None and input == self.button_shrink):
+        elif key in self.keys_shrink or (self.active_gamepad_layout is not None and self.button_shrink is not None and key == self.button_shrink):
             self.level.get_player().shrink()
         return 0
 

@@ -208,6 +208,7 @@ class Menu:
 
         win.blit(screen, ((win.get_width() - screen.get_width()) // 2, (win.get_height() - screen.get_height()) // 2))
         pygame.display.update()
+        return None
 
 
 class Selector(Menu):
@@ -366,3 +367,4 @@ class Selector(Menu):
 
         win.blit(screen, ((win.get_width() - screen.get_width()) // 2, (win.get_height() - screen.get_height()) // 2))
         pygame.display.update()
+        return None

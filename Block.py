@@ -28,7 +28,7 @@ class Block(Object):
                 set_sound_source(self.rect, self.level.get_player().rect, self.controller.master_volume["non-player"], active_audio_channel)
 
     @staticmethod
-    def load_image(path, width, height, image_master, coord_x, coord_y, grayscale=False) -> pygame.Surface:
+    def load_image(path, width, height, image_master, coord_x, coord_y, grayscale=False) -> pygame.Surface | None:
         if isfile(path):
             if image_master.get(path) is None:
                 image_master[path] = pygame.image.load(path).convert_alpha()
@@ -40,6 +40,7 @@ class Block(Object):
             return pygame.transform.scale2x(surface)
         else:
             handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
+            return None
 
 
 class BreakableBlock(Block):
@@ -306,6 +307,7 @@ class Hazard(Block):
 
     def __init__(self, level, controller, x, y, width, height, image_master, sprite_master, audios, difficulty, hit_sides="UDLR", sprite=None, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="Hazard"):
         super().__init__(level, controller, x, (y + width - height), width, height, image_master, audios, False, coord_x=coord_x, coord_y=coord_y, name=name)
+        self.difficulty = difficulty
         self.attack_damage = attack_damage * difficulty
         self.is_attacking = True
         self.hit_sides = hit_sides.upper()
@@ -416,7 +418,7 @@ class FallingHazard(Hazard):
         should_reset = should_reset and bool(self.cooldowns["reset_time"] <= 0)
 
         if should_reset:
-            should_fire = False
+            self.should_fire = False
             if self.fire_once:
                 self.hp = 0
                 return True

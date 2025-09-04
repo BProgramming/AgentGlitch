@@ -3,7 +3,7 @@ from os.path import join, isfile
 from Helpers import handle_exception, load_images
 
 
-class HUD():
+class HUD:
     def __init__(self, player, win, grayscale=False):
         self.player = player
         self.win = win

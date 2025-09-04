@@ -35,9 +35,16 @@ class Object(pygame.sprite.Sprite):
             elif self.cooldowns[key] < 0:
                 self.cooldowns[key] = 0
 
+    def __cleanup_vfx__(self):
+        for effect in list(self.active_visual_effects.keys()):
+            if self.cooldowns[effect] <= 0:
+                del self.active_visual_effects[effect]
+
     def loop(self, fps, dtime) -> None:
         if self.cooldowns is not None:
             self.update_cooldowns(dtime)
+        if self.active_visual_effects:
+            self.__cleanup_vfx__()
         if self.hp <= 0:
             self.level.queue_purge(self)
 

@@ -32,10 +32,12 @@ class CinematicsManager:
                 else:
                     handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
 
-    def __load_slide__(self, file) -> pygame.image:
+    @staticmethod
+    def __load_slide__(file) -> pygame.Surface:
         return pygame.image.load(file)
 
-    def __load_video__(self, file) -> cv2.VideoCapture:
+    @staticmethod
+    def __load_video__(file) -> cv2.VideoCapture:
         return cv2.VideoCapture(file)
 
     def clear_queue(self) -> None:

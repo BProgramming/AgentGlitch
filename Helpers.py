@@ -51,7 +51,7 @@ def validate_file_list(dir, lst, ext=None) -> list | None:
         return None
 
 
-def load_picker_sprites(dir) -> tuple:
+def load_picker_sprites(dir) -> tuple | None:
     images = []
     values = []
     path = join("Assets", dir)
@@ -72,9 +72,10 @@ def load_picker_sprites(dir) -> tuple:
         return images, values
     else:
         handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
+        return None
 
 
-def load_level_images(dir) -> tuple:
+def load_level_images(dir) -> tuple | None:
     images = []
     values = []
     path = join("Assets", dir)
@@ -92,6 +93,7 @@ def load_level_images(dir) -> tuple:
         return images, values
     else:
         handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
+        return None
 
 
 def make_image_from_text(width, height, header, body, border=5) -> pygame.Surface:
@@ -116,7 +118,7 @@ def make_image_from_text(width, height, header, body, border=5) -> pygame.Surfac
 
 
 
-def load_images(dir1, dir2) -> dict:
+def load_images(dir1, dir2) -> dict | None:
     path = join("Assets", dir1, dir2) if dir2 is not None else join("Assets", dir1)
     if isdir(path):
         images = [f for f in listdir(path) if isfile(join(path, f)) and f[-4:].lower()==".png"]
@@ -132,6 +134,7 @@ def load_images(dir1, dir2) -> dict:
         return all_images
     else:
         handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
+        return None
 
 
 def flip(sprites) -> list:
@@ -179,7 +182,7 @@ def load_sprite_sheets(dir1, dir2, sprite_master, direction=False, grayscale=Fal
     return sprite_master[dir2]
 
 
-def load_json_dict(dir, file) -> dict:
+def load_json_dict(dir, file) -> dict | None:
     path = join("Assets", dir, file)
     try:
         with open(path, "r") as file:
@@ -190,9 +193,10 @@ def load_json_dict(dir, file) -> dict:
             return {}
     except FileNotFoundError:
         handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
+        return None
 
 
-def load_levels(dir) -> dict:
+def load_levels(dir) -> dict | None:
     path = join("Assets", dir)
     if isdir(path):
         files = [f for f in listdir(path) if isfile(join(path, f))]
@@ -207,9 +211,10 @@ def load_levels(dir) -> dict:
         return levels
     else:
         handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
+        return None
 
 
-def __load_single_audio__(dir1, dir2) -> dict:
+def __load_single_audio__(dir1, dir2) -> dict | None:
     path = join("Assets", "SoundEffects", dir1, dir2)
     if isdir(path):
         sounds = {}
@@ -220,9 +225,10 @@ def __load_single_audio__(dir1, dir2) -> dict:
         return sounds
     else:
         handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
+        return None
 
 
-def load_audios(dir, dir2=None) -> dict:
+def load_audios(dir, dir2=None) -> dict | None:
     if dir2 is None:
         path = join("Assets", "SoundEffects", dir)
     else:
@@ -243,6 +249,7 @@ def load_audios(dir, dir2=None) -> dict:
         return sounds
     else:
         handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
+        return None
 
 
 def set_sound_source(source_rect, player_rect, sound_type, channel) -> None:
@@ -261,7 +268,7 @@ def set_sound_source(source_rect, player_rect, sound_type, channel) -> None:
     channel.set_volume(left_vol * sound_type, right_vol * sound_type)
 
 
-def load_text_from_file(file) -> list:
+def load_text_from_file(file) -> list | None:
     path = join("Assets", "Text", file)
     if isfile(path):
         text = []
@@ -271,9 +278,10 @@ def load_text_from_file(file) -> list:
         return text
     else:
         handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
+        return None
 
 
-def display_text(output: list | str, controller, type=False, min_pause_time=80, should_sleep=True, audio=None) -> None:
+def display_text(output: list | str, controller, should_type_text=False, min_pause_time=80, should_sleep=True, audio=None) -> None:
     if output is None or output == "":
         return
     else:
@@ -283,7 +291,7 @@ def display_text(output: list | str, controller, type=False, min_pause_time=80, 
         clear = pygame.display.get_surface().copy()
         for j in range(len(output)):
             line = output[j]
-            if type:
+            if should_type_text:
                 text = []
                 for i in range(len(line)):
                     text.append(line[i])
@@ -337,7 +345,7 @@ def display_text(output: list | str, controller, type=False, min_pause_time=80, 
                             controller.save_profile(controller)
                             pygame.quit()
                             sys.exit()
-                    if type and controller.handle_anykey():
+                    if should_type_text and controller.handle_any_key():
                         break
                     if controller.goto_load or controller.goto_main:
                         return
@@ -373,9 +381,9 @@ def load_path(path_in, i, j, block_size) -> list:
     return path
 
 
-def set_property(triggering_entity, input) -> None:
-    if input is not None:
-        target, property, value = input["target"], input["property"], input["value"]
+def set_property(triggering_entity, prop_to_set) -> None:
+    if prop_to_set is not None:
+        target, property, value = prop_to_set["target"], prop_to_set["property"], prop_to_set["value"]
         if len(target) == len(property) == len(value):
             for i in range(len(target)):
                 if isinstance(value[i], str):

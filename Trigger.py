@@ -144,9 +144,9 @@ class Trigger(Object):
 
         if self.type == TriggerType.TEXT:
             if type(self.value) == dict and self.value.get("text") is not None and self.value.get("audio") is not None:
-                display_text(self.value["text"], self.controller, audio=self.value["audio"], type=True)
+                display_text(self.value["text"], self.controller, audio=self.value["audio"], should_type_text=True)
             else:
-                display_text(self.value, self.controller, type=True)
+                display_text(self.value, self.controller, should_type_text=True)
         elif self.type == TriggerType.SOUND:
             if self.value is not None:
                 pygame.mixer.find_channel(force=True).play(self.value)

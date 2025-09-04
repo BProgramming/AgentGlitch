@@ -30,7 +30,7 @@ class Player(Actor):
         if self.level.grayscale:
             self.toggle_retro()
             self.update_sprite(1)
-        self.cooldowns.update({"teleport": 0, "teleport_delay": 0, "teleport_effect_trail": 0, "block": 0, "block_attempt": 0, "bullet_time": 0, "bullet_time_active": 0})
+        self.cooldowns.update({"teleport": 0.0, "teleport_delay": 0.0, "teleport_effect_trail": 0.0, "block": 0.0, "block_attempt": 0.0, "bullet_time": 0.0, "bullet_time_active": 0.0})
         self.cached_cooldowns = self.cooldowns.copy()
         self.can_open_doors = True
         self.can_move_blocks = True
@@ -202,8 +202,6 @@ class Player(Actor):
         else:
             if self.is_slow_time and self.cooldowns["bullet_time_active"] <= 0:
                 self.is_slow_time = False
-            if self.active_visual_effects.get("teleport_effect_trail") is not None and self.cooldowns["teleport_effect_trail"] <= 0:
-                del self.active_visual_effects["teleport_effect_trail"]
             super().loop(fps, dtime, target=target, drag=drag, grav=grav)
 
         return self.get_triggers()

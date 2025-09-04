@@ -12,7 +12,7 @@ class VisualEffectsManager:
 
 class VisualEffect:
     def __init__(self, source, images, direction="", alpha=255, offset=(0, 0), scale=(1, 1)) -> None:
-        self.image = images[direction]
+        self.image = images["LEFT" if "LEFT" in direction else "RIGHT"]
         if scale != (1, 1):
             self.image = pygame.transform.smoothscale(self.image, scale)
         if alpha != 255:
