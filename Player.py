@@ -13,13 +13,12 @@ class Player(Actor):
     ATTACK_PUSHBACK = 0.2
     VELOCITY_TARGET = 0.5
     VELOCITY_DRAG = 0.9
-    GRAVITY = 0.02
     MULTIPLIER_TELEPORT = 384
     TELEPORT_COOLDOWN = 3
     TELEPORT_DELAY = 0.4
     TELEPORT_EFFECT_TRAIL = 0.05
     BLOCK_COOLDOWN = 3
-    BLOCK_TIME_ACTIVE = 2
+    BLOCK_EFFECT_TIME = 2
     BULLET_TIME_COOLDOWN = 3
     BULLET_TIME_ACTIVE = 2
 
@@ -30,8 +29,10 @@ class Player(Actor):
         if self.level.grayscale:
             self.toggle_retro()
             self.update_sprite(1)
-        self.cooldowns.update({"teleport": 0.0, "teleport_delay": 0.0, "teleport_effect_trail": 0.0, "block": 0.0, "block_attempt": 0.0, "bullet_time": 0.0, "bullet_time_active": 0.0})
+        self.cooldowns.update({"teleport": 0.0, "teleport_delay": 0.0, "teleport_effect_trail": 0.0, "block": 0.0, "block_attempt": 0.0, "blocking_effect": 0.0, "bullet_time": 0.0, "bullet_time_active": 0.0})
         self.cached_cooldowns = self.cooldowns.copy()
+        self.target_vel = Player.VELOCITY_TARGET
+        self.drag_vel = Player.VELOCITY_DRAG
         self.can_open_doors = True
         self.can_move_blocks = True
         self.can_block = True
@@ -89,22 +90,16 @@ class Player(Actor):
     def stop(self) -> None:
         self.should_move_horiz = False
 
-    def block(self, block_time=BLOCK_TIME_ACTIVE, block_cd=BLOCK_COOLDOWN) -> None:
-        if self.can_block:
-            if self.cooldowns["block"] > 0:
-                pass
-            elif not self.is_blocking:
-                self.is_blocking = True
-                self.cooldowns["block_attempt"] = block_time
-                self.cooldowns["block"] = block_cd
-            elif self.cooldowns["block_attempt"] <= 0:
-                self.is_blocking = False
-                self.cooldowns["block"] = block_cd
+    def block(self) -> None:
+        if self.can_block and self.cooldowns["block"] <= 0 and self.cooldowns["blocking_effect"] <= 0:
+            self.cooldowns["blocking_effect"] = Player.BLOCK_EFFECT_TIME
+            self.cooldowns["block"] = Player.BLOCK_COOLDOWN
+            if self.level.visual_effects_manager.images.get("BLOCKSHIELD") is not None:
+                self.active_visual_effects["blocking_effect"] = VisualEffect(self, self.level.visual_effects_manager.images["BLOCKSHIELD"], alpha=64, scale=(self.rect.width * 1.1, self.rect.height * 1.1), linked_to_source=True)
 
-    def get_hit(self, obj, block_cd=BLOCK_COOLDOWN, _=None) -> None:
-        if isinstance(obj, NonPlayer) and self.cooldowns["block"] <= 0 and self.is_blocking:
-            self.cooldowns["block"] = block_cd
-            self.is_blocking = False
+    def get_hit(self, obj) -> None:
+        if isinstance(obj, NonPlayer) and self.cooldowns["blocking_effect"] > 0:
+            self.cooldowns["blocking_effect"] = 0
         else:
             self.been_hit_this_level = True
             super().get_hit(obj)
@@ -132,9 +127,9 @@ class Player(Actor):
         self.deaths_this_level += 1
         return (time.perf_counter_ns() - start) // 1000000
 
-    def teleport(self, vel=(VELOCITY_TARGET * MULTIPLIER_TELEPORT), delay=TELEPORT_DELAY, cd=TELEPORT_COOLDOWN) -> None:
+    def teleport(self) -> None:
         if self.can_teleport and self.cooldowns["teleport"] <= 0:
-            for i in range(int(vel) + 1, 0, -1):
+            for i in range(int(Player.VELOCITY_TARGET * Player.MULTIPLIER_TELEPORT) + 1, 0, -1):
                 cast = Object(self.level, self.controller, self.rect.x + (self.direction * i), self.rect.y, self.rect.width, self.rect.height - 1)
                 collision = False
                 for obj in self.level.get_objects_in_range((cast.rect.x, cast.rect.y)):
@@ -143,33 +138,33 @@ class Player(Actor):
                         break
                 if not collision:
                     self.teleport_distance = self.direction * i
-                    self.cooldowns["teleport_delay"] = delay
-                    self.cooldowns["teleport"] = cd
+                    self.cooldowns["teleport_delay"] = Player.TELEPORT_DELAY
+                    self.cooldowns["teleport"] = Player.TELEPORT_DELAY
                     return
 
-    def attack(self, push=ATTACK_PUSHBACK) -> None:
+    def attack(self) -> None:
         if self.state in [MovementState.IDLE, MovementState.CROUCH, MovementState.RUN, MovementState.FALL, MovementState.JUMP, MovementState.DOUBLE_JUMP, MovementState.IDLE_ATTACK, MovementState.CROUCH_ATTACK, MovementState.RUN_ATTACK, MovementState.FALL_ATTACK, MovementState.JUMP_ATTACK, MovementState.DOUBLE_JUMP_ATTACK]:
             self.is_attacking = True
             for obj in self.level.get_objects_in_range((self.rect.x, self.rect.y)):
                 if isinstance(obj, NonPlayer) and obj.is_hostile and pygame.sprite.collide_rect(self, obj) and self.facing == (MovementDirection.RIGHT if obj.rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT):
                     obj.get_hit(self)
                     if obj.patrol_path is not None:
-                        obj.push_x -= self.direction * int(push)
+                        obj.push_x -= self.direction * int(Player.ATTACK_PUSHBACK)
                     self.play_attack_audio("ATTACK_MELEE")
                 elif isinstance(obj, BreakableBlock) and pygame.sprite.collide_rect(self, obj):
                     obj.get_hit(self)
                     self.play_attack_audio("ATTACK_MELEE")
 
-    def bullet_time(self, active_time=BULLET_TIME_ACTIVE, cd=BULLET_TIME_COOLDOWN) -> None:
+    def bullet_time(self) -> None:
         if self.can_bullet_time:
             if self.is_slow_time:
                 self.is_slow_time = False
                 self.cooldowns["bullet_time_active"] = 0
-                self.cooldowns["bullet_time"] = min(cd, self.cooldowns["bullet_time"])
+                self.cooldowns["bullet_time"] = min(Player.BULLET_TIME_COOLDOWN, self.cooldowns["bullet_time"])
             elif self.cooldowns["bullet_time"] <= 0:
                 self.is_slow_time = True
-                self.cooldowns["bullet_time_active"] = active_time
-                self.cooldowns["bullet_time"] = cd + active_time
+                self.cooldowns["bullet_time_active"] = Player.BULLET_TIME_ACTIVE
+                self.cooldowns["bullet_time"] = Player.BULLET_TIME_COOLDOWN
                 if self.audios.get("BULLET_TIME") is not None:
                     active_audio_channel = pygame.mixer.find_channel()
                     if active_audio_channel is not None:
@@ -188,7 +183,7 @@ class Player(Actor):
                     self.level.queue_purge(trigger)
         return [fired_triggers, next_level]
 
-    def loop(self, fps, dtime, target=VELOCITY_TARGET, drag=VELOCITY_DRAG, grav=GRAVITY) -> list:
+    def loop(self, fps, dtime) -> list:
         if self.teleport_distance != 0:
             self.animation_count += dtime
             if self.cooldowns["teleport_delay"] <= 0:
@@ -202,6 +197,6 @@ class Player(Actor):
         else:
             if self.is_slow_time and self.cooldowns["bullet_time_active"] <= 0:
                 self.is_slow_time = False
-            super().loop(fps, dtime, target=target, drag=drag, grav=grav)
+            super().loop(fps, dtime)
 
         return self.get_triggers()

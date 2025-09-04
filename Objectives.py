@@ -38,7 +38,7 @@ class Objective(Object):
     def collide(self, obj) -> bool:
         return False
 
-    def get_hit(self, obj, cd=0) -> None:
+    def get_hit(self, obj) -> None:
         self.hp = 0
         self.play_sound(self.sound)
         self.__collect__()
@@ -67,8 +67,8 @@ class Objective(Object):
                 active_audio_channel.play(self.audios[name.upper()][random.randrange(len(self.audios[name.upper()]))])
                 set_sound_source(self.rect, self.level.get_player().rect, self.controller.master_volume["non-player"], active_audio_channel)
 
-    def update_sprite(self, fps, delay=ANIMATION_DELAY) -> int:
-        active_index = math.floor((self.animation_count // (1000 // (fps * delay))) % len(self.sprites))
+    def update_sprite(self, fps) -> int:
+        active_index = math.floor((self.animation_count // (1000 // (fps * Objective.ANIMATION_DELAY))) % len(self.sprites))
         if active_index >= len(self.sprites):
             active_index = 0
             self.animation_count = 0

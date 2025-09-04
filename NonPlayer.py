@@ -14,6 +14,7 @@ class NonPlayer(Actor):
 
     def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, path=None, kill_at_end=False, is_hostile=True, collision_message=None, hp=100, can_shoot=False, spot_range=PLAYER_SPOT_RANGE, sprite=None, proj_sprite=None, name="Enemy"):
         super().__init__(level, controller, x, y, sprite_master, audios, difficulty, block_size, can_shoot=can_shoot, sprite=sprite, proj_sprite=proj_sprite, name=name)
+        self.target_vel = NonPlayer.VELOCITY_TARGET
         self.is_hostile = is_hostile
         if collision_message is not None:
             if type(collision_message) == dict and collision_message.get("text") is not None and collision_message.get("audio") is not None:
@@ -91,7 +92,7 @@ class NonPlayer(Actor):
         self.queued_message = None
         return (time.perf_counter_ns() - start) // 1000000
 
-    def patrol(self, dtime, vel=VELOCITY_TARGET) -> None:
+    def patrol(self, dtime) -> None:
         self.should_move_horiz = False
         if self.cooldowns["get_hit"] <= 0 and self.state != MovementState.WIND_UP and self.state != MovementState.WIND_DOWN:
             if self.patrol_path is None:
@@ -111,7 +112,7 @@ class NonPlayer(Actor):
                             if abs(self.rect.x - self.level.get_player().rect.x) > 5:
                                 self.direction = (MovementDirection.RIGHT if self.rect.centerx - self.level.get_player().rect.centerx >= 0 else MovementDirection.LEFT)
                                 self.facing = self.direction.swap()
-                                self.x_vel = float(self.direction) * vel
+                                self.x_vel = float(self.direction) * self.target_vel
                                 self.should_move_horiz = self.__find_floor__(self.x_vel * dtime)
                             if not self.is_animated_attack:
                                 self.is_attacking = False
@@ -127,14 +128,14 @@ class NonPlayer(Actor):
                                     self.play_attack_audio("ATTACK_MELEE")
                             else:
                                 self.direction = self.facing = (MovementDirection.RIGHT if self.level.get_player().rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT)
-                                self.x_vel = float(self.direction) * min(vel, dist / dtime)
+                                self.x_vel = float(self.direction) * min(self.target_vel, dist / dtime)
                                 self.should_move_horiz = self.__find_floor__(self.x_vel * dtime)
                         else:
                             if dist < self.rect.width:
                                 self.direction = self.facing = (MovementDirection.RIGHT if self.level.get_player().rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT)
                             if not self.is_animated_attack:
                                 self.is_attacking = False
-                            self.x_vel = float(self.direction) * min(vel, dist / dtime)
+                            self.x_vel = float(self.direction) * min(self.target_vel, dist / dtime)
                             self.should_move_horiz = self.__find_floor__(self.x_vel * dtime)
                 else:
                     if self.is_attacking and not self.is_animated_attack:
@@ -142,7 +143,7 @@ class NonPlayer(Actor):
                     target_x = self.patrol_path[self.patrol_path_index][0] - self.rect.x
                     if abs(target_x) > 5:
                         self.direction = self.facing = (MovementDirection.RIGHT if target_x >= 0 else MovementDirection.LEFT)
-                        self.x_vel = float(self.direction) * min(vel, abs(target_x) / dtime)
+                        self.x_vel = float(self.direction) * min(self.target_vel, abs(target_x) / dtime)
                         self.should_move_horiz = self.__find_floor__(self.x_vel * dtime)
 
                     target_y = self.patrol_path[self.patrol_path_index][1] - self.rect.y
@@ -156,14 +157,14 @@ class NonPlayer(Actor):
     def __adj_spot_range__(self) -> float:
         return self.spot_range * self.level.get_player().size / (1.5 if self.level.get_player().is_crouching else 1)
 
-    def __spot_player__(self, spot_cd=PLAYER_SPOT_COOLDOWN) -> bool:
+    def __spot_player__(self) -> bool:
         dist = math.dist(self.level.get_player().rect.center, self.rect.center)
         if dist <= self.__adj_spot_range__() and(self.facing == (MovementDirection.RIGHT if self.level.get_player().rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT) or self.cooldowns["get_hit"] > 0):
             for i in range(round(dist)):
                 for obj in self.level.get_objects_in_range((self.rect.centerx + (self.facing * ((self.rect.width // 2) + i)), self.rect.y), blocks_only=True):
                     if obj.rect.collidepoint(self.rect.centerx + (self.facing * ((self.rect.width // 2) + i)), self.rect.y):
                         return False
-            self.cooldowns["spot_player"] = spot_cd
+            self.cooldowns["spot_player"] = NonPlayer.PLAYER_SPOT_COOLDOWN
             if self.state in [MovementState.IDLE, MovementState.CROUCH, MovementState.RUN, MovementState.IDLE_ATTACK, MovementState.CROUCH_ATTACK, MovementState.RUN_ATTACK] and self.can_shoot and dist > self.spot_range // 3:
                 self.shoot_at_target(self.level.get_player().rect.center)
             return True

@@ -41,7 +41,6 @@ class Actor(Object):
     VELOCITY_TARGET = 0.4
     VELOCITY_JUMP = 10
     ANIMATION_DELAY = 0.3
-    GRAVITY = 0.02
     GET_HIT_COOLDOWN = 1
     MAX_SHOOT_DISTANCE = 500
     ATTACK_DAMAGE = 10
@@ -49,6 +48,7 @@ class Actor(Object):
     RESIZE_COOLDOWN = 3
     RESIZE_DELAY = 0.5
     RESIZE_SCALE_LIMIT = 1.5
+    RESIZE_EFFECT = 0.05
     HEAL_DELAY = 5
     DOUBLEJUMP_EFFECT_TRAIL = 0.05
 
@@ -58,6 +58,8 @@ class Actor(Object):
         self.is_hostile = False
         self.patrol_path = None
         self.x_vel = self.y_vel = 0.0
+        self.target_vel = Actor.VELOCITY_TARGET
+        self.drag_vel = 0.0
         self.push_x = self.push_y = 0.0
         self.should_move_horiz = False
         self.should_move_vert = True
@@ -99,14 +101,14 @@ class Actor(Object):
         self.proj_sprite = load_sprite_sheets("Projectiles", ("Bullet" if proj_sprite is None else proj_sprite), sprite_master, grayscale=self.level.grayscale)[("Bullet" if proj_sprite is None else proj_sprite).upper()][0]
         self.active_projectiles = []
         self.cached_x, self.cached_y = x, y
-        self.cooldowns = {"get_hit": 0.0, "launch_projectile": 0.0, "resize": 0.0, "resize_delay": 0.0, "heal": 0.0, "attack": 0.0, "doublejump_effect_trail": 0.0}
+        self.cooldowns = {"get_hit": 0.0, "launch_projectile": 0.0, "resize": 0.0, "resize_delay": 0.0, "resize_effect": 0.0, "heal": 0.0, "attack": 0.0, "doublejump_effect_trail": 0.0}
         self.cached_cooldowns = self.cooldowns.copy()
 
     def save(self) -> dict:
         projectiles = []
         for proj in self.active_projectiles:
             projectiles.append(proj.save())
-        return {self.name: {"hp": self.hp, "cached x y": (self.cached_x, self.cached_y), "cooldowns": self.cached_cooldowns, "size": self.size, "can_wall_jump": self.can_wall_jump, "can_shoot": self.can_shoot, "can_resize": self.can_resize, "max_jumps": self.max_jumps, "projectiles": projectiles}}
+        return {self.name: {"hp": self.hp, "cached x y": (self.cached_x, self.cached_y), "cooldowns": self.cached_cooldowns, "size": self.size, "size_target": self.size, "can_wall_jump": self.can_wall_jump, "can_shoot": self.can_shoot, "can_resize": self.can_resize, "max_jumps": self.max_jumps, "projectiles": projectiles}}
 
     def load(self, obj) -> None:
         self.rect.x, self.rect.y = self.cached_x, self.cached_y = obj["cached x y"]
@@ -114,6 +116,7 @@ class Actor(Object):
         self.load_attribute(obj, "hp")
         self.cached_hp = self.hp
         self.load_attribute(obj, "size")
+        self.load_attribute(obj, "size_target")
         self.load_attribute(obj, "can_wall_jump")
         self.load_attribute(obj, "can_shoot")
         self.load_attribute(obj, "can_resize")
@@ -133,23 +136,20 @@ class Actor(Object):
             proj.set_difficulty(scale)
             proj.attack_damage = self.attack_damage
 
-    def grow(self, resize_cd=RESIZE_COOLDOWN, delay_cd=RESIZE_DELAY, max_scale=RESIZE_SCALE_LIMIT) -> None:
-        if self.can_resize and self.cooldowns["resize"] <= 0:
-            target = min(self.size_target * max_scale, max_scale)
-            if self.size_target != target:
-                self.size_target = target
-                self.cooldowns["resize"] = resize_cd
-                self.cooldowns["resize_delay"] = delay_cd
-                self.attack_damage *= target
+    def resize(self, target) -> None:
+        if self.size_target != target:
+            self.size_target = target
+            self.attack_damage *= target
+            self.cooldowns["resize"] = Actor.RESIZE_DELAY
+            self.cooldowns["resize_delay"] = Actor.RESIZE_DELAY
 
-    def shrink(self, resize_cd=RESIZE_COOLDOWN, delay_cd=RESIZE_DELAY, max_scale=RESIZE_SCALE_LIMIT) -> None:
+    def grow(self) -> None:
         if self.can_resize and self.cooldowns["resize"] <= 0:
-            target = max(self.size_target / max_scale, 1 / max_scale)
-            if self.size_target != target:
-                self.size_target = target
-                self.cooldowns["resize"] = resize_cd
-                self.cooldowns["resize_delay"] = delay_cd
-                self.attack_damage *= target
+            self.resize(min(self.size_target * Actor.RESIZE_SCALE_LIMIT, Actor.RESIZE_SCALE_LIMIT))
+
+    def shrink(self) -> None:
+        if self.can_resize and self.cooldowns["resize"] <= 0:
+            self.resize(max(self.size_target / Actor.RESIZE_SCALE_LIMIT, 1 / Actor.RESIZE_SCALE_LIMIT))
 
     def move(self, dx, dy) -> None:
         if dx != 0:
@@ -179,13 +179,13 @@ class Actor(Object):
     def revert(self) -> int:
         return 0
 
-    def jump(self, target=VELOCITY_JUMP) -> None:
+    def jump(self) -> None:
         if self.jump_count < self.max_jumps:
             if self.jump_count > 0:
                 self.cooldowns["doublejump_effect_trail"] = Actor.DOUBLEJUMP_EFFECT_TRAIL
                 if self.level.visual_effects_manager.images.get("JUMPCLOUD") is not None:
                     self.active_visual_effects["doublejump_effect_trail"] = VisualEffect(self, self.level.visual_effects_manager.images["JUMPCLOUD"], direction="BOTTOM" + str(self.direction), alpha=64, scale=(self.rect.width // 2, self.rect.height // 2))
-            self.y_vel = -target
+            self.y_vel = -Actor.VELOCITY_JUMP
             self.jump_count += 1
             self.should_move_vert = True
             if self.is_wall_jumping:
@@ -216,17 +216,17 @@ class Actor(Object):
                 else:
                     set_sound_source(self.rect, self.level.get_player().rect, self.controller.master_volume["non-player"], active_audio_channel)
 
-    def shoot_at_target(self, target, max_dist=MAX_SHOOT_DISTANCE, proj_cd=LAUNCH_PROJECTILE_COOLDOWN) -> None:
+    def shoot_at_target(self, target) -> None:
         if self.cooldowns["launch_projectile"] <= 0:
             self.is_attacking = True
-            proj = Projectile(self.level, self.controller, self.rect.centerx, self.rect.centery, (target[0], self.rect.centery), max_dist, self.attack_damage, self.difficulty, sprite=self.proj_sprite, name=(self.name + "'s projectile #" + str(len(self.active_projectiles) + 1)))
+            proj = Projectile(self.level, self.controller, self.rect.centerx, self.rect.centery, (target[0], self.rect.centery), Actor.MAX_SHOOT_DISTANCE, self.attack_damage, self.difficulty, sprite=self.proj_sprite, name=(self.name + "'s projectile #" + str(len(self.active_projectiles) + 1)))
             self.active_projectiles.append(proj)
-            self.cooldowns["launch_projectile"] = proj_cd
+            self.cooldowns["launch_projectile"] = Actor.LAUNCH_PROJECTILE_COOLDOWN
             self.play_attack_audio("ATTACK_RANGE")
 
-    def get_hit(self, obj, hit_cd=GET_HIT_COOLDOWN, heal_delay=HEAL_DELAY) -> None:
-        self.cooldowns["get_hit"] = hit_cd
-        self.cooldowns["heal"] = heal_delay * self.difficulty
+    def get_hit(self, obj) -> None:
+        self.cooldowns["get_hit"] = Actor.GET_HIT_COOLDOWN
+        self.cooldowns["heal"] = Actor.HEAL_DELAY * self.difficulty
         self.hp -= obj.attack_damage
 
     def get_collisions(self) -> bool:
@@ -400,9 +400,9 @@ class Actor(Object):
                 self.state = old
         self.state_changed = bool(old != self.state)
 
-    def update_sprite(self, fps, delay=ANIMATION_DELAY) -> int:
+    def update_sprite(self, fps) -> int:
         active_sprites = self.sprites[str(self.state) + "_" + str(self.facing)]
-        active_index = math.floor((self.animation_count // (1000 // (fps * delay))) % len(active_sprites))
+        active_index = math.floor((self.animation_count // (1000 // (fps * Actor.ANIMATION_DELAY))) % len(active_sprites))
         if active_index == len(active_sprites) - 1:
             self.is_final_anim_frame = True
         else:
@@ -426,7 +426,7 @@ class Actor(Object):
         self.rect = self.sprite.get_rect(topleft=(self.rect.x, self.rect.y))
         self.mask = pygame.mask.from_surface(self.sprite)
 
-    def loop(self, fps, dtime, target=VELOCITY_TARGET, drag=0, grav=GRAVITY) -> bool:
+    def loop(self, fps, dtime) -> bool:
         self.animation_count += dtime
 
         if self.hp <= 0:
@@ -458,16 +458,19 @@ class Actor(Object):
                     else:
                         self.rect.y -= self.rect.height // 2
                     self.size = self.size_target
+                    self.cooldowns["resize_effect"] = Actor.RESIZE_EFFECT
+                    if self.level.visual_effects_manager.images.get("RESIZEBURST") is not None:
+                        self.active_visual_effects["resize_effect"] = VisualEffect(self, self.level.visual_effects_manager.images["RESIZEBURST"], direction="", alpha=128, scale=(self.rect.width * self.size * 1.25, self.rect.height * self.size * 1.25), linked_to_source=True)
 
                 if self.should_move_horiz:
-                    scaled_target = dtime * target
+                    scaled_target = dtime * self.target_vel
                     if abs(self.x_vel) < scaled_target:
-                        self.x_vel = self.direction * min(scaled_target, (abs(self.x_vel) * drag) + (scaled_target * float(1 - drag)))
+                        self.x_vel = self.direction * min(scaled_target, (abs(self.x_vel) * self.drag_vel) + (scaled_target * float(1 - self.drag_vel)))
                 else:
                     self.x_vel = 0.0
 
                 if self.should_move_vert:
-                    self.y_vel += dtime * grav * self.size / (1 + (3 if self.is_wall_jumping and self.y_vel > 0 else 0))
+                    self.y_vel += dtime * Actor.GRAVITY * self.size / (1 + (3 if self.is_wall_jumping and self.y_vel > 0 else 0))
 
                 if (self.x_vel + self.push_x != 0 or self.y_vel + self.push_y != 0) and self.hp > 0:
                     if self.level.get_player().is_slow_time and self != self.level.get_player():
@@ -497,19 +500,12 @@ class Actor(Object):
         if len(self.active_projectiles) > 0:
             for proj in self.active_projectiles:
                 proj.output(win, offset_x, offset_y, master_volume, fps)
-        if self == self.level.get_player() or -self.rect.width < adj_x_image <= window_width and -self.rect.height < adj_y_image <= window_height:
+        if self == self.level.get_player() or (-self.rect.width < adj_x_image <= window_width and -self.rect.height < adj_y_image <= window_height):
             for effect in self.active_visual_effects.keys():
                 self.active_visual_effects[effect].output(win, offset_x, offset_y, master_volume, fps)
             self.update_sprite(fps)
             self.__update_geo__()
             win.blit(self.sprite, (adj_x_image, adj_y_image))
-            if self.cooldowns.get("block_attempt") is not None and self.cooldowns["block_attempt"] > 0:
-                radius = math.dist((self.rect.x, self.rect.y), (self.rect.centerx, self.rect.centery))
-                surf = pygame.Surface((2 * radius, 2 * radius))
-                surf.set_colorkey((0, 0, 0))
-                surf.set_alpha(128)
-                pygame.draw.circle(surf, (65, 235, 245, 50), (radius, radius), radius)
-                win.blit(surf, (adj_x_image - (radius - (self.rect.width // 2)), adj_y_image - (radius - (self.rect.height // 2))))
 
         if self.active_audio is not None:
             if self.active_audio_channel is None:

@@ -11,14 +11,19 @@ class VisualEffectsManager:
 
 
 class VisualEffect:
-    def __init__(self, source, images, direction="", alpha=255, offset=(0, 0), scale=(1, 1)) -> None:
+    def __init__(self, source, images, direction="", alpha=255, offset=(0, 0), scale=(1, 1), linked_to_source=False) -> None:
         self.image = images["LEFT" if "LEFT" in direction else "RIGHT"]
         if scale != (1, 1):
             self.image = pygame.transform.smoothscale(self.image, scale)
         if alpha != 255:
             self.image.set_alpha(alpha)
-
         self.rect = self.image.get_rect()
+
+        self.is_linked_to_source = linked_to_source
+        self.source = (source if linked_to_source else None)
+        self.offset = (offset if linked_to_source else None)
+        self.direction = (direction if linked_to_source else None)
+
         if "LEFT" in direction:
             self.rect.left = source.rect.left + offset[0]
         elif "RIGHT" in direction:
@@ -33,6 +38,20 @@ class VisualEffect:
             self.rect.centery = source.rect.centery
 
     def output(self, win, offset_x, offset_y, master_volume, fps) -> None:
+        if self.is_linked_to_source:
+            if "LEFT" in self.direction:
+                self.rect.left = self.source.rect.left + self.offset[0]
+            elif "RIGHT" in self.direction:
+                self.rect.right = self.source.rect.right - self.offset[0]
+            else:
+                self.rect.centerx = self.source.rect.centerx
+            if "BOTTOM" in self.direction:
+                self.rect.bottom = self.source.rect.bottom - self.offset[1]
+            elif "TOP" in self.direction:
+                self.rect.top = self.source.rect.top + self.offset[1]
+            else:
+                self.rect.centery = self.source.rect.centery
+
         adj_x = self.rect.x - offset_x
         adj_y = self.rect.y - offset_y
         win.blit(self.image, (adj_x, adj_y))

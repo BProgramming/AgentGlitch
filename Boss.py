@@ -14,6 +14,7 @@ class Boss(NonPlayer):
 
     def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, music=None, death_triggers=None, path=None, hp=100, can_shoot=False, spot_range=PLAYER_SPOT_RANGE, sprite=None, proj_sprite=None, name="Boss"):
         super().__init__(level, controller, x, y, sprite_master, audios, difficulty, block_size, path=path, hp=hp, can_shoot=can_shoot, spot_range=spot_range, sprite=sprite, proj_sprite=proj_sprite, name=name)
+        self.target_vel = Boss.VELOCITY_TARGET
         self.music = (None if music is None else validate_file_list("Music", list(music.split(' ')), "mp3"))
         self.music_is_playing = False
         self.is_animated_attack = True
@@ -58,7 +59,7 @@ class Boss(NonPlayer):
         await self.__queue_music__()
         pygame.event.Event(pygame.USEREVENT)
 
-    def update_sprite(self, fps, delay=0) -> int:
+    def update_sprite(self, fps) -> int:
         active_index = super().update_sprite(fps)
         if self.audios is not None and (self.state in [MovementState.WIND_UP, MovementState.ATTACK_ANIM, MovementState.WIND_DOWN]) and self.audio_trigger_frames.get(str(self.state)) is not None:
             audio_folder = self.name.upper().split(" ",1)[0] + "_" + str(self.state)
@@ -70,6 +71,6 @@ class Boss(NonPlayer):
 
         return active_index
 
-    def loop(self, fps, dtime, target=VELOCITY_TARGET, drag=0, grav=0) -> bool:
+    def loop(self, fps, dtime) -> bool:
         asyncio.run(self.__toggle_music__())
-        return super().loop(fps, dtime, target=target)
+        return super().loop(fps, dtime)

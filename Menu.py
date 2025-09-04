@@ -10,6 +10,8 @@ class ButtonType(Enum):
 
 
 class Menu:
+    JOYSTICK_TOLERANCE = 0.25
+
     def __init__(self, win, header, button_labels, music=None, should_glitch=True):
         self.clear = None
         button_assets = load_images("Menu", "Buttons")
@@ -114,7 +116,7 @@ class Menu:
 
         pygame.mouse.set_pos((x, y))
 
-    def display(self, win, joystick_tolerance=0.25) -> int | None:
+    def display(self, win) -> int | None:
         if self.clear is not None:
             win.blit(self.clear, (0, 0))
 
@@ -169,7 +171,7 @@ class Menu:
                                         self.notch_val[i] = adj_notch_val
                                     else:
                                         self.notch_val[i] = adj_notch_val_down
-                        elif event.type == pygame.JOYAXISMOTION and event.axis == 0 and abs(event.value) > joystick_tolerance:
+                        elif event.type == pygame.JOYAXISMOTION and event.axis == 0 and abs(event.value) > Menu.JOYSTICK_TOLERANCE:
                             if len(self.buttons[i]) > 4:
                                 self.notch_val[i] = (self.buttons[i][4][min(len(self.buttons[i][4]) - 1, max(0, (self.buttons[i][4].index((self.notch_val[i] * (self.buttons[i][4][-1] - self.buttons[i][4][0])) + self.buttons[i][4][0]) + int(1 if event.value >= 0 else -1))))] - self.buttons[i][4][0]) / (self.buttons[i][4][-1] - self.buttons[i][4][0])
                                 time.sleep(0.25)
@@ -310,7 +312,7 @@ class Selector(Menu):
             buttons.append([pygame.Rect(0, 0, max(normal.get_width(), mouseover.get_width()), max(normal.get_height(), mouseover.get_height())), normal, mouseover, ButtonType.CLICK])
         return buttons
 
-    def display(self, win, joystick_tolerance=0.25) -> int | None:
+    def display(self, win) -> int | None:
         if self.clear is not None:
             win.blit(self.clear, (0, 0))
 

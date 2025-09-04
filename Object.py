@@ -2,6 +2,8 @@ import pygame
 
 
 class Object(pygame.sprite.Sprite):
+    GRAVITY = 0.02
+
     def __init__(self, level, controller, x, y, width, height, is_blocking=True, name="Object"):
         super().__init__()
         self.level = level

@@ -121,10 +121,10 @@ def main(win):
             player_audio = enemy_audio = load_audios("Actors")
             block_audio = load_audios("Blocks")
             message_audio = load_audios("Messages", dir2=cur_level)
-            vfx = VisualEffectsManager(controller)
+            vfx_manager = VisualEffectsManager(controller)
             win.fill((0, 0, 0))
             display_text("Loading mission... [3/3]", controller, min_pause_time=0, should_sleep=False)
-            controller.level = level = Level(cur_level, levels, meta_dict, objects_dict, sprite_master, image_master, player_audio, enemy_audio, block_audio, message_audio, vfx, win, controller)
+            controller.level = level = Level(cur_level, levels, meta_dict, objects_dict, sprite_master, image_master, player_audio, enemy_audio, block_audio, message_audio, vfx_manager, win, controller)
 
             win.fill((0, 0, 0))
             display_text("Loading agent...", controller, min_pause_time=0, should_sleep=False)
