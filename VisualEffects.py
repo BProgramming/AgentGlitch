@@ -10,7 +10,7 @@ class VisualEffectsManager:
 
 
 class VisualEffect:
-    def __init__(self, source, images: dict, direction: str="", rotation: float=0, alpha: int=255, offset: tuple[float, float]=(0.0, 0.0), scale: tuple[float, float]=(1.0, 1.0), linked_to_source: bool=False) -> None:
+    def __init__(self, source, images: dict[str, pygame.Surface], direction: str="", rotation: float=0, alpha: int=255, offset: tuple[float, float]=(0.0, 0.0), scale: tuple[float, float]=(1.0, 1.0), linked_to_source: bool=False) -> None:
         self.image = images["LEFT" if "LEFT" in direction else "RIGHT"]
         if scale != (1, 1):
             self.image = pygame.transform.smoothscale(self.image, scale)
