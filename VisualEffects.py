@@ -10,7 +10,7 @@ class VisualEffectsManager:
 
 
 class VisualEffect:
-    def __init__(self, source, images: dict, direction: str="", rotation: float=0, alpha: int=255, offset: tuple[float, float]=(0, 0), scale: tuple[float, float]=(1, 1), linked_to_source: bool=False) -> None:
+    def __init__(self, source, images: dict, direction: str="", rotation: float=0, alpha: int=255, offset: tuple[float, float]=(0.0, 0.0), scale: tuple[float, float]=(1.0, 1.0), linked_to_source: bool=False) -> None:
         self.image = images["LEFT" if "LEFT" in direction else "RIGHT"]
         if scale != (1, 1):
             self.image = pygame.transform.smoothscale(self.image, scale)
@@ -21,38 +21,30 @@ class VisualEffect:
         self.rect = self.image.get_rect()
 
         self.is_linked_to_source = linked_to_source
-        self.source = (source if linked_to_source else None)
-        self.offset = (offset if linked_to_source else None)
-        self.direction = (direction if linked_to_source else None)
+        self.source = source
+        self.offset = offset
+        self.direction = direction
 
-        if "LEFT" in direction:
-            self.rect.left = source.rect.left + offset[0]
-        elif "RIGHT" in direction:
-            self.rect.right = source.rect.right - offset[0]
+        if not self.is_linked_to_source:
+            self.__align__()
+
+    def __align__(self):
+        if "LEFT" in self.direction:
+            self.rect.left = self.source.rect.left + self.offset[0]
+        elif "RIGHT" in self.direction:
+            self.rect.right = self.source.rect.right - self.offset[0]
         else:
-            self.rect.centerx = source.rect.centerx
-        if "BOTTOM" in direction:
-            self.rect.bottom = source.rect.bottom - offset[1]
-        elif "TOP" in direction:
-            self.rect.top = source.rect.top + offset[1]
+            self.rect.centerx = self.source.rect.centerx
+        if "BOTTOM" in self.direction:
+            self.rect.bottom = self.source.rect.bottom - self.offset[1]
+        elif "TOP" in self.direction:
+            self.rect.top = self.source.rect.top + self.offset[1]
         else:
-            self.rect.centery = source.rect.centery
+            self.rect.centery = self.source.rect.centery
 
     def output(self, win, offset_x: float, offset_y: float) -> None:
         if self.is_linked_to_source:
-            if "LEFT" in self.direction:
-                self.rect.left = self.source.rect.left + self.offset[0]
-            elif "RIGHT" in self.direction:
-                self.rect.right = self.source.rect.right - self.offset[0]
-            else:
-                self.rect.centerx = self.source.rect.centerx
-            if "BOTTOM" in self.direction:
-                self.rect.bottom = self.source.rect.bottom - self.offset[1]
-            elif "TOP" in self.direction:
-                self.rect.top = self.source.rect.top + self.offset[1]
-            else:
-                self.rect.centery = self.source.rect.centery
-
+            self.__align__()
         adj_x = self.rect.x - offset_x
         adj_y = self.rect.y - offset_y
         win.blit(self.image, (adj_x, adj_y))
