@@ -4,7 +4,7 @@ from Helpers import handle_exception, load_images
 
 
 class HUD:
-    def __init__(self, player, win, grayscale=False):
+    def __init__(self, player, win, grayscale: bool=False):
         self.player = player
         self.win = win
         self.is_grayscale: bool = grayscale

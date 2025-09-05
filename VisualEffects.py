@@ -1,7 +1,6 @@
 import pygame
 from Helpers import load_images, display_text
 
-
 class VisualEffectsManager:
     def __init__(self, controller) -> None:
         display_text("Loading cool effects...", controller, min_pause_time=0, should_sleep=False)
@@ -11,7 +10,7 @@ class VisualEffectsManager:
 
 
 class VisualEffect:
-    def __init__(self, source, images, direction="", rotation=0, alpha=255, offset=(0, 0), scale=(1, 1), linked_to_source=False) -> None:
+    def __init__(self, source, images: dict, direction: str="", rotation: float=0, alpha: int=255, offset: tuple[float, float]=(0, 0), scale: tuple[float, float]=(1, 1), linked_to_source: bool=False) -> None:
         self.image = images["LEFT" if "LEFT" in direction else "RIGHT"]
         if scale != (1, 1):
             self.image = pygame.transform.smoothscale(self.image, scale)
@@ -39,7 +38,7 @@ class VisualEffect:
         else:
             self.rect.centery = source.rect.centery
 
-    def output(self, win, offset_x, offset_y, master_volume, fps) -> None:
+    def output(self, win, offset_x: float, offset_y: float) -> None:
         if self.is_linked_to_source:
             if "LEFT" in self.direction:
                 self.rect.left = self.source.rect.left + self.offset[0]
