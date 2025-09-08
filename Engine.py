@@ -33,7 +33,7 @@ from Controller import Controller
 from Level import Level
 from HUD import HUD
 from NonPlayer import NonPlayer
-from RenderFunctions import *
+from Camera import Camera
 from SaveLoadFunctions import *
 
 
@@ -55,6 +55,8 @@ def main(win):
                         {"name": "recap", "file": "recap.png", "type": "SLIDE"},
                         {"name": "all_done", "file": "all_done.png", "type": "SLIDE"}]
     cinematics = CinematicsManager(cinematics_files, controller)
+
+    camera = Camera(win)
 
     while True:
         if len(load_player_profile(controller)) == 0:
@@ -146,10 +148,9 @@ def main(win):
             win.fill((0, 0, 0))
             funny_loading_text = ["Applying finishing touches", "Applying one last coat of paint", "Almost done", "Any minute now", "Nearly there", "One more thing", "Tidying up", "Training agent", "Catching the train", "Finishing lunch", "Folding laundry"]
             display_text(funny_loading_text[random.randint(0, len(funny_loading_text) - 1)] + "...", controller, min_pause_time=0, should_sleep=False)
-            background, bg_image = get_background(level)
-            fg_image = get_foreground(level)
-            offset_x = offset_y = 0
-            offset_x, offset_y = get_offset(level, offset_x, offset_y, win.get_width(), win.get_height())
+
+            camera.prepare(level, hud)
+            camera.scroll_to_player(0)
 
             # FROM HERE, THE LEVEL ACTUALLY STARTS: #
             if level.start_cinematic is not None:
@@ -163,7 +164,7 @@ def main(win):
                 pygame.mixer.music.play(fade_ms=2000)
                 controller.cycle_music()
 
-            fade_in(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller, win)
+            camera.fade_in(controller)
             if level.start_message is not None:
                 display_text(load_text_from_file(level.start_message), controller, should_type_text=True)
     
@@ -245,10 +246,10 @@ def main(win):
                 if level.can_glitch and glitch_timer <= 0 and random.randint(0, 100) / 100 > level.get_player().hp / level.get_player().max_hp:
                     glitches = glitch((1 - max(level.get_player().hp / level.get_player().max_hp, 0)) / 2, win)
                     glitch_timer = 0.5
-                draw(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller.master_volume, FPS_TARGET, win, glitches=glitches)
-                pygame.display.update()
 
-                offset_x, offset_y = get_offset(level, offset_x, offset_y, win.get_width(), win.get_height())
+                camera.draw(controller.master_volume, FPS_TARGET, glitches=glitches)
+                pygame.display.update()
+                camera.scroll_to_player(dtime)
 
                 if controller.should_hot_swap_level:
                     controller.should_hot_swap_level = False
@@ -258,6 +259,7 @@ def main(win):
                         cur_target_time = level.target_time
                         cur_objectives_collected = level.objectives_collected
                         controller.level = level = level.hot_swap_level
+                        camera.prepare(level, hud)
                         level.time += cur_time
                         level.achievements.update(cur_achievements)
                         level.target_time += cur_target_time
@@ -289,7 +291,7 @@ def main(win):
                 if level.end_message is not None:
                     display_text(load_text_from_file(level.end_message), controller, should_type_text=True)
                 save_player_profile(controller, level)
-                fade_out(background, bg_image, fg_image, level, hud, offset_x, offset_y, controller, win)
+                camera.fade_out(controller)
                 if level.end_cinematic is not None:
                     for cinematic in level.end_cinematic:
                         level.cinematics.play(cinematic, win)

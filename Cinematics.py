@@ -13,12 +13,12 @@ class CinematicType(Enum):
 
 
 class CinematicsManager:
-    def __init__(self, files, controller):
+    def __init__(self, files: dict[str, str] | list[dict[str, str]] | tuple[dict[str, str]], controller):
         self.cinematics = {}
         self.queued = []
         self.load(files, controller)
 
-    def load(self, files, controller) -> None:
+    def load(self, files: dict[str, str] | list[dict[str, str]] | tuple[dict[str, str]], controller) -> None:
         if type(files) not in [list, tuple]:
             files = [files]
         for file in files:
@@ -33,26 +33,26 @@ class CinematicsManager:
                     handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
 
     @staticmethod
-    def __load_slide__(file) -> pygame.Surface:
+    def __load_slide__(file: str) -> pygame.Surface:
         return pygame.image.load(file)
 
     @staticmethod
-    def __load_video__(file) -> cv2.VideoCapture:
+    def __load_video__(file: str) -> cv2.VideoCapture:
         return cv2.VideoCapture(file)
 
     def clear_queue(self) -> None:
         self.queued = []
 
-    def queue(self, name) -> None:
+    def queue(self, name: str) -> None:
         self.queued.append(self.cinematics[name])
 
-    def play(self, name, win) -> int:
+    def play(self, name: str, win: pygame.Surface) -> int:
         if self.cinematics.get(name) is not None:
             return self.cinematics[name].play(win)
         else:
             return 0
 
-    def play_queue(self, win) -> int:
+    def play_queue(self, win: pygame.Surface) -> int:
         dtime = 0
         for cinematic in self.queued:
             dtime += cinematic.play(win)
@@ -60,7 +60,7 @@ class CinematicsManager:
         return dtime
 
 class Cinematic:
-    def __init__(self, obj, cinematic_type, controller, pause_key=None, text=None, should_glitch=False, should_fade_in=True, should_fade_out=True):
+    def __init__(self, obj: pygame.Surface | cv2.VideoCapture, cinematic_type: CinematicType, controller, pause_key: int | list[int] | tuple[int] | None=None, text: str | None=None, should_glitch: bool=False, should_fade_in: bool=True, should_fade_out: bool=True):
         self.controller = controller
         self.type = cinematic_type
         self.cinematic = obj
@@ -70,7 +70,7 @@ class Cinematic:
         self.should_fade_in = should_fade_in
         self.should_fade_out = should_fade_out
 
-    def play(self, win) -> int:
+    def play(self, win: pygame.Surface) -> int:
         start = time.perf_counter_ns()
         pygame.mixer.pause()
         if self.type == CinematicType.SLIDE:
@@ -81,7 +81,7 @@ class Cinematic:
         return (time.perf_counter_ns() - start) // 1000000
 
     @staticmethod
-    def __play_slide__(slide, controller, win, text=None, should_glitch=False, pause_key=None, should_fade_in=True, should_fade_out=True) -> None:
+    def __play_slide__(slide: pygame.Surface, controller, win: pygame.Surface, text: str | None=None, should_glitch: bool=False, pause_key: int | list[int] | tuple[int] | None=None, should_fade_in: bool=True, should_fade_out: bool=True) -> None:
         og_slide = slide
         if text is not None:
             for i in range(len(text)):
@@ -177,7 +177,7 @@ class Cinematic:
             slide.blit(og_slide, (0, 0))
 
     @staticmethod
-    def __play_video__(video, controller, win, text=None, should_glitch=False, pause_key=None, should_fade_in=True, should_fade_out=True) -> None:
+    def __play_video__(video: cv2.VideoCapture, controller, win: pygame.Surface, text: str | None=None, should_glitch: bool=False, pause_key: int | list[int] | tuple[int] | None=None, should_fade_in: bool=True, should_fade_out: bool=True) -> None:
         if not video.isOpened():
             raise IOError("Video file " + str(video) + " could not be opened.")
 

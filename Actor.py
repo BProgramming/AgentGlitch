@@ -51,6 +51,7 @@ class Actor(Object):
     RESIZE_EFFECT = 0.05
     HEAL_DELAY = 5
     DOUBLEJUMP_EFFECT_TRAIL = 0.08
+    HORIZ_PUSH_DECAY_RATE = 0.05
 
     def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, can_shoot=False, can_resize=False, width=SIZE, height=SIZE, attack_damage=ATTACK_DAMAGE, sprite=None, proj_sprite=None, name=None):
         super().__init__(level, controller, x, y, width, height, name=name)
@@ -100,7 +101,7 @@ class Actor(Object):
         self.can_heal = False
         self.proj_sprite = load_sprite_sheets("Projectiles", ("Bullet" if proj_sprite is None else proj_sprite), sprite_master, grayscale=self.level.grayscale)[("Bullet" if proj_sprite is None else proj_sprite).upper()][0]
         self.active_projectiles = []
-        self.cached_x, self.cached_y = x, y
+        self.cached_x, self.cached_y = self.rect.x, self.rect.y
         self.cooldowns = {"get_hit": 0.0, "launch_projectile": 0.0, "resize": 0.0, "resize_delay": 0.0, "resize_effect": 0.0, "heal": 0.0, "attack": 0.0, "doublejump_effect_trail": 0.0}
         self.cached_cooldowns = self.cooldowns.copy()
 
@@ -435,7 +436,7 @@ class Actor(Object):
         super().loop(fps, dtime)
 
         if self.can_heal and self.hp < self.max_hp and self.cooldowns["heal"] <= 0:
-            self.hp = min(self.max_hp, self.hp + (dtime * fps / (10000 * self.difficulty)))
+            self.hp = min(self.max_hp, self.hp + ((self.max_hp * dtime) / (50000 * self.difficulty)))
 
         if len(self.active_projectiles) > 0:
             for proj in self.active_projectiles:
@@ -445,11 +446,13 @@ class Actor(Object):
                     proj.loop(fps, dtime)
 
         if (self == self.level.get_player() or self.patrol_path is not None) and self.state != MovementState.WIND_UP and self.state != MovementState.WIND_DOWN:
-            self.should_move_vert = True
-            self.push_x *= 0.9
-            if abs(self.push_x) < 0.01:
-                self.push_x = 0
+            if self.push_x > 0:
+                self.push_x = max(self.push_x - Actor.HORIZ_PUSH_DECAY_RATE * (dtime / fps), 0)
+            elif self.push_x < 0:
+                self.push_x = min(self.push_x + Actor.HORIZ_PUSH_DECAY_RATE * (dtime / fps), 0)
             self.push_y = 0
+
+            self.should_move_vert = True
             collided = self.get_collisions()
 
             if self.cooldowns["resize_delay"] <= 0:
@@ -491,7 +494,7 @@ class Actor(Object):
         self.update_state()
         return collided
 
-    def output(self, win, offset_x, offset_y, master_volume, fps) -> None:
+    def draw(self, win, offset_x, offset_y, master_volume, fps) -> None:
         adj_x_image = self.rect.x - offset_x
         adj_y_image = self.rect.y - offset_y
         #adj_x_audio = self.level.get_player().rect.x - self.rect.x
@@ -500,10 +503,10 @@ class Actor(Object):
         window_height = win.get_height()
         if len(self.active_projectiles) > 0:
             for proj in self.active_projectiles:
-                proj.output(win, offset_x, offset_y, master_volume, fps)
-        if self == self.level.get_player() or (-self.rect.width < adj_x_image <= window_width and -self.rect.height < adj_y_image <= window_height):
+                proj.draw(win, offset_x, offset_y, master_volume, fps)
+        if -self.rect.width < adj_x_image <= window_width and -self.rect.height < adj_y_image <= window_height:
             for effect in self.active_visual_effects.keys():
-                self.active_visual_effects[effect].output(win, offset_x, offset_y, master_volume, fps)
+                self.active_visual_effects[effect].draw(win, offset_x, offset_y)
             self.update_sprite(fps)
             self.__update_geo__()
             win.blit(self.sprite, (adj_x_image, adj_y_image))

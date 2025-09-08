@@ -134,7 +134,7 @@ class HUD:
                 self.win.blit(self.time_display[i], (self.win.get_width() - (10 + offset_x), 10))
             self.old_time = formatted_level_time
 
-    def output(self, formatted_level_time: str) -> None:
+    def draw(self, formatted_level_time: str) -> None:
         self.__draw_health_bar__()
         self.__draw_icons__()
         self.__draw_time__(formatted_level_time)

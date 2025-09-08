@@ -192,7 +192,7 @@ class NonPlayer(Actor):
             self.collision_message = None
         return True
 
-    def output(self, win, offset_x, offset_y, master_volume, fps) -> None:
+    def draw(self, win, offset_x, offset_y, master_volume, fps) -> None:
         if self.difficulty <= DifficultyScale.EASY:
             adj_x_image = self.rect.centerx - offset_x - (self.__adj_spot_range__() if self.facing == MovementDirection.LEFT else 0)
             adj_y_image = self.rect.y - offset_y + (7 * self.rect.height // 24)
@@ -204,4 +204,4 @@ class NonPlayer(Actor):
                 else:
                     vision = self.vision["hidden"][self.facing]
                 win.blit(pygame.transform.scale(vision, (self.__adj_spot_range__(), self.rect.height // 4)), (adj_x_image, adj_y_image))
-        super().output(win, offset_x, offset_y, master_volume, fps)
+        super().draw(win, offset_x, offset_y, master_volume, fps)

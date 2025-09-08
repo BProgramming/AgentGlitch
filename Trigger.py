@@ -184,5 +184,5 @@ class Trigger(Object):
 
         return [(time.perf_counter_ns() - start) // 1000000, next_level]
 
-    def output(self, win, offset_x, offset_y, master_volume, fps) -> None:
+    def draw(self, win, offset_x, offset_y, master_volume, fps) -> None:
         pass

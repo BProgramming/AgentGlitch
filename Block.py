@@ -338,7 +338,7 @@ class Hazard(Block):
         self.animation_count += dtime
         super().loop(fps, dtime)
 
-    def output(self, win, offset_x, offset_y, master_volume, fps) -> None:
+    def draw(self, win, offset_x, offset_y, master_volume, fps) -> None:
         adj_x = self.rect.x - offset_x
         adj_y = self.rect.y - offset_y
         if -self.rect.width < adj_x <= win.get_width() and -self.rect.height < adj_y <= win.get_height():

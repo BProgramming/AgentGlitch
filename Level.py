@@ -212,7 +212,7 @@ class Level:
     def __get_static_block_slice__(self, win, offset_x, offset_y) -> list:
         return [row[int(offset_x // self.block_size):int((offset_x + (1.5 * win.get_width())) // self.block_size)] for row in self.static_blocks[int(offset_y // self.block_size):int((offset_y + (1.5 * win.get_height())) // self.block_size)]]
 
-    def output(self, win, offset_x, offset_y, master_volume, fps) -> None:
+    def draw(self, win, offset_x, offset_y, master_volume, fps) -> None:
         above_player = []
 
         for obj in self.triggers + self.__get_static_block_slice__(win, offset_x, offset_y) + self.dynamic_blocks + list(self.doors.values()) + self.hazards + self.enemies + self.objectives:
@@ -220,19 +220,19 @@ class Level:
                 for obj_lower in obj:
                     if obj_lower is not None:
                         if obj_lower.is_blocking:
-                            obj_lower.output(win, offset_x, offset_y, master_volume, fps)
+                            obj_lower.draw(win, offset_x, offset_y, master_volume, fps)
                         else:
                             above_player.append(obj_lower)
             else:
                 if obj.is_blocking:
-                    obj.output(win, offset_x, offset_y, master_volume, fps)
+                    obj.draw(win, offset_x, offset_y, master_volume, fps)
                 else:
                     above_player.append(obj)
 
-        self.player.output(win, offset_x, offset_y, master_volume, fps)
+        self.player.draw(win, offset_x, offset_y, master_volume, fps)
 
         for obj in above_player:
-            obj.output(win, offset_x, offset_y, master_volume, fps)
+            obj.draw(win, offset_x, offset_y, master_volume, fps)
 
         if self.weather is not None:
             self.weather.draw(win, offset_x, offset_y)

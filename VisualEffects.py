@@ -42,7 +42,7 @@ class VisualEffect:
         else:
             self.rect.centery = self.source.rect.centery
 
-    def output(self, win, offset_x: float, offset_y: float) -> None:
+    def draw(self, win, offset_x: float, offset_y: float) -> None:
         if self.is_linked_to_source:
             self.__align__()
         adj_x = self.rect.x - offset_x
