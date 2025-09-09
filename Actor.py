@@ -85,7 +85,7 @@ class Actor(Object):
         self.sprite = None
         self.audios = audios
         self.update_sprite(1)
-        self.__update_geo__()
+        self.update_geo()
         self.rect.x += (block_size - self.rect.width) // 2
         self.rect.y += (block_size - self.rect.height)
         self.audio_trigger_frames = {"TELEPORT": [0], "RUN": [4, 10], "JUMP": [0], "DOUBLE_JUMP": [0], "CROUCH": [0], "HIT": [0], "RESIZE": [0]}
@@ -125,7 +125,7 @@ class Actor(Object):
             self.active_projectiles.append(Projectile(self.level, self.controller, self.rect.centerx + (self.rect.width * self.facing // 3), self.rect.centery, None, 0, self.attack_damage, self.difficulty, sprite=self.proj_sprite, name=(self.name + "'s projectile #" + str(len(self.active_projectiles) + 1))))
             self.active_projectiles[-1].load(list(proj.values())[0])
         self.update_sprite(1)
-        self.__update_geo__()
+        self.update_geo()
 
     def set_difficulty(self, scale) -> None:
         self.difficulty = scale
@@ -299,7 +299,7 @@ class Actor(Object):
         return collided
 
     def die(self) -> None:
-        pass
+        return
 
     def update_state(self) -> None:
         old = self.state
@@ -423,7 +423,7 @@ class Actor(Object):
                     self.active_audio_channel = None
         return active_index
 
-    def __update_geo__(self) -> None:
+    def update_geo(self) -> None:
         self.rect = self.sprite.get_rect(topleft=(self.rect.x, self.rect.y))
         self.mask = pygame.mask.from_surface(self.sprite)
 
@@ -460,10 +460,19 @@ class Actor(Object):
                         self.rect.y += self.rect.height // 3
                     else:
                         self.rect.y -= self.rect.height // 2
+
+                    scale_factor = self.size_target * 1.25
+                    if self.size_target == 1:
+                        if self.size < self.size_target:
+                            scale_factor *= 1.5
+                        else:
+                            scale_factor /= 1.5
+
                     self.size = self.size_target
+
                     self.cooldowns["resize_effect"] = Actor.RESIZE_EFFECT
                     if self.level.visual_effects_manager.images.get("RESIZEBURST") is not None:
-                        self.active_visual_effects["resize_effect"] = VisualEffect(self, self.level.visual_effects_manager.images["RESIZEBURST"], direction="", alpha=128, scale=(self.rect.width * self.size * 1.25, self.rect.height * self.size * 1.25), linked_to_source=True)
+                        self.active_visual_effects["resize_effect"] = VisualEffect(self, self.level.visual_effects_manager.images["RESIZEBURST"], direction="", alpha=128, scale=(self.rect.width * scale_factor, self.rect.height * scale_factor), linked_to_source=True)
 
                 if self.should_move_horiz:
                     scaled_target = dtime * self.target_vel
@@ -507,7 +516,7 @@ class Actor(Object):
             for effect in self.active_visual_effects.keys():
                 self.active_visual_effects[effect].draw(win, offset_x, offset_y)
             self.update_sprite(fps)
-            self.__update_geo__()
+            self.update_geo()
             win.blit(self.sprite, (adj_x_image, adj_y_image))
 
         if self.active_audio is not None:
