@@ -4,7 +4,7 @@ from Object import Object
 
 
 class Projectile(Object):
-    MAX_SPEED = 100
+    MAX_SPEED = 1.7
     STOCK_PROJECTILE_SIZE = 16
 
     def __init__(self, level, controller, x, y, target, max_dist, attack_damage, difficulty, speed=MAX_SPEED, stock_size=STOCK_PROJECTILE_SIZE, sprite=None, name=None):
@@ -53,8 +53,8 @@ class Projectile(Object):
             delta = speed / dist
             self.rect.center = [((1 - delta) * self.rect.centerx) + (delta * self.dest[0]), ((1 - delta) * self.rect.centery) + (delta * self.dest[1])]
 
-    def loop(self, fps, dtime) -> None:
-        self.move(self.speed * (dtime / fps) * (0.5 if self.level.get_player() is not None and self.level.get_player().is_slow_time else 1))
+    def loop(self, dtime) -> None:
+        self.move(self.speed * dtime * (0.5 if self.level.get_player() is not None and self.level.get_player().is_slow_time else 1))
 
     def collide(self, obj) -> bool:
         self.hp = 0

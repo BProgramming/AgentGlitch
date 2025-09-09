@@ -7,7 +7,6 @@ from Helpers import handle_exception, set_sound_source, load_sprite_sheets
 
 
 class Objective(Object):
-    ANIMATION_DELAY = 0.3
     if not isfile(join("Assets", "Icons", "Pointer", "pointer.png")):
         handle_exception("File " + str(FileNotFoundError(join("Assets", "Icons", "Pointer", "pointer.png"))) + " not found.")
     else:
@@ -79,9 +78,9 @@ class Objective(Object):
         self.rect = self.sprite.get_rect(topleft=(self.rect.x, self.rect.y))
         self.mask = pygame.mask.from_surface(self.sprite)
 
-    def loop(self, fps, dtime) -> None:
+    def loop(self, dtime) -> None:
         self.animation_count += dtime
-        super().loop(fps, dtime)
+        super().loop(dtime)
 
     def draw(self, win, offset_x, offset_y, master_volume, fps) -> None:
         adj_x = self.rect.x - offset_x

@@ -235,7 +235,7 @@ class Level:
             obj.draw(win, offset_x, offset_y, master_volume, fps)
 
         if self.weather is not None:
-            self.weather.draw(win, offset_x, offset_y)
+            self.weather.draw(win, offset_x, offset_y, master_volume, fps)
 
     @staticmethod
     def build_level(level, layout, sprite_master, image_master, objects_dict, player_audios, enemy_audios, block_audios, message_audios, win, controller, player_sprite, block_size) -> tuple:

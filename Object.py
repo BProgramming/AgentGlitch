@@ -3,6 +3,7 @@ import pygame
 
 class Object(pygame.sprite.Sprite):
     GRAVITY = 0.02
+    ANIMATION_DELAY = 0.3
 
     def __init__(self, level, controller, x, y, width, height, is_blocking=True, name="Object"):
         super().__init__()
@@ -35,14 +36,14 @@ class Object(pygame.sprite.Sprite):
             if self.cooldowns[key] > 0:
                 self.cooldowns[key] -= (dtime / 1000)
             elif self.cooldowns[key] < 0:
-                self.cooldowns[key] = 0
+                self.cooldowns[key] = 0.0
 
     def __cleanup_vfx__(self):
         for effect in list(self.active_visual_effects.keys()):
             if self.cooldowns[effect] <= 0:
                 del self.active_visual_effects[effect]
 
-    def loop(self, fps, dtime) -> None:
+    def loop(self, dtime) -> None:
         if self.cooldowns is not None:
             self.update_cooldowns(dtime)
         if self.active_visual_effects:

@@ -184,7 +184,7 @@ class Player(Actor):
                     self.level.queue_purge(trigger)
         return [fired_triggers, next_level]
 
-    def loop(self, fps, dtime) -> list:
+    def loop(self, dtime) -> list:
         if self.teleport_distance != 0:
             self.animation_count += dtime
             if self.cooldowns["teleport_delay"] <= 0:
@@ -198,6 +198,6 @@ class Player(Actor):
         else:
             if self.is_slow_time and self.cooldowns["bullet_time_active"] <= 0:
                 self.is_slow_time = False
-            super().loop(fps, dtime)
+            super().loop(dtime)
 
         return self.get_triggers()

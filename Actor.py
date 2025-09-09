@@ -40,7 +40,6 @@ class Actor(Object):
     SIZE = 64
     VELOCITY_TARGET = 0.4
     VELOCITY_JUMP = 10
-    ANIMATION_DELAY = 0.3
     GET_HIT_COOLDOWN = 1
     MAX_SHOOT_DISTANCE = 500
     ATTACK_DAMAGE = 10
@@ -51,7 +50,7 @@ class Actor(Object):
     RESIZE_EFFECT = 0.05
     HEAL_DELAY = 5
     DOUBLEJUMP_EFFECT_TRAIL = 0.08
-    HORIZ_PUSH_DECAY_RATE = 0.05
+    HORIZ_PUSH_DECAY_RATE = 0.03
 
     def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, can_shoot=False, can_resize=False, width=SIZE, height=SIZE, attack_damage=ATTACK_DAMAGE, sprite=None, proj_sprite=None, name=None):
         super().__init__(level, controller, x, y, width, height, name=name)
@@ -428,12 +427,12 @@ class Actor(Object):
         self.rect = self.sprite.get_rect(topleft=(self.rect.x, self.rect.y))
         self.mask = pygame.mask.from_surface(self.sprite)
 
-    def loop(self, fps, dtime) -> bool:
+    def loop(self, dtime) -> bool:
         self.animation_count += dtime
 
         if self.hp <= 0:
             self.die()
-        super().loop(fps, dtime)
+        super().loop(dtime)
 
         if self.can_heal and self.hp < self.max_hp and self.cooldowns["heal"] <= 0:
             self.hp = min(self.max_hp, self.hp + ((self.max_hp * dtime) / (50000 * self.difficulty)))
@@ -443,13 +442,13 @@ class Actor(Object):
                 if proj.hp <= 0:
                     self.active_projectiles.remove(proj)
                 else:
-                    proj.loop(fps, dtime)
+                    proj.loop(dtime)
 
         if (self == self.level.get_player() or self.patrol_path is not None) and self.state != MovementState.WIND_UP and self.state != MovementState.WIND_DOWN:
             if self.push_x > 0:
-                self.push_x = max(self.push_x - Actor.HORIZ_PUSH_DECAY_RATE * (dtime / fps), 0)
+                self.push_x = max(self.push_x - Actor.HORIZ_PUSH_DECAY_RATE * dtime, 0)
             elif self.push_x < 0:
-                self.push_x = min(self.push_x + Actor.HORIZ_PUSH_DECAY_RATE * (dtime / fps), 0)
+                self.push_x = min(self.push_x + Actor.HORIZ_PUSH_DECAY_RATE * dtime, 0)
             self.push_y = 0
 
             self.should_move_vert = True

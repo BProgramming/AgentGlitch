@@ -6,6 +6,10 @@ from VisualEffects import VisualEffectsManager
 
 
 # This stuff happens in the middle of imports because some classes require pygame display available before they can be imported
+# And steam is initialized first because it doesn't work having it after pygame.init for... reasons?
+steamworks_connection = SteamworksConnection.initialize()
+steamworks_connection.UserStats.RequestCurrentStats()
+
 pygame.init()
 WIDTH, HEIGHT = 1920, 1080
 FPS_TARGET = 60
@@ -18,9 +22,6 @@ else:
 
 WINDOW = pygame.display.set_mode((WIDTH, HEIGHT), flags=pygame.SCALED)
 pygame.display.set_caption("AGENT GLITCH")
-
-steamworks_connection = SteamworksConnection.initialize()
-steamworks_connection.UserStats.RequestCurrentStats()
 
 
 import math
@@ -218,7 +219,7 @@ def main(win):
                 if (controller.goto_load and isfile("GameData/save.p")) or controller.goto_main or controller.goto_restart:
                     break
 
-                result = level.get_player().loop(FPS_TARGET, dtime)
+                result = level.get_player().loop(dtime)
                 if result[1] is not None:
                     next_level = result[1]
                     break
@@ -234,7 +235,7 @@ def main(win):
                     if (not isinstance(obj, Actor) and type(obj).__name__.upper() != "BLOCK") or (isinstance(obj, Actor) and math.dist(obj.rect.topleft, level.get_player().rect.topleft) < win.get_width() * 1.5):
                         if hasattr(obj, "patrol") and callable(obj.patrol):
                             obj.patrol(dtime)
-                        obj.loop(FPS_TARGET, dtime)
+                        obj.loop(dtime)
                         if isinstance(obj, NonPlayer) and obj.queued_message is not None:
                             dtime_offset += obj.play_queued_message()
 

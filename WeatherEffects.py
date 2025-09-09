@@ -39,7 +39,7 @@ class ParticleEffect:
             elif self.rect.y > self.rect.height:
                 self.rect.y = 0
 
-    def draw(self, win, offset_x, offset_y) -> None:
+    def draw(self, win, offset_x, offset_y, master_volume, fps) -> None:
         win.blit(self.image, (self.rect.x - offset_x, self.rect.y - offset_y))
         if self.y_vel > 0:
             win.blit(self.image, (self.rect.x - offset_x, self.rect.y - self.rect.height - offset_y))

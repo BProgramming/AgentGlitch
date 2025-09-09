@@ -734,11 +734,13 @@ class Controller:
                     player_is_moving = True
                     self.level.get_player().move_left()
                     break
+
         if not player_is_attacking:
             for input_key in self.keys_attack:
                 if keys[input_key]:
                     player_is_attacking = True
                     self.level.get_player().attack()
+                    break
 
         if not player_is_attacking:
             self.level.get_player().is_attacking = False

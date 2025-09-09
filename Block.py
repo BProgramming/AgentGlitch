@@ -4,6 +4,7 @@ import pygame
 from os.path import join, isfile
 from Object import Object
 from Helpers import handle_exception, MovementDirection, load_sprite_sheets, set_sound_source
+from VisualEffects import VisualEffect
 
 
 class Block(Object):
@@ -147,8 +148,8 @@ class MovingBlock(Block):
                 else:
                     self.rect.y = target
 
-    def loop(self, fps, dtime) -> None:
-        super().loop(fps, dtime)
+    def loop(self, dtime) -> None:
+        super().loop(dtime)
 
         if not self.hold:
             if self.should_move_horiz:
@@ -211,13 +212,13 @@ class Door(MovingBlock):
             self.open()
         return True
 
-    def loop(self, fps, dtime) -> None:
+    def loop(self, dtime) -> None:
         if not self.is_open and self.rect.y == self.patrol_path_closed[0][1]:
             return
         else:
             if math.dist((self.level.get_player().rect.centerx, self.level.get_player().rect.centery), (self.rect.centerx, self.rect.centery)) > math.sqrt(self.rect.height**2 + (1.5 * self.rect.width)**2):
                 self.close()
-            super().loop(fps, dtime)
+            super().loop(dtime)
 
 class MovableBlock(Block):
     def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=0, coord_y=0, name="MovableBlock"):
@@ -279,8 +280,8 @@ class MovableBlock(Block):
             else:
                 self.rect.y += dy
 
-    def loop(self, fps, dtime) -> None:
-        super().loop(fps, dtime)
+    def loop(self, dtime) -> None:
+        super().loop(dtime)
 
         self.push_x *= 0.9
         if abs(self.push_x) < 0.01:
@@ -301,7 +302,6 @@ class MovableBlock(Block):
 
 class Hazard(Block):
     ATTACK_DAMAGE = 99
-    ANIMATION_DELAY = 0.3
 
     def __init__(self, level, controller, x, y, width, height, image_master, sprite_master, audios, difficulty, hit_sides="UDLR", sprite=None, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="Hazard"):
         super().__init__(level, controller, x, (y + width - height), width, height, image_master, audios, False, coord_x=coord_x, coord_y=coord_y, name=name)
@@ -334,9 +334,9 @@ class Hazard(Block):
         self.rect = self.sprite.get_rect(topleft=(self.rect.x, self.rect.y))
         self.mask = pygame.mask.from_surface(self.sprite)
 
-    def loop(self, fps, dtime) -> None:
+    def loop(self, dtime) -> None:
         self.animation_count += dtime
-        super().loop(fps, dtime)
+        super().loop(dtime)
 
     def draw(self, win, offset_x, offset_y, master_volume, fps) -> None:
         adj_x = self.rect.x - offset_x
@@ -344,6 +344,8 @@ class Hazard(Block):
         if -self.rect.width < adj_x <= win.get_width() and -self.rect.height < adj_y <= win.get_height():
             self.update_sprite(fps)
             self.update_geo()
+            for effect in self.active_visual_effects.keys():
+                self.active_visual_effects[effect].draw(win, offset_x, offset_y)
             win.blit(self.sprite, (adj_x, adj_y))
 
 class MovingHazard(MovingBlock, Hazard):
@@ -363,14 +365,14 @@ class MovingHazard(MovingBlock, Hazard):
         self.sprite = None
         self.update_sprite(1)
 
-    def loop(self, fps, dtime) -> None:
-        MovingBlock.loop(self, fps, dtime)
+    def loop(self, dtime) -> None:
+        MovingBlock.loop(self, dtime)
 
 
 class FallingHazard(Hazard):
     ATTACK_DAMAGE = 99
     RESET_DELAY = 1
-    ANIMATION_DELAY = 0.3
+    LANDING_EFFECT = 0.05
 
     def __init__(self, level, controller, x, y, width, height, image_master, sprite_master, audios, difficulty, hit_sides="D", drop_x=0, drop_y=0, fire_once=True, sprite=None, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="FallingHazard"):
         super().__init__(level, controller, x, y, width, height, image_master, sprite_master, audios, difficulty, hit_sides=hit_sides, sprite=sprite, coord_x=coord_x, coord_y=coord_y, attack_damage=attack_damage, name=name)
@@ -381,8 +383,8 @@ class FallingHazard(Hazard):
         self.fire_once = fire_once
         self.has_fired = False
         self.should_fire = False
-        self.y_vel = 0
-        self.cooldowns = {"reset_time": 0}
+        self.y_vel = 0.0
+        self.cooldowns = {"reset_time": 0.0, "landing_effect": 0.0}
 
     def update_sprite(self, fps) -> int:
         if hasattr(self, "has_fired") and self.has_fired:
@@ -398,7 +400,7 @@ class FallingHazard(Hazard):
         self.sprite = self.sprites[active_index]
         return active_index
 
-    def loop(self, fps, dtime) -> bool:
+    def loop(self, dtime) -> bool:
         if not self.has_fired:
             if abs(self.level.get_player().rect.x - self.rect.x) <= self.drop_x and self.level.get_player().rect.top >= self.rect.bottom and abs(self.level.get_player().rect.y - self.rect.y) <= self.drop_y:
                 self.should_fire = True
@@ -411,7 +413,7 @@ class FallingHazard(Hazard):
                 return False
 
         should_reset = bool(self.cooldowns["reset_time"] > 0)
-        super().loop(fps, dtime)
+        super().loop(dtime)
         should_reset = should_reset and bool(self.cooldowns["reset_time"] <= 0)
 
         if should_reset:
@@ -441,6 +443,9 @@ class FallingHazard(Hazard):
                     self.y_vel = 0
                     collided = True
                     self.play_sound("block_land")
+                    self.cooldowns["landing_effect"] = FallingHazard.LANDING_EFFECT
+                    if self.level.visual_effects_manager.images.get("LANDBURST") is not None:
+                        self.active_visual_effects["landing_effect"] = VisualEffect(self, self.level.visual_effects_manager.images["LANDBURST"], direction="BOTTOM", alpha=128, scale=(self.rect.width * 2, self.rect.height / 2))
                     if isinstance(obj, FallingHazard):
                         obj.should_fire = True
                     else:

@@ -71,6 +71,6 @@ class Boss(NonPlayer):
 
         return active_index
 
-    def loop(self, fps, dtime) -> bool:
+    def loop(self, dtime) -> bool:
         asyncio.run(self.__toggle_music__())
-        return super().loop(fps, dtime)
+        return super().loop(dtime)
