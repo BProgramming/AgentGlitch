@@ -59,6 +59,7 @@ class Controller:
         self.music = None
         self.music_index = 0
         self.should_hot_swap_level = False
+        self.should_scroll_to_point = None
 
     def queue_track_list(self, music=None) -> None:
         if music is None:

@@ -250,7 +250,14 @@ def main(win):
 
                 camera.draw(controller.master_volume, FPS_TARGET, glitches=glitches)
                 pygame.display.update()
-                camera.scroll_to_player(dtime)
+
+                if controller.should_scroll_to_point is not None:
+                    camera.focus_player = False
+                    if camera.scroll_to_point(dtime, controller.should_scroll_to_point["coords"][0], controller.should_scroll_to_point["coords"][1], target_wait_time=controller.should_scroll_to_point["time"]):
+                        camera.focus_player = True
+                        controller.should_scroll_to_point = None
+                else:
+                    camera.scroll_to_player(dtime)
 
                 if controller.should_hot_swap_level:
                     controller.should_hot_swap_level = False
