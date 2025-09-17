@@ -672,21 +672,24 @@ class Controller:
             return self.cycle_keyboard_layout(win)
         elif key in self.keys_fullscreen_toggle:
             pygame.display.toggle_fullscreen()
-        elif key in self.keys_crouch_uncrouch or (self.active_gamepad_layout is not None and self.button_crouch_uncrouch is not None and key == self.button_crouch_uncrouch):
+        elif (key in self.keys_crouch_uncrouch or (self.active_gamepad_layout is not None and self.button_crouch_uncrouch is not None and key == self.button_crouch_uncrouch)) and self.should_scroll_to_point is None:
             self.level.get_player().toggle_crouch()
-        elif key in self.keys_jump or (self.active_gamepad_layout is not None and self.button_jump is not None and key == self.button_jump):
+        elif (key in self.keys_jump or (self.active_gamepad_layout is not None and self.button_jump is not None and key == self.button_jump)) and self.should_scroll_to_point is None:
             self.level.get_player().jump()
-        elif key in self.keys_teleport_dash or (self.active_gamepad_layout is not None and self.button_teleport_dash is not None and key == self.button_teleport_dash):
+        elif (key in self.keys_teleport_dash or (self.active_gamepad_layout is not None and self.button_teleport_dash is not None and key == self.button_teleport_dash)) and self.should_scroll_to_point is None:
             self.level.get_player().teleport()
-        elif key in self.keys_bullet_time or (self.active_gamepad_layout is not None and self.button_bullet_time is not None and key == self.button_bullet_time):
+        elif (key in self.keys_bullet_time or (self.active_gamepad_layout is not None and self.button_bullet_time is not None and key == self.button_bullet_time)) and self.should_scroll_to_point is None:
             self.level.get_player().bullet_time()
-        elif key in self.keys_grow or (self.active_gamepad_layout is not None and self.button_grow is not None and key == self.button_grow):
+        elif (key in self.keys_grow or (self.active_gamepad_layout is not None and self.button_grow is not None and key == self.button_grow)) and self.should_scroll_to_point is None:
             self.level.get_player().grow()
-        elif key in self.keys_shrink or (self.active_gamepad_layout is not None and self.button_shrink is not None and key == self.button_shrink):
+        elif (key in self.keys_shrink or (self.active_gamepad_layout is not None and self.button_shrink is not None and key == self.button_shrink)) and self.should_scroll_to_point is None:
             self.level.get_player().shrink()
         return 0
 
     def handle_continuous_input(self) -> None:
+        if self.should_scroll_to_point is not None:
+            return
+
         player_is_moving = False
         player_is_attacking = False
 
