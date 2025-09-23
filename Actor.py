@@ -2,7 +2,7 @@ import math
 import pygame
 import random
 from enum import Enum
-from Object import Object
+from Entity import Entity
 from Projectile import Projectile
 from Block import Hazard, MovableBlock, MovingBlock
 from Objectives import Objective
@@ -36,7 +36,7 @@ class MovementState(Enum):
         return self.name
 
 
-class Actor(Object):
+class Actor(Entity):
     SIZE = 64
     VELOCITY_TARGET = 0.4
     VELOCITY_JUMP = 10
@@ -110,18 +110,18 @@ class Actor(Object):
             projectiles.append(proj.save())
         return {self.name: {"hp": self.hp, "cached x y": (self.cached_x, self.cached_y), "cooldowns": self.cached_cooldowns, "size": self.size, "size_target": self.size, "can_wall_jump": self.can_wall_jump, "can_shoot": self.can_shoot, "can_resize": self.can_resize, "max_jumps": self.max_jumps, "projectiles": projectiles}}
 
-    def load(self, obj) -> None:
-        self.rect.x, self.rect.y = self.cached_x, self.cached_y = obj["cached x y"]
-        self.cooldowns = self.cached_cooldowns = obj["cooldowns"]
-        self.load_attribute(obj, "hp")
+    def load(self, ent) -> None:
+        self.rect.x, self.rect.y = self.cached_x, self.cached_y = ent["cached x y"]
+        self.cooldowns = self.cached_cooldowns = ent["cooldowns"]
+        self.load_attribute(ent, "hp")
         self.cached_hp = self.hp
-        self.load_attribute(obj, "size")
-        self.load_attribute(obj, "size_target")
-        self.load_attribute(obj, "can_wall_jump")
-        self.load_attribute(obj, "can_shoot")
-        self.load_attribute(obj, "can_resize")
-        self.load_attribute(obj, "max_jumps")
-        for proj in obj["projectiles"]:
+        self.load_attribute(ent, "size")
+        self.load_attribute(ent, "size_target")
+        self.load_attribute(ent, "can_wall_jump")
+        self.load_attribute(ent, "can_shoot")
+        self.load_attribute(ent, "can_resize")
+        self.load_attribute(ent, "max_jumps")
+        for proj in ent["projectiles"]:
             self.active_projectiles.append(Projectile(self.level, self.controller, self.rect.centerx + (self.rect.width * self.facing // 3), self.rect.centery, None, 0, self.attack_damage, self.difficulty, sprite=self.proj_sprite, name=(self.name + "'s projectile #" + str(len(self.active_projectiles) + 1))))
             self.active_projectiles[-1].load(list(proj.values())[0])
         self.update_sprite(1)
@@ -225,74 +225,74 @@ class Actor(Object):
             self.cooldowns["launch_projectile"] = Actor.LAUNCH_PROJECTILE_COOLDOWN
             self.play_attack_audio("ATTACK_RANGE")
 
-    def get_hit(self, obj) -> None:
+    def get_hit(self, ent) -> None:
         self.cooldowns["get_hit"] = Actor.GET_HIT_COOLDOWN
         self.cooldowns["heal"] = Actor.HEAL_DELAY * self.difficulty
-        self.hp -= obj.attack_damage
+        self.hp -= ent.attack_damage
 
     def get_collisions(self) -> bool:
         collided = False
 
         if self == self.level.get_player():
-            objs = self.level.get_objects_in_range((self.rect.x, self.rect.y))
+            ents = self.level.get_entities_in_range((self.rect.x, self.rect.y))
         elif self.is_hostile:
-            objs = [self.level.get_player()] + self.level.get_objects_in_range((self.rect.x, self.rect.y), blocks_only=True)
+            ents = [self.level.get_player()] + self.level.get_entities_in_range((self.rect.x, self.rect.y), blocks_only=True)
         else:
-            objs = self.level.get_objects_in_range((self.rect.x, self.rect.y), blocks_only=True)
-        for obj in objs:
-            if self.rect.colliderect(obj.rect):
-                if pygame.sprite.collide_mask(self, obj):
-                    if isinstance(obj, Actor) or isinstance(obj, Objective):
-                        overlap = self.mask.overlap_mask(obj.mask, (0, 0)).get_rect()
+            ents = self.level.get_entities_in_range((self.rect.x, self.rect.y), blocks_only=True)
+        for ent in ents:
+            if self.rect.colliderect(ent.rect):
+                if pygame.sprite.collide_mask(self, ent):
+                    if isinstance(ent, Actor) or isinstance(ent, Objective):
+                        overlap = self.mask.overlap_mask(ent.mask, (0, 0)).get_rect()
                     else:
-                        overlap = self.rect.clip(obj.rect)
-                    if isinstance(obj, Actor) and obj != self.level.get_player():
-                        if obj.facing == (MovementDirection.RIGHT if self.rect.centerx - obj.rect.centerx >= 0 else MovementDirection.LEFT) and obj.is_attacking and self.cooldowns["get_hit"] <= 0:
-                            self.get_hit(obj)
-                    elif isinstance(obj, Hazard):
-                        if obj.is_attacking and self.cooldowns["get_hit"] <= 0:
-                            if overlap.width <= overlap.height and ((self.rect.x <= obj.rect.x and "L" in obj.hit_sides) or (self.rect.x >= obj.rect.x and "R" in obj.hit_sides)):
-                                self.get_hit(obj)
-                            if overlap.width >= overlap.height and ((self.rect.y <= obj.rect.y and "U" in obj.hit_sides) or (self.rect.y >= obj.rect.y and "D" in obj.hit_sides)):
-                                self.get_hit(obj)
-                    elif isinstance(obj, Objective) and self == self.level.get_player():
-                        obj.get_hit(self)
-                    if obj.collide(self):
-                        self.collide(obj)
+                        overlap = self.rect.clip(ent.rect)
+                    if isinstance(ent, Actor) and ent != self.level.get_player():
+                        if ent.facing == (MovementDirection.RIGHT if self.rect.centerx - ent.rect.centerx >= 0 else MovementDirection.LEFT) and ent.is_attacking and self.cooldowns["get_hit"] <= 0:
+                            self.get_hit(ent)
+                    elif isinstance(ent, Hazard):
+                        if ent.is_attacking and self.cooldowns["get_hit"] <= 0:
+                            if overlap.width <= overlap.height and ((self.rect.x <= ent.rect.x and "L" in ent.hit_sides) or (self.rect.x >= ent.rect.x and "R" in ent.hit_sides)):
+                                self.get_hit(ent)
+                            if overlap.width >= overlap.height and ((self.rect.y <= ent.rect.y and "U" in ent.hit_sides) or (self.rect.y >= ent.rect.y and "D" in ent.hit_sides)):
+                                self.get_hit(ent)
+                    elif isinstance(ent, Objective) and self == self.level.get_player():
+                        ent.get_hit(self)
+                    if ent.collide(self):
+                        self.collide(ent)
                         if overlap.width <= overlap.height and (self.x_vel == 0 or self.direction == (MovementDirection.RIGHT if self.x_vel >= 0 else MovementDirection.LEFT)):
-                            if self.can_move_blocks and isinstance(obj, MovableBlock) and obj.should_move_horiz and self.direction == (MovementDirection.RIGHT if obj.rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT):
-                                obj.push_x = self.x_vel * self.size
-                            if (isinstance(obj, Actor) and obj.is_hostile) or not isinstance(obj, Actor):
-                                if self.x_vel <= 0 and self.rect.centerx > obj.rect.centerx:
-                                    self.rect.left = obj.rect.right - (self.rect.width // 5)
+                            if self.can_move_blocks and isinstance(ent, MovableBlock) and ent.should_move_horiz and self.direction == (MovementDirection.RIGHT if ent.rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT):
+                                ent.push_x = self.x_vel * self.size
+                            if (isinstance(ent, Actor) and ent.is_hostile) or not isinstance(ent, Actor):
+                                if self.x_vel <= 0 and self.rect.centerx > ent.rect.centerx:
+                                    self.rect.left = ent.rect.right - (self.rect.width // 5)
                                     self.x_vel = 0.0
-                                elif self.x_vel >= 0 and self.rect.centerx <= obj.rect.centerx:
-                                    self.rect.right = obj.rect.left + (self.rect.width // 5)
+                                elif self.x_vel >= 0 and self.rect.centerx <= ent.rect.centerx:
+                                    self.rect.right = ent.rect.left + (self.rect.width // 5)
                                     self.x_vel = 0.0
                             collided = True
 
                         if overlap.width >= overlap.height:
-                            if self.y_vel >= 0 and not obj.is_stacked and self.rect.bottom == overlap.bottom:
-                                self.rect.bottom = obj.rect.top
+                            if self.y_vel >= 0 and not ent.is_stacked and self.rect.bottom == overlap.bottom:
+                                self.rect.bottom = ent.rect.top
                                 self.land()
                             elif self.y_vel < 0 and self.rect.top == overlap.top:
-                                self.rect.top = obj.rect.bottom
+                                self.rect.top = ent.rect.bottom
                                 self.hit_head()
 
                         if collided and self.should_move_vert and not self.is_wall_jumping and self.direction == (MovementDirection.RIGHT if overlap.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT):
                             self.y_vel = min(self.y_vel, 0.0)
                             self.jump_count = 0
                             self.is_wall_jumping = True
-                elif isinstance(obj, Objective) and self == self.level.get_player() and obj.sprite is None:
-                    obj.get_hit(self)
-            elif obj.rect.top <= self.rect.bottom <= obj.rect.bottom and self.rect.left + (self.rect.width // 4) <= obj.rect.right and self.rect.right - (self.rect.width // 4) >= obj.rect.left:
-                if isinstance(obj, MovingBlock) or isinstance(obj, MovableBlock) :
-                    obj.collide(self)
-                if self.rect.centerx != obj.rect.centerx:
-                    if math.degrees(math.atan(abs(self.rect.centery - obj.rect.centery) / abs(self.rect.centerx - obj.rect.centerx))) >= 45:
+                elif isinstance(ent, Objective) and self == self.level.get_player() and ent.sprite is None:
+                    ent.get_hit(self)
+            elif ent.rect.top <= self.rect.bottom <= ent.rect.bottom and self.rect.left + (self.rect.width // 4) <= ent.rect.right and self.rect.right - (self.rect.width // 4) >= ent.rect.left:
+                if isinstance(ent, MovingBlock) or isinstance(ent, MovableBlock) :
+                    ent.collide(self)
+                if self.rect.centerx != ent.rect.centerx:
+                    if math.degrees(math.atan(abs(self.rect.centery - ent.rect.centery) / abs(self.rect.centerx - ent.rect.centerx))) >= 45:
                         self.should_move_vert = False
-                        if self.rect.bottom != obj.rect.top:
-                            self.rect.bottom = obj.rect.top
+                        if self.rect.bottom != ent.rect.top:
+                            self.rect.bottom = ent.rect.top
 
         if self.x_vel != 0 and not collided and self.is_wall_jumping:
             self.is_wall_jumping = False

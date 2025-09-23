@@ -78,7 +78,7 @@ class NonPlayer(Actor):
             self.patrol_path_index = 0
 
     def __find_floor__(self, dist) -> bool:
-        for block in self.level.get_objects_in_range((self.rect.x + dist, self.rect.bottom), blocks_only=True):
+        for block in self.level.get_entities_in_range((self.rect.x + dist, self.rect.bottom), blocks_only=True):
             if block.rect.collidepoint(self.rect.centerx + dist, self.rect.bottom):
                 return True
         return False
@@ -161,8 +161,8 @@ class NonPlayer(Actor):
         dist = math.dist(self.level.get_player().rect.center, self.rect.center)
         if dist <= self.__adj_spot_range__() and(self.facing == (MovementDirection.RIGHT if self.level.get_player().rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT) or self.cooldowns["get_hit"] > 0):
             for i in range(round(dist)):
-                for obj in self.level.get_objects_in_range((self.rect.centerx + (self.facing * ((self.rect.width // 2) + i)), self.rect.y), blocks_only=True):
-                    if obj.rect.collidepoint(self.rect.centerx + (self.facing * ((self.rect.width // 2) + i)), self.rect.y):
+                for ent in self.level.get_entities_in_range((self.rect.centerx + (self.facing * ((self.rect.width // 2) + i)), self.rect.y), blocks_only=True):
+                    if ent.rect.collidepoint(self.rect.centerx + (self.facing * ((self.rect.width // 2) + i)), self.rect.y):
                         return False
             self.cooldowns["spot_player"] = NonPlayer.PLAYER_SPOT_COOLDOWN
             if self.state in [MovementState.IDLE, MovementState.CROUCH, MovementState.RUN, MovementState.IDLE_ATTACK, MovementState.CROUCH_ATTACK, MovementState.RUN_ATTACK] and self.can_shoot and dist > self.spot_range // 3:
@@ -170,10 +170,10 @@ class NonPlayer(Actor):
             return True
         return False
 
-    def collide(self, obj) -> bool:
-        if obj != self.level.get_player():
-            if self.direction == (MovementDirection.RIGHT if obj.rect.centerx - self.rect.centerx > 0 else MovementDirection.LEFT):
-                if obj.is_stacked or isinstance(obj, Door):
+    def collide(self, ent) -> bool:
+        if ent != self.level.get_player():
+            if self.direction == (MovementDirection.RIGHT if ent.rect.centerx - self.rect.centerx > 0 else MovementDirection.LEFT):
+                if ent.is_stacked or isinstance(ent, Door):
                     if self.patrol_path is not None:
                         for point in range(len(self.patrol_path)):
                             self.__increment_patrol_index__()

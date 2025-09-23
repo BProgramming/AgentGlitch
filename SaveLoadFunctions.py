@@ -43,10 +43,10 @@ def save(level, hud):
         hud.save_icon_timer = 1.0
 
     data = {"level": level.name, "time": level.time}
-    for obj in [level.get_player()] + level.get_objects() + level.objectives_collected:
-        obj_data = obj.save()
-        if obj_data is not None:
-            data.update(obj_data)
+    for ent in [level.get_player()] + level.get_entities() + level.objectives_collected:
+        ent_data = ent.save()
+        if ent_data is not None:
+            data.update(ent_data)
     pickle.dump(data, open("GameData/save.p", "wb"))
 
 
@@ -66,14 +66,14 @@ def load_part2(data, level):
         return False
     else:
         level.time = (0 if data.get("time") is None else data["time"])
-        for obj in [level.get_player()] + level.get_objects():
-            obj_data = data.get(obj.name)
-            if obj_data is not None:
-                if hasattr(obj, "has_fired") and obj.has_fired:
-                    level.queue_purge(obj)
+        for ent in [level.get_player()] + level.get_entities():
+            ent_data = data.get(ent.name)
+            if ent_data is not None:
+                if hasattr(ent, "has_fired") and ent.has_fired:
+                    level.queue_purge(ent)
                 else:
-                    obj.load(obj_data)
-            elif isinstance(obj, Actor) or isinstance(obj, BreakableBlock):
-                level.queue_purge(obj)
+                    ent.load(ent_data)
+            elif isinstance(ent, Actor) or isinstance(ent, BreakableBlock):
+                level.queue_purge(ent)
         level.purge()
         return True

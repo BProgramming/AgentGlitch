@@ -117,10 +117,10 @@ class Level:
         if abilities.get("can_heal") is not None:
             self.player.can_heal = bool(abilities["can_heal"].upper() == "TRUE")
 
-    def get_objects(self) -> list:
+    def get_entities(self) -> list:
         return self.triggers + self.blocks + self.hazards + self.enemies + self.objectives
 
-    def get_objects_in_range(self, point, dist=1, blocks_only=False) -> list:
+    def get_entities_in_range(self, point, dist=1, blocks_only=False) -> list:
         x = int(point[0] / self.block_size)
         y = int(point[1] / self.block_size)
         # this sum thing below is a hack to turn a 2D list into a 1D list since it applies the + operator to the second (optional) [] argument (e.g. an empty list), thereby concatenating all the elements
@@ -130,51 +130,51 @@ class Level:
                 in_range += self.doors[x + i]
 
         if not blocks_only:
-            for obj in self.triggers + self.dynamic_blocks + self.hazards + self.enemies + self.objectives:
-                if obj.rect.x - (self.block_size * dist) <= point[0] <= obj.rect.x + (self.block_size * dist) and obj.rect.y - (self.block_size * dist) <= point[1] <= obj.rect.y + (self.block_size * dist):
-                    in_range.append(obj)
+            for ent in self.triggers + self.dynamic_blocks + self.hazards + self.enemies + self.objectives:
+                if ent.rect.x - (self.block_size * dist) <= point[0] <= ent.rect.x + (self.block_size * dist) and ent.rect.y - (self.block_size * dist) <= point[1] <= ent.rect.y + (self.block_size * dist):
+                    in_range.append(ent)
 
         return in_range
 
-    def queue_purge(self, obj) -> None:
-        if isinstance(obj, Trigger):
-            self.purge_queue["triggers"].add(obj)
-        if isinstance(obj, Hazard):
-            self.purge_queue["hazards"].add(obj)
-        elif isinstance(obj, Block):
-            self.purge_queue["blocks"].add(obj)
-        elif isinstance(obj, NonPlayer):
-            self.purge_queue["enemies"].add(obj)
-        elif isinstance(obj, Objective):
-            self.purge_queue["objectives"].add(obj)
+    def queue_purge(self, ent) -> None:
+        if isinstance(ent, Trigger):
+            self.purge_queue["triggers"].add(ent)
+        if isinstance(ent, Hazard):
+            self.purge_queue["hazards"].add(ent)
+        elif isinstance(ent, Block):
+            self.purge_queue["blocks"].add(ent)
+        elif isinstance(ent, NonPlayer):
+            self.purge_queue["enemies"].add(ent)
+        elif isinstance(ent, Objective):
+            self.purge_queue["objectives"].add(ent)
 
     def purge(self) -> None:
         if bool(self.purge_queue["triggers"]):
-            self.triggers = [obj for obj in self.triggers if obj not in self.purge_queue["triggers"]]
+            self.triggers = [ent for ent in self.triggers if ent not in self.purge_queue["triggers"]]
             self.purge_queue["triggers"].clear()
         if bool(self.purge_queue["hazards"]):
-            self.hazards = [obj for obj in self.hazards if obj not in self.purge_queue["hazards"]]
-            for obj in self.purge_queue["hazards"]:
-                if isinstance(obj, FallingHazard):
+            self.hazards = [ent for ent in self.hazards if ent not in self.purge_queue["hazards"]]
+            for ent in self.purge_queue["hazards"]:
+                if isinstance(ent, FallingHazard):
                     for x in list(self.falling_hazards.keys()):
                         for falling_hazard in self.falling_hazards[x]:
-                            if falling_hazard == obj:
+                            if falling_hazard == ent:
                                 if len(self.falling_hazards[x]) == 1:
                                     self.falling_hazards.pop(x)
                                 else:
                                     self.falling_hazards[x].remove(falling_hazard)
             self.purge_queue["hazards"].clear()
         if bool(self.purge_queue["blocks"]):
-            self.blocks = [obj for obj in self.blocks if obj not in self.purge_queue["blocks"]]
-            self.dynamic_blocks = [obj for obj in self.dynamic_blocks if obj not in self.purge_queue["blocks"]]
+            self.blocks = [ent for ent in self.blocks if ent not in self.purge_queue["blocks"]]
+            self.dynamic_blocks = [ent for ent in self.dynamic_blocks if ent not in self.purge_queue["blocks"]]
             for i in range(len(self.static_blocks)):
-                self.static_blocks[i] = [obj for obj in self.static_blocks[i] if obj not in self.purge_queue["blocks"]]
+                self.static_blocks[i] = [ent for ent in self.static_blocks[i] if ent not in self.purge_queue["blocks"]]
             self.purge_queue["blocks"].clear()
         if bool(self.purge_queue["enemies"]):
-            self.enemies = [obj for obj in self.enemies if obj not in self.purge_queue["enemies"]]
+            self.enemies = [ent for ent in self.enemies if ent not in self.purge_queue["enemies"]]
             self.purge_queue["enemies"].clear()
         if bool(self.purge_queue["objectives"]):
-            self.objectives = [obj for obj in self.objectives if obj not in self.purge_queue["objectives"]]
+            self.objectives = [ent for ent in self.objectives if ent not in self.purge_queue["objectives"]]
             self.purge_queue["objectives"].clear()
 
     #NOTE: having weather with lots of particles + lots of enemies + bullets will decrease the frame rate
@@ -191,8 +191,8 @@ class Level:
 
     def gen_image(self) -> None:
         img = pygame.Surface((self.level_bounds[1][0], self.level_bounds[1][1]), pygame.SRCALPHA)
-        for obj in self.get_objects() + [self.get_player()]:
-            img.blit(obj.sprite, (obj.rect.x, obj.rect.y))
+        for ent in self.get_entities() + [self.get_player()]:
+            img.blit(ent.sprite, (ent.rect.x, ent.rect.y))
         pygame.image.save(img, join("Assets", "Misc", self.name + ".png"))
 
     def gen_background(self) -> None:
@@ -215,24 +215,24 @@ class Level:
     def draw(self, win, offset_x, offset_y, master_volume, fps) -> None:
         above_player = []
 
-        for obj in self.triggers + self.__get_static_block_slice__(win, offset_x, offset_y) + self.dynamic_blocks + list(self.doors.values()) + self.hazards + self.enemies + self.objectives:
-            if isinstance(obj, list):
-                for obj_lower in obj:
-                    if obj_lower is not None:
-                        if obj_lower.is_blocking:
-                            obj_lower.draw(win, offset_x, offset_y, master_volume, fps)
+        for ent in self.triggers + self.__get_static_block_slice__(win, offset_x, offset_y) + self.dynamic_blocks + list(self.doors.values()) + self.hazards + self.enemies + self.objectives:
+            if isinstance(ent, list):
+                for ent_lower in ent:
+                    if ent_lower is not None:
+                        if ent_lower.is_blocking:
+                            ent_lower.draw(win, offset_x, offset_y, master_volume, fps)
                         else:
-                            above_player.append(obj_lower)
+                            above_player.append(ent_lower)
             else:
-                if obj.is_blocking:
-                    obj.draw(win, offset_x, offset_y, master_volume, fps)
+                if ent.is_blocking:
+                    ent.draw(win, offset_x, offset_y, master_volume, fps)
                 else:
-                    above_player.append(obj)
+                    above_player.append(ent)
 
         self.player.draw(win, offset_x, offset_y, master_volume, fps)
 
-        for obj in above_player:
-            obj.draw(win, offset_x, offset_y, master_volume, fps)
+        for ent in above_player:
+            ent.draw(win, offset_x, offset_y, master_volume, fps)
 
         if self.weather is not None:
             self.weather.draw(win, offset_x, offset_y, master_volume, fps)

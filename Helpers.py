@@ -393,8 +393,8 @@ def set_property(triggering_entity, prop_to_set) -> None:
                         value[i] = float(value[i])
                         if value[i] == int(value[i]):
                             value[i] = int(value[i])
-                for obj in [triggering_entity.level.get_player()] + triggering_entity.level.get_objects():
-                    if (obj.name.split()[0] == target[i] or obj.name == target[i]) and hasattr(obj, property[i]):
-                        setattr(obj, property[i], value[i])
+                for ent in [triggering_entity.level.get_player()] + triggering_entity.level.get_entities():
+                    if (ent.name.split()[0] == target[i] or ent.name == target[i]) and hasattr(ent, property[i]):
+                        setattr(ent, property[i], value[i])
                         if triggering_entity.controller.player_abilities.get(property[i]) is not None:
                             triggering_entity.controller.player_abilities[property[i]] = value[i]

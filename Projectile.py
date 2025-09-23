@@ -1,9 +1,9 @@
 import math
 import pygame
-from Object import Object
+from Entity import Entity
 
 
-class Projectile(Object):
+class Projectile(Entity):
     MAX_SPEED = 1.7
     STOCK_PROJECTILE_SIZE = 16
 
@@ -24,13 +24,13 @@ class Projectile(Object):
     def save(self) -> dict:
         return {self.name: {"hp": self.hp, "cached x y": (self.rect.x, self.rect.y), "speed": self.speed, "max_dist": self.max_dist, "dest": self.dest, "angle": self.angle}}
 
-    def load(self, obj) -> None:
-        self.hp = obj["hp"]
-        self.rect.x, self.rect.y = obj["cached x y"]
-        self.speed = obj["speed"]
-        self.max_dist = obj["max_dist"]
-        self.dest = obj["dest"]
-        self.angle = obj["angle"]
+    def load(self, ent) -> None:
+        self.hp = ent["hp"]
+        self.rect.x, self.rect.y = ent["cached x y"]
+        self.speed = ent["speed"]
+        self.max_dist = ent["max_dist"]
+        self.dest = ent["dest"]
+        self.angle = ent["angle"]
 
     def move(self, speed) -> None:
         if self.rect.colliderect(self.level.get_player()) and pygame.sprite.collide_mask(self, self.level.get_player()):
@@ -38,10 +38,10 @@ class Projectile(Object):
             self.level.get_player().get_hit(self)
             return
 
-        for obj in self.level.get_objects_in_range((self.rect.x, self.rect.y), blocks_only=True):
-            if self.rect.colliderect(obj.rect):
-                if pygame.sprite.collide_mask(self, obj):
-                    self.rect.center = obj.rect.center
+        for ent in self.level.get_entities_in_range((self.rect.x, self.rect.y), blocks_only=True):
+            if self.rect.colliderect(ent.rect):
+                if pygame.sprite.collide_mask(self, ent):
+                    self.rect.center = ent.rect.center
                     self.collide(None)
                     return
 
@@ -56,7 +56,7 @@ class Projectile(Object):
     def loop(self, dtime) -> None:
         self.move(self.speed * dtime * (0.5 if self.level.get_player() is not None and self.level.get_player().is_slow_time else 1))
 
-    def collide(self, obj) -> bool:
+    def collide(self, ent) -> bool:
         self.hp = 0
         return True
 

@@ -30,7 +30,7 @@ class Controller:
         self.hud = None
         self.goto_load = self.goto_main = self.goto_restart = False
         self.level = level
-        self.master_volume = {"background": 1, "player": 1, "non-player": 1, "cinematics": 1}
+        self.master_volume = {"background": 1.0, "player": 1.0, "non-player": 1.0, "cinematics": 1.0}
         dif = {"label": "Difficulty", "type": ButtonType.BAR, "snap": True, "value": self.difficulty, "range": (float(DifficultyScale.EASIEST), float(DifficultyScale.EASY), float(DifficultyScale.MEDIUM), float(DifficultyScale.HARD), float(DifficultyScale.HARDEST))}
         vol_bg = {"label": "Music", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["background"], "range": (0, 100)}
         vol_pc = {"label": "Player", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["player"], "range": (0, 100)}
@@ -85,8 +85,8 @@ class Controller:
 
     def set_difficulty(self) -> None:
         if self.level is not None:
-            for obj in [self.level.get_player()] + self.level.get_objects():
-                obj.set_difficulty(self.difficulty)
+            for ent in [self.level.get_player()] + self.level.get_entities():
+                ent.set_difficulty(self.difficulty)
 
     def get_gamepad(self, notify=True) -> int:
         start = time.perf_counter_ns()

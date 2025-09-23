@@ -2,11 +2,11 @@ import math
 import random
 import pygame
 from os.path import join, isfile
-from Object import Object
+from Entity import Entity
 from Helpers import handle_exception, set_sound_source, load_sprite_sheets
 
 
-class Objective(Object):
+class Objective(Entity):
     if not isfile(join("Assets", "Icons", "Pointer", "pointer.png")):
         handle_exception("File " + str(FileNotFoundError(join("Assets", "Icons", "Pointer", "pointer.png"))) + " not found.")
     else:
@@ -34,10 +34,10 @@ class Objective(Object):
         self.pointer = (Objective.POINTER_SPRITE_GRAYSCALE if self.level.grayscale == True else Objective.POINTER_SPRITE)
         self.pointer_offset = ((self.rect.width - Objective.POINTER_SPRITE_WIDTH) / 2, (-(Objective.POINTER_SPRITE_HEIGHT + 2), -(self.rect.height - Objective.POINTER_SPRITE_HEIGHT / 2)))
 
-    def collide(self, obj) -> bool:
+    def collide(self, ent) -> bool:
         return False
 
-    def get_hit(self, obj) -> None:
+    def get_hit(self, ent) -> None:
         self.hp = 0
         self.play_sound(self.sound)
         self.__collect__()
@@ -48,8 +48,8 @@ class Objective(Object):
     def save(self) -> dict:
         return super().save()
 
-    def load(self, obj) -> None:
-        self.hp = obj["hp"]
+    def load(self, ent) -> None:
+        self.hp = ent["hp"]
         if self.hp <= 0:
             self.__collect__()
             self.level.queue_purge(self)

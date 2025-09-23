@@ -3,7 +3,7 @@ import pygame
 from enum import Enum
 from os.path import join, isfile
 from Helpers import display_text, load_text_from_file, load_path, set_property
-from Object import Object
+from Entity import Entity
 from Block import Block, BreakableBlock, MovableBlock, Hazard, MovingBlock, MovingHazard, Door, FallingHazard
 from Objectives import Objective
 from NonPlayer import NonPlayer
@@ -32,7 +32,7 @@ class TriggerType(Enum):
         except KeyError:
             return TriggerType.NONE
 
-class Trigger(Object):
+class Trigger(Entity):
     def __init__(self, level, controller, x, y, width, height, win, objects_dict, sprite_master, enemy_audios, block_audios, message_audios, image_master, block_size, fire_once=False, type=None, input=None, name="Trigger"):
         super().__init__(level, controller, x, y, width, height, name=name)
         self.win = win
@@ -50,8 +50,8 @@ class Trigger(Object):
         else:
             return None
 
-    def load(self, obj) -> None:
-        self.has_fired = obj["has_fired"]
+    def load(self, ent) -> None:
+        self.has_fired = ent["has_fired"]
 
     # THIS CAN RETURN SO MANY DIFFERENT THINGS, SO IT DOESN'T HAVE A TYPE HINT. #
     def __load_input__(self, input, objects_dict, sprite_master, enemy_audios, block_audios, message_audios, image_master, block_size):
@@ -150,7 +150,7 @@ class Trigger(Object):
         else:
             return None
 
-    def collide(self, obj) -> list:
+    def collide(self, ent) -> list:
         start = time.perf_counter_ns()
 
         next_level = None

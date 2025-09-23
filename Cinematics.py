@@ -60,10 +60,10 @@ class CinematicsManager:
         return dtime
 
 class Cinematic:
-    def __init__(self, obj: pygame.Surface | cv2.VideoCapture, cinematic_type: CinematicType, controller, pause_key: int | list[int] | tuple[int] | None=None, text: str | None=None, should_glitch: bool=False, should_fade_in: bool=True, should_fade_out: bool=True):
+    def __init__(self, ent: pygame.Surface | cv2.VideoCapture, cinematic_type: CinematicType, controller, pause_key: int | list[int] | tuple[int] | None=None, text: str | None=None, should_glitch: bool=False, should_fade_in: bool=True, should_fade_out: bool=True):
         self.controller = controller
         self.type = cinematic_type
-        self.cinematic = obj
+        self.cinematic = ent
         self.pause_key = pause_key
         self.text = text
         self.should_glitch = should_glitch

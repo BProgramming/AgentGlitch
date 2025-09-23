@@ -2,12 +2,12 @@ import math
 import random
 import pygame
 from os.path import join, isfile
-from Object import Object
+from Entity import Entity
 from Helpers import handle_exception, MovementDirection, load_sprite_sheets, set_sound_source
 from VisualEffects import VisualEffect
 
 
-class Block(Object):
+class Block(Entity):
     def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=0, coord_y=0, is_blocking=True, name="Block"):
         super().__init__(level, controller, x, y, width, height, is_blocking=is_blocking, name=name)
         self.sprite = self.load_image(join("Assets", "Terrain", "Terrain.png"), width, height, image_master, coord_x, coord_y, grayscale=self.level.grayscale)
@@ -52,7 +52,7 @@ class BreakableBlock(Block):
         self.sprite_damaged = self.load_image(join("Assets", "Terrain", "Terrain.png"), width, height, image_master, coord_x2, coord_y2, grayscale=self.level.grayscale)
         self.cooldowns = {"get_hit": 0}
 
-    def get_hit(self, obj) -> None:
+    def get_hit(self, ent) -> None:
         if self.cooldowns["get_hit"] <= 0:
             if self.hp == self.max_hp:
                 self.hp = self.max_hp // 2
@@ -114,13 +114,13 @@ class MovingBlock(Block):
                     self.cooldowns["wait"] = MovingBlock.PATH_STOP_TIME
                 self.increment_patrol_index()
 
-    def collide(self, obj) -> bool:
-        if self.hold and obj == self.level.get_player():
+    def collide(self, ent) -> bool:
+        if self.hold and ent == self.level.get_player():
             self.hold = False
-        if hasattr(obj, "push_x"):
-            obj.push_x = self.x_vel
-        if hasattr(obj, "push_y"):
-            obj.push_y = self.y_vel
+        if hasattr(ent, "push_x"):
+            ent.push_x = self.x_vel
+        if hasattr(ent, "push_y"):
+            ent.push_y = self.y_vel
         return self.is_blocking
 
     def move(self, dx, dy) -> None:
@@ -207,8 +207,8 @@ class Door(MovingBlock):
     def toggle_lock(self) -> None:
         self.is_locked = not self.is_locked
 
-    def collide(self, obj) -> bool:
-        if hasattr(obj, "can_open_doors") and obj.can_open_doors and obj.rect.bottom > self.rect.top:
+    def collide(self, ent) -> bool:
+        if hasattr(ent, "can_open_doors") and ent.can_open_doors and ent.rect.bottom > self.rect.top:
             self.open()
         return True
 
@@ -227,34 +227,34 @@ class MovableBlock(Block):
         self.x_vel = self.y_vel = self.push_x = self.push_y = 0.0
         self.should_move_horiz = self.should_move_vert = True
 
-    def collide(self, obj) -> bool:
-        if hasattr(obj, "push_x"):
-            obj.push_x = self.x_vel
-        if hasattr(obj, "push_y") and self.rect.top >= obj.rect.bottom:
-            obj.push_y = self.y_vel
+    def collide(self, ent) -> bool:
+        if hasattr(ent, "push_x"):
+            ent.push_x = self.x_vel
+        if hasattr(ent, "push_y") and self.rect.top >= ent.rect.bottom:
+            ent.push_y = self.y_vel
         return True
 
     def get_collisions(self) -> None:
         self.should_move_horiz = self.should_move_vert = True
-        for obj in self.level.get_objects_in_range((self.rect.x, self.rect.y), blocks_only=True):
-            if obj != self and pygame.sprite.collide_rect(self, obj):
-                if pygame.sprite.collide_mask(self, obj) and obj.collide(self):
-                    self.collide(obj)
-                    overlap = self.rect.clip(obj.rect)
+        for ent in self.level.get_entities_in_range((self.rect.x, self.rect.y), blocks_only=True):
+            if ent != self and pygame.sprite.collide_rect(self, ent):
+                if pygame.sprite.collide_mask(self, ent) and ent.collide(self):
+                    self.collide(ent)
+                    overlap = self.rect.clip(ent.rect)
                     if overlap.width < overlap.height:
-                        if self.x_vel <= 0 and self.rect.centerx > obj.rect.centerx:
-                            self.rect.left = obj.rect.right + self.rect.width
+                        if self.x_vel <= 0 and self.rect.centerx > ent.rect.centerx:
+                            self.rect.left = ent.rect.right + self.rect.width
                             self.should_move_horiz = False
-                        elif self.x_vel >= 0 and self.rect.centerx < obj.rect.centerx:
-                            self.rect.right = obj.rect.left - self.rect.width
+                        elif self.x_vel >= 0 and self.rect.centerx < ent.rect.centerx:
+                            self.rect.right = ent.rect.left - self.rect.width
                             self.should_move_horiz = False
                     if overlap.width >= overlap.height:
                         if self.y_vel >= 0 and self.rect.bottom == overlap.bottom:
                             if self.y_vel > 1:
-                                self.rect.bottom = obj.rect.top
+                                self.rect.bottom = ent.rect.top
                             self.should_move_vert = False
                         elif self.y_vel < 0 and self.rect.top == overlap.top:
-                            self.rect.top = obj.rect.bottom
+                            self.rect.top = ent.rect.bottom
                             self.y_vel *= -0.5
             if not self.should_move_horiz and not self.should_move_vert:
                 break
@@ -431,23 +431,23 @@ class FallingHazard(Hazard):
         if self.has_fired and self.cooldowns["reset_time"] <= 0:
             self.y_vel += dtime * FallingHazard.GRAVITY
 
-            objs = self.level.get_objects_in_range((self.rect.x, self.rect.y + self.y_vel), blocks_only=True)
+            ents = self.level.get_entities_in_range((self.rect.x, self.rect.y + self.y_vel), blocks_only=True)
             # this part lets falling hazards hit each other and cause those to fall too
             x = int(self.rect.x / self.level.block_size)
             if self.level.falling_hazards.get(x) is not None:
-                objs += self.level.falling_hazards[x]
+                ents += self.level.falling_hazards[x]
 
-            for obj in objs:
-                if obj != self and pygame.sprite.collide_rect(self, obj) and pygame.sprite.collide_mask(self, obj):
-                    self.rect.bottom = obj.rect.top
+            for ent in ents:
+                if ent != self and pygame.sprite.collide_rect(self, ent) and pygame.sprite.collide_mask(self, ent):
+                    self.rect.bottom = ent.rect.top
                     self.y_vel = 0
                     collided = True
                     self.play_sound("block_land")
                     self.cooldowns["landing_effect"] = FallingHazard.LANDING_EFFECT
                     if self.level.visual_effects_manager.images.get("LANDBURST") is not None:
                         self.active_visual_effects["landing_effect"] = VisualEffect(self, self.level.visual_effects_manager.images["LANDBURST"], direction="BOTTOM", alpha=128, scale=(self.rect.width * 2, self.rect.height / 2))
-                    if isinstance(obj, FallingHazard):
-                        obj.should_fire = True
+                    if isinstance(ent, FallingHazard):
+                        ent.should_fire = True
                     else:
                         self.cooldowns["reset_time"] += FallingHazard.RESET_DELAY
                     break

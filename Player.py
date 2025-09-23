@@ -2,7 +2,7 @@ import random
 import time
 import pygame
 from Actor import Actor, MovementState
-from Object import Object
+from Entity import Entity
 from NonPlayer import NonPlayer
 from Block import BreakableBlock
 from Helpers import MovementDirection, load_sprite_sheets, display_text
@@ -69,14 +69,14 @@ class Player(Actor):
                                 "kills_this_level": self.kills_this_level})
         return data
 
-    def load(self, obj) -> None:
-        self.load_attribute(obj, "can_teleport")
-        self.load_attribute(obj, "can_bullet_time")
-        self.load_attribute(obj, "been_hit_this_level")
-        self.load_attribute(obj, "been_seen_this_level")
-        self.load_attribute(obj, "deaths_this_level")
-        self.load_attribute(obj, "kills_this_level")
-        super().load(obj)
+    def load(self, ent) -> None:
+        self.load_attribute(ent, "can_teleport")
+        self.load_attribute(ent, "can_bullet_time")
+        self.load_attribute(ent, "been_hit_this_level")
+        self.load_attribute(ent, "been_seen_this_level")
+        self.load_attribute(ent, "deaths_this_level")
+        self.load_attribute(ent, "kills_this_level")
+        super().load(ent)
 
     def set_difficulty(self, scale) -> None:
         self.difficulty = scale
@@ -98,12 +98,12 @@ class Player(Actor):
                 scale = max(self.rect.width, self.rect.height)
                 self.active_visual_effects["blocking_effect"] = VisualEffect(self, self.level.visual_effects_manager.images["BLOCKSHIELD"], alpha=128, scale=(scale, scale), linked_to_source=True)
 
-    def get_hit(self, obj) -> None:
-        if isinstance(obj, NonPlayer) and self.cooldowns["blocking_effect"] > 0:
+    def get_hit(self, ent) -> None:
+        if isinstance(ent, NonPlayer) and self.cooldowns["blocking_effect"] > 0:
             self.cooldowns["blocking_effect"] = 0
         else:
             self.been_hit_this_level = True
-            super().get_hit(obj)
+            super().get_hit(ent)
 
     def move_left(self) -> None:
         self.should_move_horiz = True
@@ -131,10 +131,10 @@ class Player(Actor):
     def teleport(self) -> None:
         if self.can_teleport and self.cooldowns["teleport"] <= 0:
             for i in range(int(Player.VELOCITY_TARGET * Player.MULTIPLIER_TELEPORT) + 1, 0, -1):
-                cast = Object(self.level, self.controller, self.rect.x + (self.direction * i), self.rect.y, self.rect.width, self.rect.height - 1)
+                cast = Entity(self.level, self.controller, self.rect.x + (self.direction * i), self.rect.y, self.rect.width, self.rect.height - 1)
                 collision = False
-                for obj in self.level.get_objects_in_range((cast.rect.x, cast.rect.y)):
-                    if pygame.sprite.collide_rect(cast, obj):
+                for ent in self.level.get_entities_in_range((cast.rect.x, cast.rect.y)):
+                    if pygame.sprite.collide_rect(cast, ent):
                         collision = True
                         break
                 if not collision:
@@ -146,14 +146,14 @@ class Player(Actor):
     def attack(self) -> None:
         if self.state in [MovementState.IDLE, MovementState.CROUCH, MovementState.RUN, MovementState.FALL, MovementState.JUMP, MovementState.DOUBLE_JUMP, MovementState.IDLE_ATTACK, MovementState.CROUCH_ATTACK, MovementState.RUN_ATTACK, MovementState.FALL_ATTACK, MovementState.JUMP_ATTACK, MovementState.DOUBLE_JUMP_ATTACK]:
             self.is_attacking = True
-            for obj in self.level.get_objects_in_range((self.rect.x, self.rect.y)):
-                if isinstance(obj, NonPlayer) and obj.is_hostile and pygame.sprite.collide_rect(self, obj) and self.facing == (MovementDirection.RIGHT if obj.rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT):
-                    obj.get_hit(self)
-                    if obj.patrol_path is not None:
-                        obj.push_x -= self.direction * int(Player.ATTACK_PUSHBACK)
+            for ent in self.level.get_entities_in_range((self.rect.x, self.rect.y)):
+                if isinstance(ent, NonPlayer) and ent.is_hostile and pygame.sprite.collide_rect(self, ent) and self.facing == (MovementDirection.RIGHT if ent.rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT):
+                    ent.get_hit(self)
+                    if ent.patrol_path is not None:
+                        ent.push_x -= self.direction * int(Player.ATTACK_PUSHBACK)
                     self.play_attack_audio("ATTACK_MELEE")
-                elif isinstance(obj, BreakableBlock) and pygame.sprite.collide_rect(self, obj):
-                    obj.get_hit(self)
+                elif isinstance(ent, BreakableBlock) and pygame.sprite.collide_rect(self, ent):
+                    ent.get_hit(self)
                     self.play_attack_audio("ATTACK_MELEE")
 
     def bullet_time(self) -> None:

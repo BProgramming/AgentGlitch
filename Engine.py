@@ -231,13 +231,13 @@ def main(win):
                     else:
                         dtime_offset += level.get_player().revert()
 
-                for obj in level.get_objects():
-                    if (not isinstance(obj, Actor) and type(obj).__name__.upper() != "BLOCK") or (isinstance(obj, Actor) and math.dist(obj.rect.topleft, level.get_player().rect.topleft) < win.get_width() * 1.5):
-                        if hasattr(obj, "patrol") and callable(obj.patrol):
-                            obj.patrol(dtime)
-                        obj.loop(dtime)
-                        if isinstance(obj, NonPlayer) and obj.queued_message is not None:
-                            dtime_offset += obj.play_queued_message()
+                for ent in level.get_entities():
+                    if (not isinstance(ent, Actor) and type(ent).__name__.upper() != "BLOCK") or (isinstance(ent, Actor) and math.dist(ent.rect.topleft, level.get_player().rect.topleft) < win.get_width() * 1.5):
+                        if hasattr(ent, "patrol") and callable(ent.patrol):
+                            ent.patrol(dtime)
+                        ent.loop(dtime)
+                        if isinstance(ent, NonPlayer) and ent.queued_message is not None:
+                            dtime_offset += ent.play_queued_message()
 
                 level.purge()
 

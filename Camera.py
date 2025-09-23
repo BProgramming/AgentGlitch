@@ -11,7 +11,7 @@ class Camera:
     SCROLL_AREA_HEIGHT_PCT_FIXED = 0.25
     SCROLL_SPEED = 1
 
-    def __init__(self, win: pygame.Surface, focus_player=True) -> None:
+    def __init__(self, win: pygame.Surface, focus_player: bool=True) -> None:
         self.level = None
         self.hud = None
         self.win = win
@@ -107,7 +107,7 @@ class Camera:
                 if self.level.grayscale:
                     self.fg_image = pygame.transform.grayscale(self.fg_image)
 
-    def draw(self, master_volume: dict, fps: int, glitches: list=None):
+    def draw(self, master_volume: dict[str, float], fps: int, glitches: list=None) -> None:
         visible_screen = pygame.Rect(self.offset_x, self.offset_y, self.width, self.height)
 
         if len(self.bg_tileset) == 1:
@@ -127,7 +127,7 @@ class Camera:
             for spot in glitches:
                 self.win.blit(spot[0], spot[1])
 
-    def __fade__(self, controller, direction: str="in"):
+    def __fade__(self, controller, direction: str="in") -> None:
         black = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
         black.fill((0, 0, 0))
         for i in range(64):
@@ -151,9 +151,9 @@ class Camera:
                 pygame.mixer.music.set_volume((controller.master_volume["background"]) * volume)
             time.sleep(0.01)
 
-    def fade_in(self, controller):
+    def fade_in(self, controller) -> None:
         self.__fade__(controller, direction="in")
 
-    def fade_out(self, controller):
+    def fade_out(self, controller) -> None:
         self.__fade__(controller, direction="out")
         self.win.fill((0, 0, 0))
