@@ -171,11 +171,34 @@ class MovingBlock(Block):
 class Door(MovingBlock):
     VELOCITY_TARGET = 0.5
 
-    def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, speed=VELOCITY_TARGET, direction=-1, is_locked=False, coord_x=0, coord_y=0, name="Door"):
+    def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, speed=VELOCITY_TARGET, direction=-1, is_locked=False, coord_x=0, coord_y=0, locked_coord_x=None, locked_coord_y=None, unlocked_coord_x=None, unlocked_coord_y=None, name="Door"):
         super().__init__(level, controller, x, y, width, height, image_master, audios, is_stacked, speed=speed, coord_x=coord_x, coord_y=coord_y, name=name)
+        if is_locked:
+            self.is_locked = True
+            if locked_coord_x is not None and locked_coord_y is not None and unlocked_coord_x is not None and unlocked_coord_y is not None:
+                self.locked_sprite = self.load_image(join(ASSETS_FOLDER, "Terrain", "Terrain.png"), width, height, image_master, locked_coord_x, locked_coord_y, grayscale=self.level.grayscale)
+                self.locked_mask = pygame.mask.from_surface(self.locked_sprite)
+                self.unlocked_sprite = self.load_image(join(ASSETS_FOLDER, "Terrain", "Terrain.png"), width, height, image_master, unlocked_coord_x, unlocked_coord_y, grayscale=self.level.grayscale)
+                self.locked_mask = pygame.mask.from_surface(self.unlocked_sprite)
+                self.sprite = self.locked_sprite
+                self.mask = self.locked_mask
+            else:
+                self.locked_sprite = self.unlocked_sprite = self.sprite
+                self.locked_mask = self.unlocked_mask = self.mask
+        else:
+            self.is_locked = False
+            if locked_coord_x is not None and locked_coord_y is not None and unlocked_coord_x is not None and unlocked_coord_y is not None:
+                self.locked_sprite = self.load_image(join(ASSETS_FOLDER, "Terrain", "Terrain.png"), width, height, image_master, locked_coord_x, locked_coord_y, grayscale=self.level.grayscale)
+                self.locked_mask = pygame.mask.from_surface(self.locked_sprite)
+                self.unlocked_sprite = self.load_image(join(ASSETS_FOLDER, "Terrain", "Terrain.png"), width, height, image_master, unlocked_coord_x, unlocked_coord_y, grayscale=self.level.grayscale)
+                self.unlocked_mask = pygame.mask.from_surface(self.unlocked_sprite)
+                self.sprite = self.unlocked_sprite
+                self.mask = self.unlocked_mask
+            else:
+                self.locked_sprite = self.unlocked_sprite = self.sprite
+                self.locked_mask = self.unlocked_mask = self.mask
         self.patrol_path_open = [(x, y + (height * direction))]
         self.patrol_path_closed = [(x, y)]
-        self.is_locked = is_locked
         self.is_open = False
         self.direction = self.facing = MovementDirection.LEFT
 
@@ -200,12 +223,19 @@ class Door(MovingBlock):
 
     def unlock(self) -> None:
         self.is_locked = False
+        self.sprite = self.unlocked_sprite
+        self.mask = self.unlocked_mask
 
     def lock(self) -> None:
         self.is_locked = True
+        self.sprite = self.locked_sprite
+        self.mask = self.locked_mask
 
     def toggle_lock(self) -> None:
-        self.is_locked = not self.is_locked
+        if self.is_locked:
+            self.unlock()
+        else:
+            self.lock()
 
     def collide(self, ent) -> bool:
         if hasattr(ent, "can_open_doors") and ent.can_open_doors and ent.rect.bottom > self.rect.top:

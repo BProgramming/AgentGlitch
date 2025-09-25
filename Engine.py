@@ -95,7 +95,7 @@ def main(win):
                 pygame.display.update()
                 time.sleep(0.01)
         else:
-            handle_exception(FileNotFoundError(join(ASSETS_FOLDER, "Screens", "title.png")))
+            handle_exception("File " + str(FileNotFoundError(join(ASSETS_FOLDER, "Screens", "title.png"))) + " not found.")
         controller.goto_main = False
         load_data = None
         cur_level = None
@@ -232,7 +232,7 @@ def main(win):
                         dtime_offset += level.get_player().revert()
 
                 for ent in level.get_entities():
-                    if (not isinstance(ent, Actor) and type(ent).__name__.upper() != "BLOCK") or (isinstance(ent, Actor) and math.dist(ent.rect.topleft, level.get_player().rect.topleft) < win.get_width() * 1.5):
+                    if (not isinstance(ent, Actor) and type(ent).__name__.upper() != "BLOCK") or (isinstance(ent, Actor) and math.dist(ent.rect.center, (camera.focus_x, camera.focus_y)) < win.get_width() * 1.5):
                         if hasattr(ent, "patrol") and callable(ent.patrol):
                             ent.patrol(dtime)
                         ent.loop(dtime)

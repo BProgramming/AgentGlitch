@@ -99,11 +99,14 @@ class Player(Actor):
                 self.active_visual_effects["blocking_effect"] = VisualEffect(self, self.level.visual_effects_manager.images["BLOCKSHIELD"], alpha=128, scale=(scale, scale), linked_to_source=True)
 
     def get_hit(self, ent) -> None:
-        if isinstance(ent, NonPlayer) and self.cooldowns["blocking_effect"] > 0:
-            self.cooldowns["blocking_effect"] = 0
+        if self.controller.should_scroll_to_point is not None:
+            return
         else:
-            self.been_hit_this_level = True
-            super().get_hit(ent)
+            if isinstance(ent, NonPlayer) and self.cooldowns["blocking_effect"] > 0:
+                self.cooldowns["blocking_effect"] = 0
+            else:
+                self.been_hit_this_level = True
+                super().get_hit(ent)
 
     def move_left(self) -> None:
         self.should_move_horiz = True

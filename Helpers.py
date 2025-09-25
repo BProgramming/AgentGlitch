@@ -1,6 +1,8 @@
 import random
 import sys
 import time
+import traceback
+
 import pygame
 import csv
 import json
@@ -39,7 +41,14 @@ class DifficultyScale(float, Enum):
 
 def handle_exception(msg) -> None:
     pygame.quit()
-    messagebox.showerror(title="Even the agent couldn't glitch out of this!", message="ERROR:\n\n" + msg + ("" if msg.endswith(".") else "."))
+    cur_time = time.gmtime(time.time())
+    filename_time = time.strftime("%Y%m%d_%H%M%S", cur_time)
+    printable_time = time.strftime("%Y-%m-%d, %H:%M:%S", cur_time)
+    log_file = join(GAME_DATA_FOLDER, "glitch_" + filename_time + ".log")
+    with open(log_file, "w") as log:
+        print(f"Error encountered at GMT {printable_time}:", file=log)
+        traceback.print_exc(file=log)
+    messagebox.showerror(title="Even the agent couldn't glitch out of this!", message="ERROR: " + msg + "\nMore info available in " + log_file)
     sys.exit()
 
 

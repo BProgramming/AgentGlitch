@@ -17,11 +17,11 @@ class HUD:
         for i in range(10):
             c = str(i)
             if self.time_characters.get(c) is None:
-                handle_exception("File " + join(ASSETS_FOLDER, "Icons", "Timer", c + ".png") + " not found.")
+                handle_exception("File " + str(FileNotFoundError(join(ASSETS_FOLDER, "Icons", "Timer", c + ".png"))) + " not found.")
         if self.time_characters.get("COLON") is None:
-            handle_exception("File " + join(ASSETS_FOLDER, "Icons", "Timer", "colon.png") + " not found.")
+            handle_exception("File " + str(FileNotFoundError(join(ASSETS_FOLDER, "Icons", "Timer", "colon.png"))) + " not found.")
         if self.time_characters.get("DECIMAL") is None:
-            handle_exception("File " + join(ASSETS_FOLDER, "Icons", "Timer", "decimal.png") + " not found.")
+            handle_exception("File " + str(FileNotFoundError(join(ASSETS_FOLDER, "Icons", "Timer", "decimal.png"))) + " not found.")
         self.time_num_icon_width: int = self.time_characters["0"].get_width()
         self.time_punc_icon_width: int = self.time_characters["COLON"].get_width()
         self.old_time: str = "00:00.000"
