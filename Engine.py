@@ -1,6 +1,6 @@
 import pygame
 import SteamworksConnection
-from Helpers import load_json_dict, load_levels, load_audios, display_text, DifficultyScale, handle_exception, load_text_from_file
+from Helpers import load_json_dict, load_object_dicts, load_levels, load_audios, display_text, DifficultyScale, handle_exception, load_text_from_file, ASSETS_FOLDER
 from os.path import join, isfile
 from VisualEffects import VisualEffectsManager
 
@@ -14,7 +14,7 @@ pygame.init()
 WIDTH, HEIGHT = 1920, 1080
 FPS_TARGET = 60
 
-icon = join("Assets", "Icons", "icon.png")
+icon = join(ASSETS_FOLDER, "Icons", "icon.png")
 if isfile(icon):
     pygame.display.set_icon(pygame.image.load(icon))
 else:
@@ -43,8 +43,8 @@ def main(win):
     clock = pygame.time.Clock()
 
     levels = load_levels("Levels")
-    objects_dict = load_json_dict("ReferenceDicts", "objects_dict.txt")
-    meta_dict = load_json_dict("ReferenceDicts", "meta_dict.txt")
+    objects_dict = load_object_dicts("ReferenceDicts\\GameObjects")
+    meta_dict = load_json_dict("ReferenceDicts", "meta.agd")
     sprite_master = {}
     image_master = {}
 
@@ -67,9 +67,9 @@ def main(win):
             cinematics.play("credit2", win)
         pygame.mixer.music.set_volume(controller.master_volume["background"])
         new_game = False
-        if isfile(join("Assets", "Screens", "title.png")):
-            slide = pygame.transform.scale2x(pygame.image.load(join("Assets", "Screens", "title2.0.png")))
-            #overlay = pygame.image.load(join("Assets", "Screens", "title_overlay.png"))
+        if isfile(join(ASSETS_FOLDER, "Screens", "title.png")):
+            slide = pygame.transform.scale2x(pygame.image.load(join(ASSETS_FOLDER, "Screens", "title2.0.png")))
+            #overlay = pygame.image.load(join(ASSETS_FOLDER, "Screens", "title_overlay.png"))
             black = pygame.Surface((win.get_width(), win.get_height()), pygame.SRCALPHA)
             black.fill((0, 0, 0))
             if not controller.goto_main:
@@ -95,7 +95,7 @@ def main(win):
                 pygame.display.update()
                 time.sleep(0.01)
         else:
-            handle_exception(FileNotFoundError(join("Assets", "Screens", "title.png")))
+            handle_exception(FileNotFoundError(join(ASSETS_FOLDER, "Screens", "title.png")))
         controller.goto_main = False
         load_data = None
         cur_level = None

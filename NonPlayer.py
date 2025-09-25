@@ -3,7 +3,7 @@ import pygame
 import time
 from Actor import Actor, MovementState
 from Block import Door
-from Helpers import DifficultyScale, MovementDirection, load_text_from_file, display_text
+from Helpers import DifficultyScale, MovementDirection, load_text_from_file, display_text, ASSETS_FOLDER
 from os.path import isfile, join
 
 
@@ -18,7 +18,7 @@ class NonPlayer(Actor):
         self.is_hostile = is_hostile
         if collision_message is not None:
             if type(collision_message) == dict and collision_message.get("text") is not None and collision_message.get("audio") is not None:
-                audio_file = join("Assets", "SoundEffects", "Text", collision_message["audio"])
+                audio_file = join(ASSETS_FOLDER, "SoundEffects", "Text", collision_message["audio"])
                 if isfile(audio_file):
                     self.collision_message = {"text": load_text_from_file(collision_message["text"]), "audio": pygame.mixer.Sound(audio_file)}
                 else:

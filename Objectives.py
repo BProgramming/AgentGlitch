@@ -3,14 +3,14 @@ import random
 import pygame
 from os.path import join, isfile
 from Entity import Entity
-from Helpers import handle_exception, set_sound_source, load_sprite_sheets
+from Helpers import handle_exception, set_sound_source, load_sprite_sheets, ASSETS_FOLDER
 
 
 class Objective(Entity):
-    if not isfile(join("Assets", "Icons", "Pointer", "pointer.png")):
-        handle_exception("File " + str(FileNotFoundError(join("Assets", "Icons", "Pointer", "pointer.png"))) + " not found.")
+    if not isfile(join(ASSETS_FOLDER, "Icons", "Pointer", "pointer.png")):
+        handle_exception("File " + str(FileNotFoundError(join(ASSETS_FOLDER, "Icons", "Pointer", "pointer.png"))) + " not found.")
     else:
-        POINTER_SPRITE: pygame.Surface = pygame.transform.scale2x(pygame.image.load(join("Assets", "Icons", "Pointer", "pointer.png")).convert_alpha())
+        POINTER_SPRITE: pygame.Surface = pygame.transform.scale2x(pygame.image.load(join(ASSETS_FOLDER, "Icons", "Pointer", "pointer.png")).convert_alpha())
         POINTER_SPRITE_GRAYSCALE: pygame.Surface = pygame.transform.grayscale(POINTER_SPRITE)
         POINTER_SPRITE_HEIGHT: int = POINTER_SPRITE.get_height()
         POINTER_SPRITE_WIDTH: int = POINTER_SPRITE.get_width()

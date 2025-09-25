@@ -2,7 +2,7 @@ import time
 import pygame
 from enum import Enum
 from os.path import join, isfile
-from Helpers import display_text, load_text_from_file, load_path, set_property
+from Helpers import display_text, load_text_from_file, load_path, set_property, ASSETS_FOLDER
 from Entity import Entity
 from Block import Block, BreakableBlock, MovableBlock, Hazard, MovingBlock, MovingHazard, Door, FallingHazard
 from Objectives import Objective
@@ -65,7 +65,7 @@ class Trigger(Entity):
         elif self.type == TriggerType.CHANGE_LEVEL:
             return input.upper()
         elif self.type == TriggerType.SOUND:
-            path = join("Assets", "SoundEffects", "triggers", input)
+            path = join(ASSETS_FOLDER, "SoundEffects", "triggers", input)
             if not isfile(path) or len(input) < 4 or (input[-4:] != ".wav" and input[-4:] != ".mp3"):
                 return None
             else:

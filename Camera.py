@@ -2,6 +2,8 @@ import pygame
 import time
 import sys
 from os.path import join, isfile
+
+from Helpers import ASSETS_FOLDER
 from Level import Level
 from HUD import HUD
 
@@ -85,9 +87,9 @@ class Camera:
             self.offset_y = min(self.focus_y + self.scroll_height - self.height, self.level.level_bounds[1][1] - self.height)
 
     def __get_background__(self) -> None:
-        file = join("Assets", "Background", self.level.background)
+        file = join(ASSETS_FOLDER, "Background", self.level.background)
         if not isfile(file):
-            file = join("Assets", "Background", "Blue.png")
+            file = join(ASSETS_FOLDER, "Background", "Blue.png")
 
         self.bg_image = pygame.image.load(file).convert_alpha()
         if self.level.grayscale:
@@ -101,7 +103,7 @@ class Camera:
 
     def __get_foreground__(self) -> None:
         if self.level.foreground is not None:
-            file = join("Assets", "Foreground", self.level.foreground)
+            file = join(ASSETS_FOLDER, "Foreground", self.level.foreground)
             if isfile(file):
                 self.fg_image = pygame.image.load(file).convert_alpha()
                 if self.level.grayscale:

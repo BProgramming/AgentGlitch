@@ -3,7 +3,7 @@ import pygame
 import sys
 import time
 from enum import Enum
-from Helpers import glitch, handle_exception
+from Helpers import glitch, handle_exception, ASSETS_FOLDER
 from os.path import join, isfile
 
 
@@ -23,7 +23,7 @@ class CinematicsManager:
             files = [files]
         for file in files:
             if file["file"].upper() != "NONE":
-                path = join("Assets", "Cinematics", file["file"])
+                path = join(ASSETS_FOLDER, "Cinematics", file["file"])
                 if isfile(path):
                     if file["type"].upper() == "SLIDE":
                         self.cinematics[file["name"]] = Cinematic(self.__load_slide__(path), CinematicType.SLIDE, controller, pause_key=(None if file.get("pause_key") is None else file["pause_key"]), text=(None if file.get("text") is None else file["text"]), should_glitch=(False if file.get("should_glitch") is None or file["should_glitch"].upper() == "FALSE" else True), should_fade_in=(True if file.get("should_fade_in") is None or file["should_fade_in"].upper() == "TRUE" else False), should_fade_out=(True if file.get("should_fade_out") is None or file["should_fade_out"].upper() == "TRUE" else False))

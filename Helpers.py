@@ -10,6 +10,9 @@ from os.path import isfile, isdir, join
 from enum import Enum, IntEnum
 
 
+ASSETS_FOLDER: str = "Assets"
+
+
 class MovementDirection(IntEnum):
     LEFT = -1
     RIGHT = 1
@@ -42,7 +45,7 @@ def validate_file_list(dir, lst, ext=None) -> list | None:
     out = []
     for name in lst:
         if ext is None or name[-len(ext):].upper() == ext.upper():
-            file = join("Assets", dir, name)
+            file = join(ASSETS_FOLDER, dir, name)
             if isfile(file):
                 out.append(file)
     if len(out) > 0:
@@ -54,7 +57,7 @@ def validate_file_list(dir, lst, ext=None) -> list | None:
 def load_picker_sprites(dir) -> tuple | None:
     images = []
     values = []
-    path = join("Assets", dir)
+    path = join(ASSETS_FOLDER, dir)
     if isdir(path):
         folders = [f for f in listdir(path) if isdir(join(path, f))]
         for folder in folders:
@@ -78,7 +81,7 @@ def load_picker_sprites(dir) -> tuple | None:
 def load_level_images(dir) -> tuple | None:
     images = []
     values = []
-    path = join("Assets", dir)
+    path = join(ASSETS_FOLDER, dir)
     if isdir(path):
         files = [f for f in listdir(path) if isfile(join(path, f)) and f[-4:].lower()==".png"]
         for file in sorted(files):
@@ -119,7 +122,7 @@ def make_image_from_text(width, height, header, body, border=5) -> pygame.Surfac
 
 
 def load_images(dir1, dir2) -> dict | None:
-    path = join("Assets", dir1, dir2) if dir2 is not None else join("Assets", dir1)
+    path = join(ASSETS_FOLDER, dir1, dir2) if dir2 is not None else join(ASSETS_FOLDER, dir1)
     if isdir(path):
         images = [f for f in listdir(path) if isfile(join(path, f)) and f[-4:].lower()==".png"]
 
@@ -143,17 +146,17 @@ def flip(sprites) -> list:
 
 def load_sprite_sheets(dir1, dir2, sprite_master, direction=False, grayscale=False) -> dict:
     if sprite_master.get(dir2) is None:
-        path = join("Assets", dir1, dir2)
+        path = join(ASSETS_FOLDER, dir1, dir2)
 
         if not isdir(path):
             options = []
-            for dir in listdir(join("Assets", dir1)):
+            for dir in listdir(join(ASSETS_FOLDER, dir1)):
                 if len(dir2) < len(dir) and dir2.upper() == dir[:len(dir2)].upper():
                     options.append(dir)
             if len(options) > 0:
                 i = random.randint(0, len(options) - 1)
                 dir2 = options[i]
-                path = join("Assets", dir1, dir2)
+                path = join(ASSETS_FOLDER, dir1, dir2)
             else:
                 handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
 
@@ -183,7 +186,7 @@ def load_sprite_sheets(dir1, dir2, sprite_master, direction=False, grayscale=Fal
 
 
 def load_json_dict(dir, file) -> dict | None:
-    path = join("Assets", dir, file)
+    path = join(ASSETS_FOLDER, dir, file)
     try:
         with open(path, "r") as file:
             ref = json.loads(file.read())
@@ -196,26 +199,39 @@ def load_json_dict(dir, file) -> dict | None:
         return None
 
 
-def load_levels(dir) -> dict | None:
-    path = join("Assets", dir)
+def load_object_dicts(dir) -> dict | None:
+    path = join(ASSETS_FOLDER, dir)
     if isdir(path):
-        files = [f for f in listdir(path) if isfile(join(path, f))]
+        files = [f for f in listdir(path) if isfile(join(path, f)) and f.endswith(".agd")]
+        dicts = {}
+        for f in files:
+            dicts[str.upper(f.replace(".agd", ""))] = load_json_dict(dir, f)
+        return dicts
+    else:
+        handle_exception("File or folder " + str(FileNotFoundError(path)) + " not found.")
+        return None
+
+
+def load_levels(dir) -> dict | None:
+    path = join(ASSETS_FOLDER, dir)
+    if isdir(path):
+        files = [f for f in listdir(path) if isfile(join(path, f)) and f.endswith(".agl")]
         files.sort()
 
         levels = {}
         for f in files:
             with open(join(path, f)) as level:
                 reader = csv.reader(level, delimiter=",", quotechar='"')
-                levels[str.upper(f.replace(".csv", "").replace(".txt", ""))] = [row for row in reader]
+                levels[str.upper(f.replace(".agl", ""))] = [row for row in reader]
 
         return levels
     else:
-        handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
+        handle_exception("File or folder " + str(FileNotFoundError(path)) + " not found.")
         return None
 
 
 def __load_single_audio__(dir1, dir2) -> dict | None:
-    path = join("Assets", "SoundEffects", dir1, dir2)
+    path = join(ASSETS_FOLDER, "SoundEffects", dir1, dir2)
     if isdir(path):
         sounds = {}
         for file in [f for f in listdir(path) if isfile(join(path, f))]:
@@ -230,9 +246,9 @@ def __load_single_audio__(dir1, dir2) -> dict | None:
 
 def load_audios(dir, dir2=None) -> dict | None:
     if dir2 is None:
-        path = join("Assets", "SoundEffects", dir)
+        path = join(ASSETS_FOLDER, "SoundEffects", dir)
     else:
-        path = join("Assets", "SoundEffects", dir, dir2)
+        path = join(ASSETS_FOLDER, "SoundEffects", dir, dir2)
     if isdir(path):
         sounds = {}
         for sub_dir in [d for d in listdir(path) if isdir(path)]:
@@ -269,7 +285,7 @@ def set_sound_source(source_rect, player_rect, sound_type, channel) -> None:
 
 
 def load_text_from_file(file) -> list | None:
-    path = join("Assets", "Text", file)
+    path = join(ASSETS_FOLDER, "Text", file)
     if isfile(path):
         text = []
         with open(path, "r") as file:

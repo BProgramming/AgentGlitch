@@ -7,7 +7,7 @@ from NonPlayer import NonPlayer
 from Objectives import Objective
 from Trigger import Trigger, TriggerType
 from WeatherEffects import *
-from Helpers import load_path, validate_file_list, display_text
+from Helpers import load_path, validate_file_list, display_text, ASSETS_FOLDER
 
 
 class Level:
@@ -33,7 +33,7 @@ class Level:
         self.start_message = (None if meta_dict[name].get("start_message") is None else meta_dict[name]["start_message"])
         self.end_message = (None if meta_dict[name].get("end_message") is None else meta_dict[name]["end_message"])
         self.music = (None if meta_dict[name].get("music") is None else validate_file_list("Music", list(meta_dict[name]["music"].split(' ')), "mp3"))
-        self.level_bounds, self.player, self.triggers, self.blocks, self.dynamic_blocks, self.doors, self.static_blocks, self.hazards, self.falling_hazards, self.enemies, self.objectives = self.build_level(self, levels[self.name], sprite_master, image_master, objects_dict, player_audios, enemy_audios, block_audios, message_audios, win, controller, None if meta_dict[name].get("player_sprite") is None or meta_dict[name]["player_sprite"].upper() == "NONE" else meta_dict[name]["player_sprite"], self.block_size)
+        self.level_bounds, self.player, self.triggers, self.blocks, self.dynamic_blocks, self.doors, self.static_blocks, self.hazards, self.falling_hazards, self.enemies, self.objectives = self.build_level(self, levels[self.name], sprite_master, image_master, objects_dict[self.name], player_audios, enemy_audios, block_audios, message_audios, win, controller, None if meta_dict[name].get("player_sprite") is None or meta_dict[name]["player_sprite"].upper() == "NONE" else meta_dict[name]["player_sprite"], self.block_size)
         self.weather = (None if meta_dict[name].get("weather") is None else self.get_weather(meta_dict[name]["weather"].upper()))
         if meta_dict[name].get("abilities") is not None:
             self.set_player_abilities(meta_dict[name]["abilities"])
@@ -193,7 +193,7 @@ class Level:
         img = pygame.Surface((self.level_bounds[1][0], self.level_bounds[1][1]), pygame.SRCALPHA)
         for ent in self.get_entities() + [self.get_player()]:
             img.blit(ent.sprite, (ent.rect.x, ent.rect.y))
-        pygame.image.save(img, join("Assets", "Misc", self.name + ".png"))
+        pygame.image.save(img, join(ASSETS_FOLDER, "Misc", self.name + ".png"))
 
     def gen_background(self) -> None:
         img = pygame.Surface((self.level_bounds[1][0], self.level_bounds[1][1]), pygame.SRCALPHA)
@@ -207,7 +207,7 @@ class Level:
         square.fill((255, 0, 0, 255))
         for block in self.hazards + [door for doors in list(self.doors.values()) for door in doors]:
             img.blit(square, (block.rect.x, block.rect.y))
-        pygame.image.save(img, join("Assets", "Misc", self.name + "_bg.png"))
+        pygame.image.save(img, join(ASSETS_FOLDER, "Misc", self.name + "_bg.png"))
 
     def __get_static_block_slice__(self, win, offset_x, offset_y) -> list:
         return [row[int(offset_x // self.block_size):int((offset_x + (1.5 * win.get_width())) // self.block_size)] for row in self.static_blocks[int(offset_y // self.block_size):int((offset_y + (1.5 * win.get_height())) // self.block_size)]]

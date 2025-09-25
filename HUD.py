@@ -1,6 +1,6 @@
 import pygame
 from os.path import join, isfile
-from Helpers import handle_exception, load_images
+from Helpers import handle_exception, load_images, ASSETS_FOLDER
 
 
 class HUD:
@@ -17,53 +17,53 @@ class HUD:
         for i in range(10):
             c = str(i)
             if self.time_characters.get(c) is None:
-                handle_exception("File " + join("Assets", "Icons", "Timer", c + ".png") + " not found.")
+                handle_exception("File " + join(ASSETS_FOLDER, "Icons", "Timer", c + ".png") + " not found.")
         if self.time_characters.get("COLON") is None:
-            handle_exception("File " + join("Assets", "Icons", "Timer", "colon.png") + " not found.")
+            handle_exception("File " + join(ASSETS_FOLDER, "Icons", "Timer", "colon.png") + " not found.")
         if self.time_characters.get("DECIMAL") is None:
-            handle_exception("File " + join("Assets", "Icons", "Timer", "decimal.png") + " not found.")
+            handle_exception("File " + join(ASSETS_FOLDER, "Icons", "Timer", "decimal.png") + " not found.")
         self.time_num_icon_width: int = self.time_characters["0"].get_width()
         self.time_punc_icon_width: int = self.time_characters["COLON"].get_width()
         self.old_time: str = "00:00.000"
         self.time_display: list[pygame.Surface | None] = [self.time_characters["0"], self.time_characters["0"], self.time_characters["COLON"], self.time_characters["0"], self.time_characters["0"], self.time_characters["DECIMAL"], self.time_characters["0"], self.time_characters["0"], self.time_characters["0"]]
 
         self.icon_bar: pygame.Surface | None = pygame.Surface((324, 64), pygame.SRCALPHA)
-        file = join("Assets", "Icons", "jump.png")
+        file = join(ASSETS_FOLDER, "Icons", "jump.png")
         if not isfile(file):
             handle_exception("File " + str(FileNotFoundError(file)) + " not found.")
         else:
             self.icon_jump: pygame.Surface | None = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
             if grayscale:
                 self.icon_jump = pygame.transform.grayscale(self.icon_jump)
-        file = join("Assets", "Icons", "double_jump.png")
+        file = join(ASSETS_FOLDER, "Icons", "double_jump.png")
         if not isfile(file):
             handle_exception("File " + str(FileNotFoundError(file)) + " not found.")
         else:
             self.icon_double_jump: pygame.Surface | None = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
             if grayscale:
                 self.icon_double_jump = pygame.transform.grayscale(self.icon_double_jump)
-        file = join("Assets", "Icons", "block.png")
+        file = join(ASSETS_FOLDER, "Icons", "block.png")
         if not isfile(file):
             handle_exception("File " + str(FileNotFoundError(file)) + " not found.")
         else:
             self.icon_block: pygame.Surface | None = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
             if grayscale:
                 self.icon_block = pygame.transform.grayscale(self.icon_block)
-        file = join("Assets", "Icons", "teleport.png")
+        file = join(ASSETS_FOLDER, "Icons", "teleport.png")
         if not isfile(file):
             handle_exception("File " + str(FileNotFoundError(file)) + " not found.")
         else:
             self.icon_teleport: pygame.Surface | None = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
             if grayscale:
                 self.icon_teleport = pygame.transform.grayscale(self.icon_teleport)
-        file = join("Assets", "Icons", "resize.png")
+        file = join(ASSETS_FOLDER, "Icons", "resize.png")
         if not isfile(file):
             handle_exception("File " + str(FileNotFoundError(file)) + " not found.")
         else:
             self.icon_resize: pygame.Surface | None = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
             if grayscale:
                 self.icon_resize = pygame.transform.grayscale(self.icon_resize)
-        file = join("Assets", "Icons", "bullet_time.png")
+        file = join(ASSETS_FOLDER, "Icons", "bullet_time.png")
         if not isfile(file):
             handle_exception("File " + str(FileNotFoundError(file)) + " not found.")
         else:
@@ -71,7 +71,7 @@ class HUD:
             if grayscale:
                 self.icon_bullet_time = pygame.transform.grayscale(self.icon_bullet_time)
 
-        file = join("Assets", "Icons", "save.png")
+        file = join(ASSETS_FOLDER, "Icons", "save.png")
         if not isfile(file):
             handle_exception("File " + str(FileNotFoundError(file)) + " not found.")
         else:

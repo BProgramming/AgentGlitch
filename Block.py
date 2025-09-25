@@ -3,14 +3,14 @@ import random
 import pygame
 from os.path import join, isfile
 from Entity import Entity
-from Helpers import handle_exception, MovementDirection, load_sprite_sheets, set_sound_source
+from Helpers import handle_exception, MovementDirection, load_sprite_sheets, set_sound_source, ASSETS_FOLDER
 from VisualEffects import VisualEffect
 
 
 class Block(Entity):
     def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=0, coord_y=0, is_blocking=True, name="Block"):
         super().__init__(level, controller, x, y, width, height, is_blocking=is_blocking, name=name)
-        self.sprite = self.load_image(join("Assets", "Terrain", "Terrain.png"), width, height, image_master, coord_x, coord_y, grayscale=self.level.grayscale)
+        self.sprite = self.load_image(join(ASSETS_FOLDER, "Terrain", "Terrain.png"), width, height, image_master, coord_x, coord_y, grayscale=self.level.grayscale)
         self.mask = pygame.mask.from_surface(self.sprite)
         self.is_stacked = is_stacked
         self.audios = audios
@@ -49,7 +49,7 @@ class BreakableBlock(Block):
 
     def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=0, coord_y=0, coord_x2=0, coord_y2=0, name="BreakableBlock"):
         super().__init__(level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=coord_x, coord_y=coord_y, name=name)
-        self.sprite_damaged = self.load_image(join("Assets", "Terrain", "Terrain.png"), width, height, image_master, coord_x2, coord_y2, grayscale=self.level.grayscale)
+        self.sprite_damaged = self.load_image(join(ASSETS_FOLDER, "Terrain", "Terrain.png"), width, height, image_master, coord_x2, coord_y2, grayscale=self.level.grayscale)
         self.cooldowns = {"get_hit": 0}
 
     def get_hit(self, ent) -> None:
