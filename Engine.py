@@ -1,6 +1,6 @@
 import pygame
 import SteamworksConnection
-from Helpers import load_json_dict, load_object_dicts, load_levels, load_audios, display_text, DifficultyScale, handle_exception, load_text_from_file, ASSETS_FOLDER
+from Helpers import load_json_dict, load_object_dicts, load_levels, load_audios, display_text, DifficultyScale, handle_exception, load_text_from_file, ASSETS_FOLDER, GAME_DATA_FOLDER, FIRST_LEVEL_NAME
 from os.path import join, isfile
 from VisualEffects import VisualEffectsManager
 
@@ -80,7 +80,7 @@ def main(win):
                     win.blit(black, (0, 0))
                     pygame.display.update()
                     time.sleep(0.01)
-            if isfile("GameData/save.p"):
+            if isfile(join(GAME_DATA_FOLDER, "save.p")):
                 controller.main_menu.buttons[1][1].set_alpha(255)
                 controller.main_menu.buttons[1][2].set_alpha(255)
             else:
@@ -105,7 +105,7 @@ def main(win):
             display_text("Loading mission.   [1/3]", controller, min_pause_time=0, should_sleep=False)
             should_load = False
             if new_game:
-                cur_level = "__START__"
+                cur_level = FIRST_LEVEL_NAME
                 save_player_profile(controller)
                 new_game = False
             elif controller.goto_load:
@@ -216,7 +216,7 @@ def main(win):
                         if "LOOP" not in controller.music[controller.music_index].upper():
                             controller.cycle_music()
                 controller.handle_continuous_input()
-                if (controller.goto_load and isfile("GameData/save.p")) or controller.goto_main or controller.goto_restart:
+                if (controller.goto_load and isfile(join(GAME_DATA_FOLDER, "save.p"))) or controller.goto_main or controller.goto_restart:
                     break
 
                 result = level.get_player().loop(dtime)

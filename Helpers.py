@@ -11,6 +11,8 @@ from enum import Enum, IntEnum
 
 
 ASSETS_FOLDER: str = "Assets"
+GAME_DATA_FOLDER: str = "GameData"
+FIRST_LEVEL_NAME: str = "__START__"
 
 
 class MovementDirection(IntEnum):
@@ -37,7 +39,7 @@ class DifficultyScale(float, Enum):
 
 def handle_exception(msg) -> None:
     pygame.quit()
-    messagebox.showerror(title="Even the agent couldn't glitch out of this!", message="ERROR:\n\n" + msg + ("" if msg[-1] == "." else "."))
+    messagebox.showerror(title="Even the agent couldn't glitch out of this!", message="ERROR:\n\n" + msg + ("" if msg.endswith(".") else "."))
     sys.exit()
 
 

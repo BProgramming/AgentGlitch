@@ -1,13 +1,15 @@
 import pygame
 import pickle
-from os.path import isfile
+from os.path import join, isfile
 from Actor import Actor
 from Block import BreakableBlock
+from Helpers import GAME_DATA_FOLDER, FIRST_LEVEL_NAME
 
 
 def save_player_profile(controller, level=None):
-    if isfile("GameData/profile.p"):
-        data = pickle.load(open("GameData/profile.p", "rb"))
+    profile_file = join(GAME_DATA_FOLDER, "profile.p")
+    if isfile(profile_file):
+        data = pickle.load(open(profile_file, "rb"))
     else:
         data = None
 
@@ -15,17 +17,18 @@ def save_player_profile(controller, level=None):
         if data is not None and data.get("level") is not None:
             cur_level = data["level"]
         else:
-            cur_level = "__START__"
+            cur_level = FIRST_LEVEL_NAME
     else:
         cur_level = level.name
 
     data = {"level": cur_level, "master volume": controller.master_volume, "keyboard layout": controller.active_keyboard_layout, "gamepad layout": controller.active_gamepad_layout, "is fullscreen": pygame.display.is_fullscreen(), "difficulty": controller.difficulty, "selected sprite": controller.player_sprite_selected, "player abilities": controller.player_abilities}
-    pickle.dump(data, open("GameData/profile.p", "wb"))
+    pickle.dump(data, open(profile_file, "wb"))
 
 
 def load_player_profile(controller):
-    if isfile("GameData/profile.p"):
-        data = pickle.load(open("GameData/profile.p", "rb"))
+    profile_file = join(GAME_DATA_FOLDER, "profile.p")
+    if isfile(profile_file):
+        data = pickle.load(open(profile_file, "rb"))
         controller.master_volume = data["master volume"]
         controller.set_keyboard_layout(data["keyboard layout"])
         controller.difficulty = data["difficulty"]
@@ -47,14 +50,16 @@ def save(level, hud):
         ent_data = ent.save()
         if ent_data is not None:
             data.update(ent_data)
-    pickle.dump(data, open("GameData/save.p", "wb"))
+    save_file = join(GAME_DATA_FOLDER, "save.p")
+    pickle.dump(data, open(save_file, "wb"))
 
 
 def load_part1():
-    if not isfile("GameData/save.p"):
+    save_file = join(GAME_DATA_FOLDER, "save.p")
+    if not isfile(save_file):
         return None
     else:
-        data = pickle.load(open("GameData/save.p", "rb"))
+        data = pickle.load(open(save_file, "rb"))
         if data is None:
             return None
         else:
