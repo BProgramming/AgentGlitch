@@ -5,33 +5,34 @@ class Entity(pygame.sprite.Sprite):
     GRAVITY = 0.02
     ANIMATION_DELAY = 0.3
 
-    def __init__(self, level, controller, x, y, width, height, is_blocking=True, name="Entity"):
+    def __init__(self, level, controller, x: float, y: float, width: float, height: float, is_blocking: bool=True, name: str="Entity"):
         super().__init__()
         self.level = level
         self.controller = controller
-        self.sprite = pygame.Surface((width, height), pygame.SRCALPHA)
-        self.mask = pygame.mask.from_surface(self.sprite)
-        self.rect = pygame.Rect(x, y, width, height)
-        self.width = width
-        self.height = height
-        self.is_blocking = is_blocking
-        self.name = name + " (" + str(x) + ", " + str(y) + ")"
-        self.max_hp = self.hp = 100
-        self.is_stacked = False # this property is only used by blocks, but needed here for generic checks
-        self.cooldowns = None
-        self.active_visual_effects = {}
+        self.sprite: pygame.Surface | None = pygame.Surface((width, height), pygame.SRCALPHA)
+        self.mask: pygame.Mask | None = pygame.mask.from_surface(self.sprite)
+        self.rect: pygame.Rect | None = pygame.Rect(x, y, width, height)
+        self.width: float = width
+        self.height: float = height
+        self.is_blocking: bool = is_blocking
+        self.name: str = name + " (" + str(x) + ", " + str(y) + ")"
+        self.max_hp: float = 100
+        self.hp: float = 100
+        self.is_stacked: bool = False # this property is only used by blocks, but needed here for generic checks
+        self.cooldowns: dict | None = None
+        self.active_visual_effects: dict = {}
 
     def save(self) -> dict:
         return {self.name: {"hp": self.hp}}
 
-    def load(self, ent) -> None:
-        self.load_attribute(ent, "hp")
+    def load(self, data: dict) -> None:
+        self.load_attribute(data, "hp")
 
-    def load_attribute(self, ent, attribute) -> None:
-        if ent.get(attribute):
-            setattr(self, attribute, ent[attribute])
+    def load_attribute(self, data: dict, attribute: str) -> None:
+        if data.get(attribute):
+            setattr(self, attribute, data[attribute])
 
-    def update_cooldowns(self, dtime) -> None:
+    def update_cooldowns(self, dtime: float) -> None:
         for key in self.cooldowns:
             if self.cooldowns[key] > 0:
                 self.cooldowns[key] -= (dtime / 1000)
@@ -43,7 +44,7 @@ class Entity(pygame.sprite.Sprite):
             if self.cooldowns[effect] <= 0:
                 del self.active_visual_effects[effect]
 
-    def loop(self, dtime) -> None:
+    def loop(self, dtime: float) -> None:
         if self.cooldowns is not None:
             self.update_cooldowns(dtime)
         if self.active_visual_effects:
@@ -51,7 +52,7 @@ class Entity(pygame.sprite.Sprite):
         if self.hp <= 0:
             self.level.queue_purge(self)
 
-    def draw(self, win, offset_x, offset_y, master_volume, fps) -> None:
+    def draw(self, win: pygame.Surface, offset_x: float, offset_y: float, master_volume: dict, fps: int) -> None:
         adj_x = self.rect.x - offset_x
         adj_y = self.rect.y - offset_y
         if -self.rect.width < adj_x <= win.get_width() and -self.rect.height < adj_y <= win.get_height():
@@ -59,11 +60,11 @@ class Entity(pygame.sprite.Sprite):
                 self.active_visual_effects[effect].draw(win, offset_x, offset_y)
             win.blit(self.sprite, (adj_x, adj_y))
 
-    def collide(self, ent) -> bool:
+    def collide(self, ent: 'Entity') -> bool:
         return self.is_blocking
 
-    def get_hit(self, ent) -> None:
+    def get_hit(self, ent: 'Entity') -> None:
         return
 
-    def set_difficulty(self, scale) -> None:
+    def set_difficulty(self, scale: float) -> None:
         return

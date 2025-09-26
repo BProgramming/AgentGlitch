@@ -9,24 +9,27 @@ from HUD import HUD
 
 
 class Camera:
-    SCROLL_AREA_WIDTH_PCT_FIXED = 0.375
-    SCROLL_AREA_HEIGHT_PCT_FIXED = 0.25
-    SCROLL_SPEED = 1
+    SCROLL_AREA_WIDTH_PCT_FIXED: float = 0.375
+    SCROLL_AREA_HEIGHT_PCT_FIXED: float = 0.25
+    SCROLL_SPEED: float = 1
 
     def __init__(self, win: pygame.Surface, focus_player: bool=True) -> None:
-        self.level = None
-        self.hud = None
-        self.win = win
-        self.width = win.get_width()
-        self.scroll_width = self.width * Camera.SCROLL_AREA_WIDTH_PCT_FIXED
-        self.height = win.get_height()
-        self.scroll_height = self.height * Camera.SCROLL_AREA_HEIGHT_PCT_FIXED
-        self.focus_player = focus_player
-        self.focus_x = self.focus_y = 0.0
-        self.scroll_wait_time = 0.0
-        self.offset_x = self.offset_y = 0.0
-        self.bg_tileset = []
-        self.bg_image = self.fg_image = None
+        self.level: Level | None = None
+        self.hud: HUD | None = None
+        self.win: pygame.Surface = win
+        self.width: float = win.get_width()
+        self.scroll_width: float = self.width * Camera.SCROLL_AREA_WIDTH_PCT_FIXED
+        self.height: float = win.get_height()
+        self.scroll_height: float = self.height * Camera.SCROLL_AREA_HEIGHT_PCT_FIXED
+        self.focus_player: bool = focus_player
+        self.focus_x: float = 0.0
+        self.focus_y: float = 0.0
+        self.scroll_wait_time: float = 0.0
+        self.offset_x: float = 0.0
+        self.offset_y: float = 0.0
+        self.bg_tileset: list = []
+        self.bg_image: pygame.Surface | None = None
+        self.fg_image: pygame.Surface | None = None
 
     def prepare(self, level: Level, hud: HUD) -> None:
         self.level = level

@@ -110,24 +110,24 @@ class Actor(Entity):
             projectiles.append(proj.save())
         return {self.name: {"hp": self.hp, "cached x y": (self.cached_x, self.cached_y), "cooldowns": self.cached_cooldowns, "size": self.size, "size_target": self.size, "can_wall_jump": self.can_wall_jump, "can_shoot": self.can_shoot, "can_resize": self.can_resize, "max_jumps": self.max_jumps, "projectiles": projectiles}}
 
-    def load(self, ent) -> None:
-        self.rect.x, self.rect.y = self.cached_x, self.cached_y = ent["cached x y"]
-        self.cooldowns = self.cached_cooldowns = ent["cooldowns"]
-        self.load_attribute(ent, "hp")
+    def load(self, data) -> None:
+        self.rect.x, self.rect.y = self.cached_x, self.cached_y = data["cached x y"]
+        self.cooldowns = self.cached_cooldowns = data["cooldowns"]
+        self.load_attribute(data, "hp")
         self.cached_hp = self.hp
-        self.load_attribute(ent, "size")
-        self.load_attribute(ent, "size_target")
-        self.load_attribute(ent, "can_wall_jump")
-        self.load_attribute(ent, "can_shoot")
-        self.load_attribute(ent, "can_resize")
-        self.load_attribute(ent, "max_jumps")
-        for proj in ent["projectiles"]:
+        self.load_attribute(data, "size")
+        self.load_attribute(data, "size_target")
+        self.load_attribute(data, "can_wall_jump")
+        self.load_attribute(data, "can_shoot")
+        self.load_attribute(data, "can_resize")
+        self.load_attribute(data, "max_jumps")
+        for proj in data["projectiles"]:
             self.active_projectiles.append(Projectile(self.level, self.controller, self.rect.centerx + (self.rect.width * self.facing // 3), self.rect.centery, None, 0, self.attack_damage, self.difficulty, sprite=self.proj_sprite, name=(self.name + "'s projectile #" + str(len(self.active_projectiles) + 1))))
             self.active_projectiles[-1].load(list(proj.values())[0])
         self.update_sprite(1)
         self.update_geo()
 
-    def set_difficulty(self, scale) -> None:
+    def set_difficulty(self, scale: float) -> None:
         self.difficulty = scale
         self.max_hp *= scale
         self.hp *= scale
@@ -136,7 +136,7 @@ class Actor(Entity):
             proj.set_difficulty(scale)
             proj.attack_damage = self.attack_damage
 
-    def resize(self, target) -> None:
+    def resize(self, target: float) -> None:
         if self.size_target != target:
             self.size_target = target
             self.attack_damage *= target
