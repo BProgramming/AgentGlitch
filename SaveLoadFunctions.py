@@ -6,7 +6,7 @@ from Block import BreakableBlock
 from Helpers import GAME_DATA_FOLDER, FIRST_LEVEL_NAME
 
 
-def save_player_profile(controller, level=None):
+def save_player_profile(controller, level):
     profile_file = join(GAME_DATA_FOLDER, "profile.p")
     if isfile(profile_file):
         data = pickle.load(open(profile_file, "rb"))
@@ -42,16 +42,19 @@ def load_player_profile(controller):
 
 
 def save(level, hud):
-    if hud is not None:
-        hud.save_icon_timer = 1.0
+    if level is None:
+        return
+    else:
+        if hud is not None:
+            hud.save_icon_timer = 1.0
 
-    data = {"level": level.name, "time": level.time}
-    for ent in [level.get_player()] + level.get_entities() + level.objectives_collected:
-        ent_data = ent.save()
-        if ent_data is not None:
-            data.update(ent_data)
-    save_file = join(GAME_DATA_FOLDER, "save.p")
-    pickle.dump(data, open(save_file, "wb"))
+        data = {"level": level.name, "time": level.time}
+        for ent in [level.get_player()] + level.get_entities() + level.objectives_collected:
+            ent_data = ent.save()
+            if ent_data is not None:
+                data.update(ent_data)
+        save_file = join(GAME_DATA_FOLDER, "save.p")
+        pickle.dump(data, open(save_file, "wb"))
 
 
 def load_part1():

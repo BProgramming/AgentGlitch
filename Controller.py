@@ -4,6 +4,7 @@ import pygame
 import sys
 from Menu import Menu, Selector, ButtonType
 from Helpers import display_text, DifficultyScale, load_images, load_level_images, load_picker_sprites, make_image_from_text
+from SaveLoadFunctions import save, save_player_profile
 
 
 class Controller:
@@ -18,11 +19,10 @@ class Controller:
                         "NONE": {"button_menu_up": None, "button_menu_down": None, "button_quicksave": None, "button_left": None, "button_right": None, "axis_horiz": None, "hat_horiz": None, "button_crouch_uncrouch": None, "button_jump": None, "button_teleport_dash": None, "button_pause_unpause": None, "axis_attack": None, "axis_block": None, "button_bullet_time": None, "button_grow": None, "button_shrink": None}}
     JOYSTICK_TOLERANCE = 0.1
 
-    def __init__(self, level, win, save, save_player_profile, layout=None, main_menu_music=None, steamworks=None):
+    def __init__(self, level, win, layout=None, main_menu_music=None, steamworks=None, discord=None):
         self.win = win
-        self.save = save
-        self.save_player_profile = save_player_profile
         self.steamworks = steamworks
+        self.discord = discord
         self.should_store_steam_stats = False
         self.player_sprite_selected = [None, None]
         self.player_abilities = None
@@ -60,6 +60,18 @@ class Controller:
         self.music_index = 0
         self.should_hot_swap_level = False
         self.should_scroll_to_point = None
+
+    def save(self):
+        save(self.level, self.hud)
+
+    def save_player_profile(self):
+        save_player_profile(self, self.level)
+
+    def quit(self):
+        self.save_player_profile()
+        self.discord.close()
+        pygame.quit()
+        sys.exit()
 
     def queue_track_list(self, music=None) -> None:
         if music is None:
@@ -198,13 +210,8 @@ class Controller:
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    if self.level is not None:
-                        self.save(self.level, self.hud)
-                        self.save_player_profile(self, self.level)
-                    else:
-                        self.save_player_profile(self)
-                    pygame.quit()
-                    sys.exit()
+                    self.save()
+                    self.quit()
                 elif event.type == pygame.KEYDOWN and event.key in self.keys_pause_unpause:
                     pygame.mouse.set_visible(False)
                     return False
@@ -268,13 +275,8 @@ class Controller:
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    if self.level is not None:
-                        self.save(self.level, self.hud)
-                        self.save_player_profile(self, self.level)
-                    else:
-                        self.save_player_profile(self)
-                    pygame.quit()
-                    sys.exit()
+                    self.save()
+                    self.quit()
                 elif event.type == pygame.KEYDOWN and event.key in self.keys_pause_unpause:
                     pygame.mouse.set_visible(False)
                     return
@@ -347,13 +349,8 @@ class Controller:
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    if self.level is not None:
-                        self.save(self.level, self.hud)
-                        self.save_player_profile(self, self.level)
-                    else:
-                        self.save_player_profile(self)
-                    pygame.quit()
-                    sys.exit()
+                    self.save()
+                    self.quit()
                 elif event.type == pygame.KEYDOWN and event.key in self.keys_pause_unpause:
                     pygame.mouse.set_visible(False)
                     return
@@ -409,13 +406,8 @@ class Controller:
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    if self.level is not None:
-                        self.save(self.level, self.hud)
-                        self.save_player_profile(self, self.level)
-                    else:
-                        self.save_player_profile(self)
-                    pygame.quit()
-                    sys.exit()
+                    self.save()
+                    self.quit()
                 elif event.type == pygame.KEYDOWN and event.key in self.keys_pause_unpause:
                     pygame.mouse.set_visible(False)
                     return
@@ -471,36 +463,23 @@ class Controller:
                     time.sleep(0.01)
                     self.settings(self.pause_menu.clear)
                 case 4:
-                    if self.level is not None:
-                        self.save(self.level, self.hud)
-                        self.save_player_profile(self, self.level)
+                    self.save()
+                    self.save_player_profile()
                     self.goto_main = True
                     pygame.mixer.unpause()
                     pygame.mouse.set_visible(False)
                     self.pause_menu.clear = None
                     return 0
                 case 5:
-                    if self.level is not None:
-                        self.save(self.level, self.hud)
-                        self.save_player_profile(self, self.level)
-                    else:
-                        self.save_player_profile(self)
-                    self.pause_menu.clear = None
-                    pygame.quit()
-                    sys.exit()
+                    self.save()
+                    self.quit()
                 case _:
                     pass
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    if self.level is not None:
-                        self.save(self.level, self.hud)
-                        self.save_player_profile(self, self.level)
-                    else:
-                        self.save_player_profile(self)
-                    self.pause_menu.clear = None
-                    pygame.quit()
-                    sys.exit()
+                    self.save()
+                    self.quit()
                 elif event.type == pygame.KEYDOWN and event.key in self.keys_pause_unpause:
                     paused = False
                     pygame.mouse.set_visible(False)
@@ -582,17 +561,13 @@ class Controller:
                     time.sleep(0.01)
                     self.settings(self.main_menu.clear)
                 case 4:
-                    self.save_player_profile(self)
-                    pygame.quit()
-                    sys.exit()
+                    self.quit()
                 case _:
                     pass
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    self.save_player_profile(self)
-                    pygame.quit()
-                    sys.exit()
+                    self.quit()
                 elif event.type == pygame.USEREVENT:
                     if "LOOP" in self.main_menu.music[self.main_menu.music_index].upper():
                         pygame.mixer.music.play(-1)
@@ -667,7 +642,7 @@ class Controller:
         if key in self.keys_pause_unpause or (self.active_gamepad_layout is not None and self.button_pause_unpause is not None and key == self.button_pause_unpause):
             return self.pause()
         elif key in self.keys_quicksave or (self.active_gamepad_layout is not None and self.button_quicksave is not None and key == self.button_quicksave):
-            self.save(self.level, self.hud)
+            self.save()
         elif key in self.keys_cycle_layout:
             return self.cycle_keyboard_layout(win)
         elif key in self.keys_fullscreen_toggle:

@@ -149,9 +149,7 @@ class Camera:
             pygame.display.update()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    controller.save_player_profile(controller)
-                    pygame.quit()
-                    sys.exit()
+                    controller.quit()
             if pygame.mixer.music.get_busy():
                 pygame.mixer.music.set_volume((controller.master_volume["background"]) * volume)
             time.sleep(0.01)

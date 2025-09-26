@@ -102,9 +102,7 @@ class Cinematic:
                 pygame.display.update()
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
-                        controller.save_player_profile(controller)
-                        pygame.quit()
-                        sys.exit()
+                        controller.quit()
                     elif event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
                         return
                 time.sleep(0.01)
@@ -121,9 +119,7 @@ class Cinematic:
             pygame.display.update()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    controller.save_player_profile(controller)
-                    pygame.quit()
-                    sys.exit()
+                    controller.quit()
                 elif event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
                     return
             time.sleep(0.01)
@@ -142,9 +138,7 @@ class Cinematic:
             while True:
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
-                        controller.save_player_profile(controller)
-                        pygame.quit()
-                        sys.exit()
+                        controller.quit()
                     elif (event.type == pygame.KEYDOWN and event.key in valid_keys) or ((event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.JOYBUTTONDOWN) and event.button in valid_keys):
                         cont = True
                         break
@@ -163,9 +157,7 @@ class Cinematic:
                 pygame.display.update()
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
-                        controller.save_player_profile(controller)
-                        pygame.quit()
-                        sys.exit()
+                        controller.quit()
                     elif event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
                         return
                 time.sleep(0.01)
@@ -211,9 +203,7 @@ class Cinematic:
                     pygame.display.update()
                     for event in pygame.event.get():
                         if event.type == pygame.QUIT:
-                            controller.save_player_profile(controller)
-                            pygame.quit()
-                            sys.exit()
+                            controller.quit()
                         elif event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
                             return
                     time.sleep(0.01)
@@ -232,9 +222,7 @@ class Cinematic:
 
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
-                        controller.save_player_profile(controller)
-                        pygame.quit()
-                        sys.exit()
+                        controller.quit()
                     elif event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
                         return
                 time.sleep(0.01)
@@ -261,9 +249,7 @@ class Cinematic:
                 while True:
                     for event in pygame.event.get():
                         if event.type == pygame.QUIT:
-                            controller.save_player_profile(controller)
-                            pygame.quit()
-                            sys.exit()
+                            controller.quit()
                         elif (event.type == pygame.KEYDOWN and event.key in valid_keys) or ((event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.JOYBUTTONDOWN) and event.button in valid_keys):
                             cont = True
                             break
@@ -286,9 +272,7 @@ class Cinematic:
                     pygame.display.update()
                     for event in pygame.event.get():
                         if event.type == pygame.QUIT:
-                            controller.save_player_profile(controller)
-                            pygame.quit()
-                            sys.exit()
+                            controller.quit()
                         elif event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
                             return
                     time.sleep(0.01)

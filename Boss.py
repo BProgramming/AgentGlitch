@@ -31,6 +31,8 @@ class Boss(NonPlayer):
                 self.death_triggers["achievement"] = death_triggers["achievements"]
 
     def die(self) -> None:
+        if self.death_triggers.get("discord_status") is not None and self.death_triggers["discord_status"].get("details") is not None and self.death_triggers["discord_status"].get("state") is not None:
+            self.controller.discord.set_status(details=self.death_triggers["discord_status"]["details"], state=self.death_triggers["discord_status"]["state"])
         if self.death_triggers.get("properties") is not None:
             for trigger in self.death_triggers["properties"]:
                 set_property(self, trigger)

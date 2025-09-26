@@ -336,9 +336,7 @@ def display_text(output: list | str, controller, should_type_text=False, min_pau
                         while pause_dtime < min_pause_time:
                             for event in pygame.event.get():
                                 if event.type == pygame.QUIT:
-                                    controller.save_profile(controller)
-                                    pygame.quit()
-                                    sys.exit()
+                                    controller.quit()
                                 elif event.type == pygame.KEYDOWN:
                                     pause_dtime += controller.handle_pause_unpause(event.key)
                                 elif event.type == pygame.JOYBUTTONDOWN:
@@ -369,9 +367,7 @@ def display_text(output: list | str, controller, should_type_text=False, min_pau
                 while pause_dtime < sleep_time:
                     for event in pygame.event.get():
                         if event.type == pygame.QUIT:
-                            controller.save_profile(controller)
-                            pygame.quit()
-                            sys.exit()
+                            controller.quit()
                     if should_type_text and controller.handle_any_key():
                         break
                     if controller.goto_load or controller.goto_main:

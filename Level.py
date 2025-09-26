@@ -15,6 +15,7 @@ class Level:
 
     def __init__(self, name, levels, meta_dict, objects_dict, sprite_master, image_master, player_audios, enemy_audios, block_audios, message_audios, vfx_manager, win, controller):
         self.name = name.upper()
+        self.display_name = self.name if meta_dict[name].get("name") is None else meta_dict[name]["name"]
         self.time = 0
         self.achievements = ({} if meta_dict[name].get("achievements") is None else meta_dict[name]["achievements"])
         self.block_size = Level.BLOCK_SIZE if meta_dict[name].get("block_size") is None or not meta_dict[name]["block_size"].isnumeric() else int(meta_dict[name]["block_size"])

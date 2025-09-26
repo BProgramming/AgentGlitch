@@ -3,12 +3,15 @@ import SteamworksConnection
 from Helpers import load_json_dict, load_object_dicts, load_levels, load_audios, display_text, DifficultyScale, handle_exception, load_text_from_file, ASSETS_FOLDER, GAME_DATA_FOLDER, FIRST_LEVEL_NAME
 from os.path import join, isfile
 from VisualEffects import VisualEffectsManager
+from DiscordConnection import DiscordActivity
 
 
 # This stuff happens in the middle of imports because some classes require pygame display available before they can be imported
 # And steam is initialized first because it doesn't work having it after pygame.init for... reasons?
 steamworks_connection = SteamworksConnection.initialize()
 steamworks_connection.UserStats.RequestCurrentStats()
+discord_connection = DiscordActivity()
+discord_connection.set_status(details="In the menu:", state="Gathering intel")
 
 pygame.init()
 WIDTH, HEIGHT = 1920, 1080
@@ -37,8 +40,8 @@ from NonPlayer import NonPlayer
 from Camera import Camera
 from SaveLoadFunctions import *
 
-
 def main(win):
+
     pygame.mouse.set_visible(False)
     clock = pygame.time.Clock()
 
@@ -48,7 +51,7 @@ def main(win):
     sprite_master = {}
     image_master = {}
 
-    controller = Controller(None, win, save, save_player_profile, main_menu_music=(None if meta_dict.get("MAIN_MENU") is None or meta_dict["MAIN_MENU"].get("music") is None else list(meta_dict["MAIN_MENU"]["music"].split(' '))), steamworks=steamworks_connection)
+    controller = Controller(None, win, main_menu_music=(None if meta_dict.get("MAIN_MENU") is None or meta_dict["MAIN_MENU"].get("music") is None else list(meta_dict["MAIN_MENU"]["music"].split(' '))), steamworks=steamworks_connection, discord=discord_connection)
     controller.get_gamepad(notify=False)
 
     cinematics_files = [{"name": "credit1", "file": "credit1.png", "type": "SLIDE", "should_glitch": "TRUE"},
@@ -106,7 +109,7 @@ def main(win):
             should_load = False
             if new_game:
                 cur_level = FIRST_LEVEL_NAME
-                save_player_profile(controller)
+                controller.save_player_profile()
                 new_game = False
             elif controller.goto_load:
                 load_data = load_part1()
@@ -143,7 +146,7 @@ def main(win):
 
             if should_load:
                 load_part2(load_data, controller.level)
-            save(controller.level, None)
+            controller.save()
             controller.get_gamepad()
 
             win.fill((0, 0, 0))
@@ -152,6 +155,8 @@ def main(win):
 
             camera.prepare(level, hud)
             camera.scroll_to_player(0)
+
+            controller.discord.set_status(details="On a mission:", state=controller.level.display_name)
 
             # FROM HERE, THE LEVEL ACTUALLY STARTS: #
             if level.start_cinematic is not None:
@@ -196,11 +201,8 @@ def main(win):
 
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
-                        save_player_profile(controller, level)
-                        if controller.level is not None:
-                            save(controller.level, controller.hud)
-                        pygame.quit()
-                        sys.exit()
+                        controller.save()
+                        controller.quit()
                     elif event.type == pygame.KEYDOWN:
                         dtime_offset += controller.handle_single_input(event.key, win)
                     elif event.type == pygame.KEYUP:
@@ -289,16 +291,14 @@ def main(win):
                     else:
                         for event in pygame.event.get():
                             if event.type == pygame.QUIT:
-                                controller.save_player_profile(controller)
-                                pygame.quit()
-                                sys.exit()
+                                controller.quit()
 
             if controller.goto_main:
                 break
             elif next_level is not None:
                 if level.end_message is not None:
                     display_text(load_text_from_file(level.end_message), controller, should_type_text=True)
-                save_player_profile(controller, level)
+                controller.save_player_profile()
                 camera.fade_out(controller)
                 if level.end_cinematic is not None:
                     for cinematic in level.end_cinematic:
