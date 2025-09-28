@@ -2,11 +2,11 @@ from discordrp import Presence
 import time
 
 
-class DiscordActivity:
+class DiscordConnection:
     CLIENT_ID: str = "1413505164362649731"
 
     def __init__(self) -> None:
-        self.presence: Presence = Presence(DiscordActivity.CLIENT_ID)
+        self.presence: Presence = Presence(DiscordConnection.CLIENT_ID)
         self.start_time: int = int(time.time())
         self.activity: dict[str, str | dict[str, int]] = {"state": "", "details": "", "timestamps": {"start": self.start_time}}
 

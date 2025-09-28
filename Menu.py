@@ -1,7 +1,7 @@
 import time
 import pygame
 from enum import Enum
-from Helpers import load_images, glitch, DifficultyScale, validate_file_list
+from Helpers import load_images, glitch, DifficultyScale, validate_file_list, handle_exception
 
 
 class ButtonType(Enum):
@@ -14,6 +14,7 @@ class Menu:
 
     def __init__(self, win, header, button_labels, music=None, should_glitch=True):
         self.clear = None
+        self.clear_grayscale = None
         button_assets = load_images("Menu", "Buttons")
         self.notch_val = []
         self.buttons = self.__make_buttons__(button_labels, pygame.transform.smoothscale_by(button_assets["BUTTON_NORMAL"], 0.5), pygame.transform.smoothscale_by(button_assets["BUTTON_MOUSEOVER"], 0.5))
@@ -54,18 +55,18 @@ class Menu:
             self.notch_val.append(notch_val)
         return buttons
 
-    def fade_in(self, win) -> None:
+    def fade_in(self, win: pygame.Surface, grayscale: bool = False) -> None:
         if self.clear is None:
             self.clear = pygame.display.get_surface().copy()
         for i in range(32):
             self.screen.set_alpha(8 * i)
-            self.display(win)
+            self.display(win, grayscale=grayscale)
             pygame.display.update()
 
             for event in pygame.event.get():
                 if event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
                     self.screen.set_alpha(248)
-                    self.display(win)
+                    self.display(win, grayscale=grayscale)
                     pygame.display.update()
                     return
             time.sleep(0.01)
@@ -82,19 +83,19 @@ class Menu:
                 self.cycle_music()
                 pygame.mixer.music.queue(self.music[self.music_index])
 
-    def fade_out(self, win) -> None:
+    def fade_out(self, win: pygame.Surface, grayscale: bool = False) -> None:
         if self.clear is None:
             return
         else:
             for i in range(32, 0, -1):
                 self.screen.set_alpha(8 * i)
-                self.display(win)
+                self.display(win, grayscale=grayscale)
                 pygame.display.update()
 
                 for event in pygame.event.get():
                     if event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
                         self.screen.set_alpha(0)
-                        self.display(win)
+                        self.display(win, grayscale=grayscale)
                         pygame.display.update()
                         return
                 time.sleep(0.005)
@@ -116,9 +117,14 @@ class Menu:
 
         pygame.mouse.set_pos((x, y))
 
-    def display(self, win) -> int | None:
+    def display(self, win: pygame.Surface, grayscale: bool=False) -> int | None:
         if self.clear is not None:
-            win.blit(self.clear, (0, 0))
+            if grayscale:
+                if self.clear_grayscale is None:
+                    self.clear_grayscale = pygame.transform.grayscale(self.clear)
+                win.blit(self.clear_grayscale, (0, 0))
+            else:
+                win.blit(self.clear, (0, 0))
 
         screen = self.screen.copy()
         for i in range(len(self.buttons)):
@@ -214,8 +220,9 @@ class Menu:
 
 
 class Selector(Menu):
-    def __init__(self, win, header, note, images, values, index=0, music=None, should_glitch=True, accept_only=False):
+    def __init__(self, win, header, note, images, values, index=0, music=None, should_glitch=True, accept_only=False, grayscale=False):
         self.clear = None
+        self.clear_grayscale = None
         self.notch_val = [None, None, None]
         self.arrow_asset = pygame.transform.smoothscale_by(load_images("Menu", "Arrows")["ARROW_WHITE"], 0.5)
         button_assets = load_images("Menu", "Buttons")
@@ -227,13 +234,26 @@ class Selector(Menu):
                 self.note.append(pygame.font.SysFont("courier", 16).render(line, True, (255, 255, 255)))
         image_width = 0
         image_height = 0
-        self.images = []
-        for image in images:
-            image_width = max(image_width, image.get_width())
-            image_height = max(image_height, image.get_height())
-            self.images.append([pygame.Rect(0, 0, image_width, image_height), image])
         self.image_index = index
-        self.image_selected = self.images[self.image_index]
+        if isinstance(images, dict):
+            if list(images.keys()) != ["normal", "retro"]:
+                handle_exception("Picker sprites error: " + str(ValueError(images.keys())))
+            else:
+                self.images = {}
+                for key in images.keys():
+                    self.images[key] = []
+                    for image in images[key]:
+                        image_width = max(image_width, image.get_width())
+                        image_height = max(image_height, image.get_height())
+                        self.images[key].append([pygame.Rect(0, 0, image_width, image_height), image])
+                self.image_selected = self.images["retro" if grayscale else "normal"][self.image_index]
+        else:
+            self.images = []
+            for image in images:
+                image_width = max(image_width, image.get_width())
+                image_height = max(image_height, image.get_height())
+                self.images.append([pygame.Rect(0, 0, image_width, image_height), image])
+            self.image_selected = self.images[self.image_index]
         self.values = values
         self.screen = pygame.Surface((min(2 * win.get_width() // 3, max(image_width, self.buttons[0][0].width * 2, self.header.get_width())), self.header.get_height() + image_height + (self.note[0].get_height() * len(self.note) if len(self.note) > 0 else 0) + (self.buttons[0][0].height * 2) + 20), pygame.SRCALPHA)
         self.screen.fill((0, 0, 0, 128))
@@ -273,20 +293,30 @@ class Selector(Menu):
 
         pygame.mouse.set_pos((x, y))
 
-    def set_index(self, index) -> None:
+    def set_index(self, index: int, grayscale: bool = False) -> None:
         self.image_index = index
-        self.image_selected = self.images[index]
+        if isinstance(self.images, dict):
+            self.image_selected = self.images["retro" if grayscale else "normal"][index]
+        else:
+            self.image_selected = self.images[index]
 
-    def cycle_images(self, direction) -> None:
+    def cycle_images(self, direction: int, grayscale: bool = False) -> None:
         if direction > 0:
             self.image_index += 1
         else:
             self.image_index -= 1
-        if self.image_index >= len(self.images):
-            self.image_index = 0
-        elif self.image_index < 0:
-            self.image_index = len(self.images) - 1
-        self.image_selected = self.images[self.image_index]
+        if isinstance(self.images, dict):
+            if self.image_index >= len(self.images["retro" if grayscale else "normal"]):
+                self.image_index = 0
+            elif self.image_index < 0:
+                self.image_index = len(self.images["retro" if grayscale else "normal"]) - 1
+            self.image_selected = self.images["retro" if grayscale else "normal"][self.image_index]
+        else:
+            if self.image_index >= len(self.images):
+                self.image_index = 0
+            elif self.image_index < 0:
+                self.image_index = len(self.images) - 1
+            self.image_selected = self.images[self.image_index]
 
     def __make_buttons__(self, half_button_normal, half_button_mouseover, button_normal, button_mouseover, accept_only=False) -> list:
         buttons = []
@@ -312,9 +342,14 @@ class Selector(Menu):
             buttons.append([pygame.Rect(0, 0, max(normal.get_width(), mouseover.get_width()), max(normal.get_height(), mouseover.get_height())), normal, mouseover, ButtonType.CLICK])
         return buttons
 
-    def display(self, win) -> int | None:
+    def display(self, win: pygame.Surface, grayscale: bool = False) -> int | None:
         if self.clear is not None:
-            win.blit(self.clear, (0, 0))
+            if grayscale:
+                if self.clear_grayscale is None:
+                    self.clear_grayscale = pygame.transform.grayscale(self.clear)
+                win.blit(self.clear_grayscale, (0, 0))
+            else:
+                win.blit(self.clear, (0, 0))
 
         screen = self.screen.copy()
         if self.image_selected[1].get_width() > screen.get_width():

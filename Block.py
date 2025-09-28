@@ -31,6 +31,8 @@ class Block(Entity):
     @staticmethod
     def load_image(path, width, height, image_master, coord_x, coord_y, grayscale=False) -> pygame.Surface | None:
         if isfile(path):
+            if grayscale and isfile(path[:-3] + "_grayscale.png"):
+                path = path[:-3] + "_grayscale.png"
             if image_master.get(path) is None:
                 image_master[path] = pygame.image.load(path).convert_alpha()
             surface = pygame.Surface((width // 2, height // 2), pygame.SRCALPHA)
@@ -340,7 +342,11 @@ class Hazard(Block):
         self.is_attacking = True
         self.hit_sides = hit_sides.upper()
         if sprite is not None:
-            self.sprites = load_sprite_sheets("Sprites", sprite, sprite_master, direction=False, grayscale=self.level.grayscale)["ANIMATE"]
+            avail_sprites = load_sprite_sheets("Sprites", sprite, sprite_master, direction=False, grayscale=self.level.grayscale)
+            if self.level.grayscale and avail_sprites.get("ANIMATE_GRAYSCALE") is not None:
+                self.sprites = avail_sprites["ANIMATE_GRAYSCALE"]
+            else:
+                self.sprites = avail_sprites["ANIMATE"]
         else:
             self.sprites = [self.sprite]
         self.animation_count = 0

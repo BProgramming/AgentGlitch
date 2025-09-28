@@ -167,6 +167,7 @@ class NonPlayer(Actor):
             self.cooldowns["spot_player"] = NonPlayer.PLAYER_SPOT_COOLDOWN
             if self.state in [MovementState.IDLE, MovementState.CROUCH, MovementState.RUN, MovementState.IDLE_ATTACK, MovementState.CROUCH_ATTACK, MovementState.RUN_ATTACK] and self.can_shoot and dist > self.spot_range // 3:
                 self.shoot_at_target(self.level.get_player().rect.center)
+            self.level.get_player().been_seen_this_level = True
             return True
         return False
 

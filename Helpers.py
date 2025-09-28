@@ -66,7 +66,7 @@ def validate_file_list(dir, lst, ext=None) -> list | None:
 
 
 def load_picker_sprites(dir) -> tuple | None:
-    images = []
+    images = {"normal": [], "retro": []}
     values = []
     path = join(ASSETS_FOLDER, dir)
     if isdir(path):
@@ -79,8 +79,19 @@ def load_picker_sprites(dir) -> tuple | None:
                     surface = pygame.Surface((asset.get_width(), asset.get_height()), pygame.SRCALPHA)
                     rect = pygame.Rect(0, 0, asset.get_width(), asset.get_height())
                     surface.blit(asset, (0, 0), rect)
-                    images.append(surface)
-                    values.append([folder, "Retro" + folder if isfile(join(path, "Retro" + folder, "picker.png")) else None])
+                    images["normal"].append(surface)
+                    values.append([folder])
+                    retro_path = join(path, "Retro" + folder, "picker.png")
+                    if isfile(retro_path):
+                        asset = pygame.transform.grayscale(pygame.transform.smoothscale_by(pygame.image.load(retro_path).convert_alpha(), 4))
+                        surface = pygame.Surface((asset.get_width(), asset.get_height()), pygame.SRCALPHA)
+                        rect = pygame.Rect(0, 0, asset.get_width(), asset.get_height())
+                        surface.blit(asset, (0, 0), rect)
+                        images["retro"].append(surface)
+                        values[-1].append("Retro" + folder)
+                    else:
+                        images["retro"].append(None)
+                        values[-1].append(None)
         if len(images) == 0:
             handle_exception("No sprite images found in " + str(FileNotFoundError(path)) + ".")
         return images, values

@@ -20,7 +20,10 @@ class Level:
         self.achievements = ({} if meta_dict[name].get("achievements") is None else meta_dict[name]["achievements"])
         self.block_size = Level.BLOCK_SIZE if meta_dict[name].get("block_size") is None or not meta_dict[name]["block_size"].isnumeric() else int(meta_dict[name]["block_size"])
         self.purge_queue = {"triggers": set(), "hazards": set(), "blocks": set(), "doors": set(), "enemies": set(), "objectives": set()}
-        self.grayscale = (False if meta_dict[name].get("grayscale") is None else bool(meta_dict[name]["grayscale"].upper() == "TRUE"))
+        if controller.force_grayscale:
+            self.grayscale = True
+        else:
+            self.grayscale = (False if meta_dict[name].get("grayscale") is None else bool(meta_dict[name]["grayscale"].upper() == "TRUE"))
         self.can_glitch = (False if meta_dict[name].get("can_glitch") is None else bool(meta_dict[name]["can_glitch"].upper() == "TRUE"))
         self.visual_effects_manager = vfx_manager
         self.background = (None if meta_dict[name].get("background") is None else meta_dict[name]["background"])
@@ -33,12 +36,18 @@ class Level:
             self.end_cinematic = [self.end_cinematic]
         self.start_message = (None if meta_dict[name].get("start_message") is None else meta_dict[name]["start_message"])
         self.end_message = (None if meta_dict[name].get("end_message") is None else meta_dict[name]["end_message"])
-        self.music = (None if meta_dict[name].get("music") is None else validate_file_list("Music", list(meta_dict[name]["music"].split(' ')), "mp3"))
+        if self.grayscale and meta_dict[name].get("retro_music") is not None:
+            self.music = validate_file_list("Music", list(meta_dict[name]["retro_music"].split(' ')), "mp3")
+        else:
+            self.music = (None if meta_dict[name].get("music") is None else validate_file_list("Music", list(meta_dict[name]["music"].split(' ')), "mp3"))
+        if self.grayscale and meta_dict[name].get("retro_cinematics") is not None:
+            self.cinematics = CinematicsManager(meta_dict[name]["retro_cinematics"], controller)
+        else:
+            self.cinematics = (None if meta_dict[name].get("cinematics") is None else CinematicsManager(meta_dict[name]["cinematics"], controller))
         self.level_bounds, self.player, self.triggers, self.blocks, self.dynamic_blocks, self.doors, self.static_blocks, self.hazards, self.falling_hazards, self.enemies, self.objectives = self.build_level(self, levels[self.name], sprite_master, image_master, objects_dict[self.name], player_audios, enemy_audios, block_audios, message_audios, win, controller, None if meta_dict[name].get("player_sprite") is None or meta_dict[name]["player_sprite"].upper() == "NONE" else meta_dict[name]["player_sprite"], self.block_size)
         self.weather = (None if meta_dict[name].get("weather") is None else self.get_weather(meta_dict[name]["weather"].upper()))
         if meta_dict[name].get("abilities") is not None:
             self.set_player_abilities(meta_dict[name]["abilities"])
-        self.cinematics = (None if meta_dict[name].get("cinematics") is None else CinematicsManager(meta_dict[name]["cinematics"], controller))
         self.player.been_hit_this_level = False
         self.player.been_seen_this_level = False
         self.player.deaths_this_level = 0

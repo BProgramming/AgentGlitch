@@ -21,7 +21,7 @@ class Controller:
 
     def __init__(self, level, win, layout=None, main_menu_music=None, steamworks=None, discord=None):
         self.win = win
-        self.steamworks = steamworks
+        self.steamworks = steamworks.connection
         self.discord = discord
         self.should_store_steam_stats = False
         self.player_sprite_selected = [None, None]
@@ -29,6 +29,8 @@ class Controller:
         self.difficulty = DifficultyScale.MEDIUM
         self.hud = None
         self.goto_load = self.goto_main = self.goto_restart = False
+        self.has_dlc: dict[str, bool] = steamworks.has_dlc()
+        self.force_grayscale: bool = False
         self.level = level
         self.master_volume = {"background": 1.0, "player": 1.0, "non-player": 1.0, "cinematics": 1.0}
         dif = {"label": "Difficulty", "type": ButtonType.BAR, "snap": True, "value": self.difficulty, "range": (float(DifficultyScale.EASIEST), float(DifficultyScale.EASY), float(DifficultyScale.MEDIUM), float(DifficultyScale.HARD), float(DifficultyScale.HARDEST))}
@@ -36,7 +38,10 @@ class Controller:
         vol_pc = {"label": "Player", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["player"], "range": (0, 100)}
         vol_fx = {"label": "Effects", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["non-player"], "range": (0, 100)}
         vol_cn = {"label": "Cinematics", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["cinematics"], "range": (0, 100)}
-        self.main_menu = Menu(win, "MAIN MENU", [{"label": "New game", "type": ButtonType.CLICK}, {"label": "Continue", "type": ButtonType.CLICK}, {"label": "Select a level", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}], music=main_menu_music)
+        if self.has_dlc.get("gumshoe") is not None and self.has_dlc["gumshoe"]:
+            self.main_menu = Menu(win, "MAIN MENU", [{"label": "New game", "type": ButtonType.CLICK}, {"label": "Continue", "type": ButtonType.CLICK}, {"label": "Select a level", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Toggle retro style", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}], music=main_menu_music)
+        else:
+            self.main_menu = Menu(win, "MAIN MENU", [{"label": "New game", "type": ButtonType.CLICK}, {"label": "Continue", "type": ButtonType.CLICK}, {"label": "Select a level", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}], music=main_menu_music)
         self.pause_menu = Menu(win, "PAUSED", [{"label": "Resume", "type": ButtonType.CLICK}, {"label": "Load last save", "type": ButtonType.CLICK}, {"label": "Restart level", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Quit to menu", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}])
         self.settings_menu = Menu(win, "SETTINGS", [dif, {"label": "Controls", "type": ButtonType.CLICK}, {"label": "Volume", "type": ButtonType.CLICK}, {"label": "Toggle fullscreen", "type": ButtonType.CLICK}, {"label": "Back", "type": ButtonType.CLICK}])
         self.volume_menu = Menu(win, "VOLUME", [vol_bg, vol_pc, vol_fx, vol_cn, {"label": "Back", "type": ButtonType.CLICK}])
@@ -44,7 +49,7 @@ class Controller:
         difficulty_images = [make_image_from_text(256, 128, "EASIEST", ["Agent is much stronger", "Enemies are much weaker", "Enemy sight ranges are visible"], border=5), make_image_from_text(256, 128, "EASY", ["Agent is stronger", "Enemies are weaker", "Enemy sight ranges are visible"], border=5), make_image_from_text(256, 128, "MEDIUM", ["Agent is normal strength", "Enemies are normal strength", "Enemy sight ranges are not visible"], border=5), make_image_from_text(256, 128, "HARD", ["Agent is weaker", "Enemies are stronger", "Enemy sight ranges are not visible"], border=5), make_image_from_text(256, 128, "HARDEST", ["Agent is much weaker", "Enemies are much stronger", "Enemy sight ranges are not visible"], border=5)]
         self.difficulty_picker = Selector(win, "CHOOSE DIFFICULTY", ["You can change this at any time."], difficulty_images, [DifficultyScale.EASIEST, DifficultyScale.EASY, DifficultyScale.MEDIUM, DifficultyScale.HARD, DifficultyScale.HARDEST], index=2)
         sprite_images, sprite_values = load_picker_sprites("Sprites")
-        self.sprite_picker = Selector(win, "CHOOSE PLAYER", ["This is a visual choice only.", "Anyone can be an Agent."], sprite_images, sprite_values, index=2 * random.randrange(0, len(sprite_images) // 2))
+        self.sprite_picker = Selector(win, "CHOOSE PLAYER", ["This is a visual choice only.", "Anyone can be an Agent."], sprite_images, sprite_values, index=2 * random.randrange(0, len(sprite_images) // 2), grayscale=self.force_grayscale)
         self.level_selected = None
         level_images, level_values = load_level_images("LevelImages")
         self.level_picker = Selector(win, "CHOOSE LEVEL", None, level_images, level_values)
@@ -177,33 +182,35 @@ class Controller:
         self.active_gamepad_layout = (None if name == "NONE" else name)
 
     def pick_from_selector(self, selector, clear=None) -> bool:
+        if isinstance(selector.images, dict):
+            selector.image_selected = selector.images["retro" if self.force_grayscale else "normal"][selector.image_index]
         pygame.mouse.set_visible(True)
         if self.active_gamepad_layout is not None:
-            selector.set_mouse_pos(self.win)
-        selector.fade_in(self.win)
+            selector.set_mouse_pos(self.win, grayscale=self.force_grayscale)
+        selector.fade_in(self.win, grayscale=self.force_grayscale)
         joystick_movement = 0
         selector.clear = clear
         while True:
             time.sleep(0.01)
 
             if len(selector.buttons) > 1:
-                match selector.display(self.win):
+                match selector.display(self.win, grayscale=self.force_grayscale):
                     case 0:
-                        selector.cycle_images(-1)
+                        selector.cycle_images(-1, grayscale=self.force_grayscale)
                     case 1:
-                        selector.cycle_images(1)
+                        selector.cycle_images(1, grayscale=self.force_grayscale)
                     case 2:
-                        selector.fade_out(self.win)
+                        selector.fade_out(self.win, grayscale=self.force_grayscale)
                         return False
                     case 3:
-                        selector.fade_out(self.win)
+                        selector.fade_out(self.win, grayscale=self.force_grayscale)
                         return True
                     case _:
                         pass
             else:
-                match selector.display(self.win):
+                match selector.display(self.win, grayscale=self.force_grayscale):
                     case 0:
-                        selector.fade_out(self.win)
+                        selector.fade_out(self.win, grayscale=self.force_grayscale)
                         return False
                     case _:
                         pass
@@ -247,13 +254,13 @@ class Controller:
         self.volume_menu.notch_val[3] = self.master_volume["cinematics"]
         if self.active_gamepad_layout is not None:
             self.volume_menu.set_mouse_pos(self.win)
-        self.volume_menu.fade_in(self.win)
+        self.volume_menu.fade_in(self.win, grayscale=self.force_grayscale)
         joystick_movement = 0
         self.volume_menu.clear = clear
         while True:
             time.sleep(0.01)
 
-            match self.volume_menu.display(self.win):
+            match self.volume_menu.display(self.win, grayscale=self.force_grayscale):
                 case 0:
                     pass  #set background music volume
                 case 1:
@@ -263,7 +270,7 @@ class Controller:
                 case 3:
                     pass  #set cinematics volume
                 case 4:
-                    self.volume_menu.fade_out(self.win)
+                    self.volume_menu.fade_out(self.win, grayscale=self.force_grayscale)
                     self.master_volume["background"] = self.volume_menu.notch_val[0]
                     pygame.mixer.music.set_volume(self.master_volume["background"])
                     self.master_volume["player"] = self.volume_menu.notch_val[1]
@@ -310,7 +317,7 @@ class Controller:
         else:
             self.controls_menu.buttons[1][1].set_alpha(128)
             self.controls_menu.buttons[1][2].set_alpha(128)
-        self.controls_menu.fade_in(self.win)
+        self.controls_menu.fade_in(self.win, grayscale=self.force_grayscale)
         joystick_movement = 0
         self.controls_menu.clear = clear
         while True:
@@ -322,27 +329,27 @@ class Controller:
                 self.controls_menu.buttons[1][1].set_alpha(128)
                 self.controls_menu.buttons[1][2].set_alpha(128)
 
-            match self.controls_menu.display(self.win):
+            match self.controls_menu.display(self.win, grayscale=self.force_grayscale):
                 case 0:
-                    self.controls_menu.fade_out(self.win)
+                    self.controls_menu.fade_out(self.win, grayscale=self.force_grayscale)
                     self.keyboard_layout_picker.set_index(self.keyboard_layout_picker.values.index(self.active_keyboard_layout))
                     if self.pick_from_selector(self.keyboard_layout_picker, clear=self.controls_menu.clear):
                         self.set_keyboard_layout(self.keyboard_layout_picker.values[self.keyboard_layout_picker.image_index])
-                    self.controls_menu.fade_in(self.win)
+                    self.controls_menu.fade_in(self.win, grayscale=self.force_grayscale)
                     if self.active_gamepad_layout is not None:
                         self.controls_menu.set_mouse_pos(self.win)
                 case 1:
                     if self.active_gamepad_layout is not None:
-                        self.controls_menu.fade_out(self.win)
+                        self.controls_menu.fade_out(self.win, grayscale=self.force_grayscale)
                         self.gamepad_layout_picker.set_index(self.gamepad_layout_picker.values.index(self.active_gamepad_layout))
                         self.pick_from_selector(self.gamepad_layout_picker, clear=self.controls_menu.clear)
-                        self.controls_menu.fade_in(self.win)
+                        self.controls_menu.fade_in(self.win, grayscale=self.force_grayscale)
                         if self.active_gamepad_layout is not None:
                             self.controls_menu.set_mouse_pos(self.win)
                     else:
                         display_text("No controller connected.", self)
                 case 2:
-                    self.controls_menu.fade_out(self.win)
+                    self.controls_menu.fade_out(self.win, grayscale=self.force_grayscale)
                     return
                 case _:
                     pass
@@ -380,13 +387,13 @@ class Controller:
         self.settings_menu.notch_val[0] = (self.difficulty - DifficultyScale.EASIEST) / (DifficultyScale.HARDEST - DifficultyScale.EASIEST)
         if self.active_gamepad_layout is not None:
             self.settings_menu.set_mouse_pos(self.win)
-        self.settings_menu.fade_in(self.win)
+        self.settings_menu.fade_in(self.win, grayscale=self.force_grayscale)
         joystick_movement = 0
         self.settings_menu.clear = clear
         while True:
             time.sleep(0.01)
 
-            match self.settings_menu.display(self.win):
+            match self.settings_menu.display(self.win, grayscale=self.force_grayscale):
                 case 0:
                     pass #set difficulty
                 case 1:
@@ -397,7 +404,7 @@ class Controller:
                 case 3:
                     pygame.display.toggle_fullscreen()
                 case 4:
-                    self.settings_menu.fade_out(self.win)
+                    self.settings_menu.fade_out(self.win, grayscale=self.force_grayscale)
                     self.difficulty = DifficultyScale((self.settings_menu.notch_val[0] * (self.settings_menu.buttons[0][4][-1] - self.settings_menu.buttons[0][4][0])) + self.settings_menu.buttons[0][4][0])
                     self.set_difficulty()
                     return
@@ -438,13 +445,13 @@ class Controller:
         pygame.mixer.pause()
         if self.active_gamepad_layout is not None:
             self.pause_menu.set_mouse_pos(self.win)
-        self.pause_menu.fade_in(self.win)
+        self.pause_menu.fade_in(self.win, grayscale=self.force_grayscale)
         joystick_movement = 0
         paused = True
         while paused:
             time.sleep(0.01)
 
-            match self.pause_menu.display(self.win):
+            match self.pause_menu.display(self.win, grayscale=self.force_grayscale):
                 case 0:
                     paused = False
                 case 1:
@@ -505,7 +512,7 @@ class Controller:
                     self.pause_menu.move_mouse_pos(self.win, 1 if joystick_movement >= 0 else -1)
                     joystick_movement = 0
 
-        self.pause_menu.fade_out(self.win)
+        self.pause_menu.fade_out(self.win, grayscale=self.force_grayscale)
         self.pause_menu.clear = None
         pygame.mixer.unpause()
         pygame.mouse.set_visible(False)
@@ -516,15 +523,15 @@ class Controller:
         pygame.mouse.set_visible(True)
         if self.active_gamepad_layout is not None:
             self.main_menu.set_mouse_pos(self.win)
-        self.main_menu.fade_in(self.win)
+        self.main_menu.fade_in(self.win, grayscale=self.force_grayscale)
         joystick_movement = 0
         self.level_selected = None
         while True:
             time.sleep(0.01)
 
-            match self.main_menu.display(self.win):
+            match self.main_menu.display(self.win, grayscale=self.force_grayscale):
                 case 0:
-                    self.main_menu.fade_out(self.win)
+                    self.main_menu.fade_out(self.win, grayscale=self.force_grayscale)
                     while True:
                         if self.pick_from_selector(self.sprite_picker, clear=self.main_menu.clear):
                             self.player_sprite_selected = [self.sprite_picker.values[self.sprite_picker.image_index][0], self.sprite_picker.values[self.sprite_picker.image_index][1]]
@@ -539,15 +546,15 @@ class Controller:
                             if self.active_gamepad_layout is not None:
                                 self.main_menu.set_mouse_pos(self.win)
                             break
-                    self.main_menu.fade_in(self.win)
+                    self.main_menu.fade_in(self.win, grayscale=self.force_grayscale)
                 case 1:
-                    self.main_menu.fade_out(self.win)
+                    self.main_menu.fade_out(self.win, grayscale=self.force_grayscale)
                     self.goto_load = True
                     pygame.mouse.set_visible(False)
                     self.main_menu.fade_music()
                     return False
                 case 2:
-                    self.main_menu.fade_out(self.win)
+                    self.main_menu.fade_out(self.win, grayscale=self.force_grayscale)
                     if self.pick_from_selector(self.level_picker, clear=self.main_menu.clear):
                         self.level_selected = self.level_picker.values[self.level_picker.image_index]
                         pygame.mouse.set_visible(False)
@@ -556,12 +563,20 @@ class Controller:
                     else:
                         if self.active_gamepad_layout is not None:
                             self.main_menu.set_mouse_pos(self.win)
-                        self.main_menu.fade_in(self.win)
+                        self.main_menu.fade_in(self.win, grayscale=self.force_grayscale)
                 case 3:
                     time.sleep(0.01)
                     self.settings(self.main_menu.clear)
                 case 4:
-                    self.quit()
+                    if self.has_dlc.get("gumshoe") is not None and self.has_dlc["gumshoe"]:
+                        self.force_grayscale = not self.force_grayscale
+                    else:
+                        self.quit()
+                case 5:
+                    if self.has_dlc.get("gumshoe") is not None and self.has_dlc["gumshoe"]:
+                        self.quit()
+                    else:
+                        pass
                 case _:
                     pass
 

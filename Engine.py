@@ -1,17 +1,16 @@
 import pygame
-import SteamworksConnection
+from SteamworksConnection import SteamworksConnection
 from Helpers import load_json_dict, load_object_dicts, load_levels, load_audios, display_text, DifficultyScale, handle_exception, load_text_from_file, ASSETS_FOLDER, GAME_DATA_FOLDER, FIRST_LEVEL_NAME
 from os.path import join, isfile
 from VisualEffects import VisualEffectsManager
-from DiscordConnection import DiscordActivity
+from DiscordConnection import DiscordConnection
 
 
 # This stuff happens in the middle of imports because some classes require pygame display available before they can be imported
 # And steam is initialized first because it doesn't work having it after pygame.init for... reasons?
-steamworks_connection = SteamworksConnection.initialize()
-steamworks_connection.UserStats.RequestCurrentStats()
-discord_connection = DiscordActivity()
-discord_connection.set_status(details="In the menu:", state="Gathering intel")
+steamworks = SteamworksConnection()
+discord = DiscordConnection()
+discord.set_status(details="In the menu:", state="Gathering intel")
 
 pygame.init()
 WIDTH, HEIGHT = 1920, 1080
@@ -51,8 +50,9 @@ def main(win):
     sprite_master = {}
     image_master = {}
 
-    controller = Controller(None, win, main_menu_music=(None if meta_dict.get("MAIN_MENU") is None or meta_dict["MAIN_MENU"].get("music") is None else list(meta_dict["MAIN_MENU"]["music"].split(' '))), steamworks=steamworks_connection, discord=discord_connection)
+    controller = Controller(None, win, main_menu_music=(None if meta_dict.get("MAIN_MENU") is None or meta_dict["MAIN_MENU"].get("music") is None else list(meta_dict["MAIN_MENU"]["music"].split(' '))), steamworks=steamworks, discord=discord)
     controller.get_gamepad(notify=False)
+    controller.has_dlc.update(steamworks.has_dlc())
 
     cinematics_files = [{"name": "credit1", "file": "credit1.png", "type": "SLIDE", "should_glitch": "TRUE"},
                         {"name": "credit2", "file": "credit2.png", "type": "SLIDE", "should_glitch": "TRUE"},
@@ -73,12 +73,15 @@ def main(win):
         title_screen_file = join(ASSETS_FOLDER, "Screens", "title2.0.png")
         if isfile(title_screen_file):
             slide = pygame.transform.scale2x(pygame.image.load(title_screen_file).convert_alpha())
+            slide_grayscale = pygame.transform.grayscale(slide)
+            controller.main_menu.clear = slide.copy()
+            controller.main_menu.clear_grayscale = slide_grayscale.copy()
             #overlay = pygame.image.load(join(ASSETS_FOLDER, "Screens", "title_overlay.png"))
             black = pygame.Surface((win.get_width(), win.get_height()), pygame.SRCALPHA)
             black.fill((0, 0, 0))
             if not controller.goto_main:
                 for i in range(64):
-                    win.blit(slide, ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
+                    win.blit((slide_grayscale if controller.force_grayscale else slide), ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
                     #win.blit(overlay, ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
                     black.set_alpha(255 - (4 * i))
                     win.blit(black, (0, 0))
@@ -92,7 +95,7 @@ def main(win):
                 controller.main_menu.buttons[1][2].set_alpha(128)
             new_game = controller.main()
             for i in range(64):
-                win.blit(slide, ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
+                win.blit((slide_grayscale if controller.force_grayscale else slide), ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
                 #win.blit(overlay, ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
                 black.set_alpha(4 * i)
                 win.blit(black, (0, 0))

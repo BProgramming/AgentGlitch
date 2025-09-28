@@ -21,7 +21,7 @@ def save_player_profile(controller, level):
     else:
         cur_level = level.name
 
-    data = {"level": cur_level, "master volume": controller.master_volume, "keyboard layout": controller.active_keyboard_layout, "gamepad layout": controller.active_gamepad_layout, "is fullscreen": pygame.display.is_fullscreen(), "difficulty": controller.difficulty, "selected sprite": controller.player_sprite_selected, "player abilities": controller.player_abilities}
+    data = {"level": cur_level, "master volume": controller.master_volume, "keyboard layout": controller.active_keyboard_layout, "gamepad layout": controller.active_gamepad_layout, "is fullscreen": pygame.display.is_fullscreen(), "difficulty": controller.difficulty, "selected sprite": controller.player_sprite_selected, "player abilities": controller.player_abilities, "force grayscale": controller.force_grayscale}
     pickle.dump(data, open(profile_file, "wb"))
 
 
@@ -29,14 +29,24 @@ def load_player_profile(controller):
     profile_file = join(GAME_DATA_FOLDER, "profile.p")
     if isfile(profile_file):
         data = pickle.load(open(profile_file, "rb"))
-        controller.master_volume = data["master volume"]
-        controller.set_keyboard_layout(data["keyboard layout"])
-        controller.difficulty = data["difficulty"]
-        controller.player_sprite_selected = data["selected sprite"]
-        controller.player_abilities = data["player abilities"]
-        if not data["is fullscreen"]:
+        if data.get("master volume") is not None:
+            controller.master_volume = data["master volume"]
+        if data.get("keyboard layout") is not None:
+            controller.set_keyboard_layout(data["keyboard layout"])
+        if data.get("difficulty") is not None:
+            controller.difficulty = data["difficulty"]
+        if data.get("selected sprite") is not None:
+            controller.player_sprite_selected = data["selected sprite"]
+        if data.get("player abilities") is not None:
+            controller.player_abilities = data["player abilities"]
+        if data.get("force grayscale") is not None:
+            controller.force_grayscale = controller.has_dlc.get("gumshoe") is not None and controller.has_dlc["gumshoe"] and data["force grayscale"]
+        if data.get("is fullscreen") is not None and not data["is fullscreen"]:
             pygame.display.toggle_fullscreen()
-        return data["level"]
+        if data.get("level") is not None:
+            return data["level"]
+        else:
+            return []
     else:
         return []
 

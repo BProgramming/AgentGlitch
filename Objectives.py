@@ -11,14 +11,21 @@ class Objective(Entity):
         handle_exception("File " + str(FileNotFoundError(join(ASSETS_FOLDER, "Icons", "Pointer", "pointer.png"))) + " not found.")
     else:
         POINTER_SPRITE: pygame.Surface = pygame.transform.scale2x(pygame.image.load(join(ASSETS_FOLDER, "Icons", "Pointer", "pointer.png")).convert_alpha())
-        POINTER_SPRITE_GRAYSCALE: pygame.Surface = pygame.transform.grayscale(POINTER_SPRITE)
+        if isfile(join(ASSETS_FOLDER, "Icons", "Pointer", "pointer_grayscale.png")):
+            POINTER_SPRITE_GRAYSCALE: pygame.Surface = pygame.transform.scale2x(pygame.image.load(join(ASSETS_FOLDER, "Icons", "Pointer", "pointer_grayscale.png")).convert_alpha())
+        else:
+            POINTER_SPRITE_GRAYSCALE: pygame.Surface = pygame.transform.grayscale(POINTER_SPRITE)
         POINTER_SPRITE_HEIGHT: int = POINTER_SPRITE.get_height()
         POINTER_SPRITE_WIDTH: int = POINTER_SPRITE.get_width()
 
     def __init__(self, level, controller, x, y, width, height, sprite_master, audios, is_active=False, sprite=None, sound="objective", is_blocking=False, achievement=None, name="Objective"):
         super().__init__(level, controller, x, y, width, height, is_blocking=is_blocking, name=name)
         if sprite is not None:
-            self.sprites = load_sprite_sheets("Sprites", sprite, sprite_master, direction=False, grayscale=self.level.grayscale)["ANIMATE"]
+            avail_sprites = load_sprite_sheets("Sprites", sprite, sprite_master, direction=False, grayscale=self.level.grayscale)
+            if self.level.grayscale and avail_sprites.get("ANIMATE_GRAYSCALE") is not None:
+                self.sprites = avail_sprites["ANIMATE_GRAYSCALE"]
+            else:
+                self.sprites = avail_sprites["ANIMATE"]
         else:
             self.sprites = None
         self.animation_count = 0
