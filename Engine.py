@@ -70,8 +70,9 @@ def main(win):
             cinematics.play("credit2", win)
         pygame.mixer.music.set_volume(controller.master_volume["background"])
         new_game = False
-        if isfile(join(ASSETS_FOLDER, "Screens", "title.png")):
-            slide = pygame.transform.scale2x(pygame.image.load(join(ASSETS_FOLDER, "Screens", "title2.0.png")))
+        title_screen_file = join(ASSETS_FOLDER, "Screens", "title2.0.png")
+        if isfile(title_screen_file):
+            slide = pygame.transform.scale2x(pygame.image.load(title_screen_file).convert_alpha())
             #overlay = pygame.image.load(join(ASSETS_FOLDER, "Screens", "title_overlay.png"))
             black = pygame.Surface((win.get_width(), win.get_height()), pygame.SRCALPHA)
             black.fill((0, 0, 0))
@@ -98,7 +99,7 @@ def main(win):
                 pygame.display.update()
                 time.sleep(0.01)
         else:
-            handle_exception("File " + str(FileNotFoundError(join(ASSETS_FOLDER, "Screens", "title.png"))) + " not found.")
+            handle_exception("File " + str(FileNotFoundError(title_screen_file)) + " not found.")
         controller.goto_main = False
         load_data = None
         cur_level = None
