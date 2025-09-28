@@ -16,7 +16,7 @@ pygame.init()
 WIDTH, HEIGHT = 1920, 1080
 FPS_TARGET = 60
 
-icon = join(ASSETS_FOLDER, "Icons", "icon.png")
+icon = join(ASSETS_FOLDER, "Icons", "icon_small.png")
 if isfile(icon):
     pygame.display.set_icon(pygame.image.load(icon))
 else:

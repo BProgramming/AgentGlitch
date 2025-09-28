@@ -15,6 +15,7 @@ from enum import Enum, IntEnum
 ASSETS_FOLDER: str = "Assets"
 GAME_DATA_FOLDER: str = "GameData"
 FIRST_LEVEL_NAME: str = "__START__"
+DLC_APP_ID: int = 0
 
 
 class MovementDirection(IntEnum):
@@ -40,7 +41,8 @@ class DifficultyScale(float, Enum):
 
 
 def handle_exception(msg) -> None:
-    pygame.quit()
+    if pygame.get_init():
+        pygame.quit()
     cur_time = time.gmtime(time.time())
     filename_time = time.strftime("%Y%m%d_%H%M%S", cur_time)
     printable_time = time.strftime("%Y-%m-%d, %H:%M:%S", cur_time)

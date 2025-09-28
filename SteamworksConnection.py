@@ -1,5 +1,5 @@
 import os
-from Helpers import handle_exception
+from Helpers import handle_exception, DLC_APP_ID
 os.add_dll_directory(os.getcwd())
 from steamworks import STEAMWORKS
 from steamworks.exceptions import *
@@ -8,7 +8,8 @@ from steamworks.exceptions import *
 class SteamworksConnection:
     def __init__(self):
         self.connection = self.initialize()
-        self.connection.UserStats.RequestCurrentStats()
+        if not self.connection.UserStats.RequestCurrentStats():
+            handle_exception(str(ConnectionError("Couldn't retrieve Steam user info.")))
 
     @staticmethod
     def initialize() -> STEAMWORKS:
@@ -25,4 +26,4 @@ class SteamworksConnection:
         return sw
 
     def has_dlc(self) -> dict[str, bool]:
-        return {"gumshoe": True}
+        return {"gumshoe": self.connection.Apps.IsDLCInstalled(DLC_APP_ID)}

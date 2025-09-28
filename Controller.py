@@ -75,7 +75,8 @@ class Controller:
     def quit(self):
         self.save_player_profile()
         self.discord.close()
-        pygame.quit()
+        if pygame.get_init():
+            pygame.quit()
         sys.exit()
 
     def queue_track_list(self, music=None) -> None:
