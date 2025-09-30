@@ -20,7 +20,6 @@ class Entity(pygame.sprite.Sprite):
         self.hp: float = 100
         self.is_stacked: bool = False # this property is only used by blocks, but needed here for generic checks
         self.cooldowns: dict | None = None
-        self.active_visual_effects: dict = {}
 
     def save(self) -> dict:
         return {self.name: {"hp": self.hp}}
@@ -39,16 +38,9 @@ class Entity(pygame.sprite.Sprite):
             elif self.cooldowns[key] < 0:
                 self.cooldowns[key] = 0.0
 
-    def __cleanup_vfx__(self):
-        for effect in list(self.active_visual_effects.keys()):
-            if self.cooldowns[effect] <= 0:
-                del self.active_visual_effects[effect]
-
     def loop(self, dtime: float) -> None:
         if self.cooldowns is not None:
             self.update_cooldowns(dtime)
-        if self.active_visual_effects:
-            self.__cleanup_vfx__()
         if self.hp <= 0:
             self.level.queue_purge(self)
 
@@ -56,8 +48,6 @@ class Entity(pygame.sprite.Sprite):
         adj_x = self.rect.x - offset_x
         adj_y = self.rect.y - offset_y
         if -self.rect.width < adj_x <= win.get_width() and -self.rect.height < adj_y <= win.get_height():
-            for effect in self.active_visual_effects.keys():
-                self.active_visual_effects[effect].draw(win, offset_x, offset_y)
             win.blit(self.sprite, (adj_x, adj_y))
 
     def collide(self, ent: 'Entity') -> bool:

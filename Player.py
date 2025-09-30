@@ -6,7 +6,7 @@ from Entity import Entity
 from NonPlayer import NonPlayer
 from Block import BreakableBlock
 from Helpers import MovementDirection, load_sprite_sheets, display_text
-from VisualEffects import VisualEffect
+from SimpleVFX.SimpleVFX import VisualEffect, ImageDirection
 
 
 class Player(Actor):
@@ -16,9 +16,9 @@ class Player(Actor):
     MULTIPLIER_TELEPORT = 384
     TELEPORT_COOLDOWN = 3
     TELEPORT_DELAY = 0.4
-    TELEPORT_EFFECT_TRAIL = 0.05
+    TELEPORT_EFFECT_TRAIL = 50
     BLOCK_COOLDOWN = 3
-    BLOCK_EFFECT_TIME = 2
+    BLOCK_EFFECT_TIME = 2000
     BULLET_TIME_COOLDOWN = 3
     BULLET_TIME_ACTIVE = 2
 
@@ -91,12 +91,11 @@ class Player(Actor):
         self.should_move_horiz = False
 
     def block(self) -> None:
-        if self.can_block and self.cooldowns["block"] <= 0 and self.cooldowns["blocking_effect"] <= 0:
+        if self.can_block and self.cooldowns["block"] <= 0:
             self.cooldowns["blocking_effect"] = Player.BLOCK_EFFECT_TIME
             self.cooldowns["block"] = Player.BLOCK_COOLDOWN
-            if self.level.visual_effects_manager.images.get("BLOCKSHIELD") is not None:
-                scale = max(self.rect.width, self.rect.height)
-                self.active_visual_effects["blocking_effect"] = VisualEffect(self, self.level.visual_effects_manager.images["BLOCKSHIELD"], alpha=128, scale=(scale, scale), linked_to_source=True)
+            scale = max(self.rect.width, self.rect.height)
+            self.level.visual_effects_manager.spawn(VisualEffect(self, self.level.visual_effects_manager.image_master, image_name="BLOCKSHIELD", alpha=128, scale=(scale, scale), linked_to_source=True), time=Player.BLOCK_EFFECT_TIME)
 
     def get_hit(self, ent) -> None:
         if self.controller.should_scroll_to_point is not None:
@@ -192,9 +191,7 @@ class Player(Actor):
             self.animation_count += dtime
             if self.cooldowns["teleport_delay"] <= 0:
                 self.move(self.teleport_distance, 0)
-                self.cooldowns["teleport_effect_trail"] = Player.TELEPORT_EFFECT_TRAIL
-                if self.level.visual_effects_manager.images.get("DASHCLOUD") is not None:
-                    self.active_visual_effects["teleport_effect_trail"] = VisualEffect(self, self.level.visual_effects_manager.images["DASHCLOUD"], direction=str(self.direction), alpha=64, offset=(self.rect.width // 2, 0), scale=(abs(self.teleport_distance), self.rect.height * 0.8))
+                self.level.visual_effects_manager.spawn(VisualEffect(self, self.level.visual_effects_manager.image_master, image_name="DASHCLOUD", direction=(ImageDirection.RIGHT if self.facing == MovementDirection.RIGHT else ImageDirection.LEFT), alpha=64, offset=(self.rect.width // 2, 0), scale=(abs(self.teleport_distance), self.rect.height * 0.8)), time=Player.TELEPORT_EFFECT_TRAIL)
                 self.teleport_distance = 0
             self.update_cooldowns(dtime)
             self.update_state()

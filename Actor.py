@@ -7,7 +7,7 @@ from Projectile import Projectile
 from Block import Hazard, MovableBlock, MovingBlock
 from Objectives import Objective
 from Helpers import load_sprite_sheets, MovementDirection, set_sound_source
-from VisualEffects import VisualEffect
+from SimpleVFX.SimpleVFX import VisualEffect, ImageDirection
 
 
 class MovementState(Enum):
@@ -47,9 +47,9 @@ class Actor(Entity):
     RESIZE_COOLDOWN = 3
     RESIZE_DELAY = 0.5
     RESIZE_SCALE_LIMIT = 1.5
-    RESIZE_EFFECT = 0.05
+    RESIZE_EFFECT = 50
     HEAL_DELAY = 5
-    DOUBLEJUMP_EFFECT_TRAIL = 0.08
+    DOUBLEJUMP_EFFECT_TRAIL = 80
     HORIZ_PUSH_DECAY_RATE = 0.03
 
     def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, can_shoot=False, can_resize=False, width=SIZE, height=SIZE, attack_damage=ATTACK_DAMAGE, sprite=None, proj_sprite=None, name=None):
@@ -183,10 +183,8 @@ class Actor(Entity):
         if self.jump_count < self.max_jumps:
             self.y_vel = -Actor.VELOCITY_JUMP
             if self.jump_count > 0:
-                self.cooldowns["doublejump_effect_trail"] = Actor.DOUBLEJUMP_EFFECT_TRAIL
-                if self.level.visual_effects_manager.images.get("JUMPLINES") is not None:
-                    rotation = (self.x_vel / self.y_vel) * 30
-                    self.active_visual_effects["doublejump_effect_trail"] = VisualEffect(self, self.level.visual_effects_manager.images["JUMPLINES"], direction="BOTTOM" + str(self.direction), rotation=rotation, alpha=64, scale=(self.rect.width // 2, self.rect.height))
+                rotation = (self.x_vel / self.y_vel) * 30
+                self.level.visual_effects_manager.spawn(VisualEffect(self, self.level.visual_effects_manager.image_master, image_name="JUMPLINES", direction=[ImageDirection.BOTTOM, (ImageDirection.RIGHT if self.facing == MovementDirection.RIGHT else ImageDirection.LEFT)], rotation=rotation, alpha=64, offset=(self.rect.width // 2, 0), scale=(self.rect.width // 2, self.rect.height)), time=Actor.DOUBLEJUMP_EFFECT_TRAIL)
             self.jump_count += 1
             self.should_move_vert = True
             if self.is_wall_jumping:
@@ -470,9 +468,7 @@ class Actor(Entity):
 
                     self.size = self.size_target
 
-                    self.cooldowns["resize_effect"] = Actor.RESIZE_EFFECT
-                    if self.level.visual_effects_manager.images.get("RESIZEBURST") is not None:
-                        self.active_visual_effects["resize_effect"] = VisualEffect(self, self.level.visual_effects_manager.images["RESIZEBURST"], direction="", alpha=128, scale=(self.rect.width * scale_factor, self.rect.height * scale_factor), linked_to_source=True)
+                    self.level.visual_effects_manager.spawn(VisualEffect(self, self.level.visual_effects_manager.image_master, image_name="RESIZEBURST", alpha=128, scale=(self.rect.width * scale_factor, self.rect.height * scale_factor), linked_to_source=True), time=Actor.RESIZE_EFFECT)
 
                 if self.should_move_horiz:
                     scaled_target = dtime * self.target_vel
@@ -513,8 +509,6 @@ class Actor(Entity):
             for proj in self.active_projectiles:
                 proj.draw(win, offset_x, offset_y, master_volume, fps)
         if -self.rect.width < adj_x_image <= window_width and -self.rect.height < adj_y_image <= window_height:
-            for effect in self.active_visual_effects.keys():
-                self.active_visual_effects[effect].draw(win, offset_x, offset_y)
             self.update_sprite(fps)
             self.update_geo()
             win.blit(self.sprite, (adj_x_image, adj_y_image))

@@ -4,7 +4,7 @@ import pygame
 from os.path import join, isfile
 from Entity import Entity
 from Helpers import handle_exception, MovementDirection, load_sprite_sheets, set_sound_source, ASSETS_FOLDER
-from VisualEffects import VisualEffect
+from SimpleVFX.SimpleVFX import VisualEffect, ImageDirection
 
 
 class Block(Entity):
@@ -380,8 +380,6 @@ class Hazard(Block):
         if -self.rect.width < adj_x <= win.get_width() and -self.rect.height < adj_y <= win.get_height():
             self.update_sprite(fps)
             self.update_geo()
-            for effect in self.active_visual_effects.keys():
-                self.active_visual_effects[effect].draw(win, offset_x, offset_y)
             win.blit(self.sprite, (adj_x, adj_y))
 
 class MovingHazard(MovingBlock, Hazard):
@@ -408,7 +406,7 @@ class MovingHazard(MovingBlock, Hazard):
 class FallingHazard(Hazard):
     ATTACK_DAMAGE = 99
     RESET_DELAY = 1
-    LANDING_EFFECT = 0.05
+    LANDING_EFFECT = 50
 
     def __init__(self, level, controller, x, y, width, height, image_master, sprite_master, audios, difficulty, hit_sides="D", drop_x=0, drop_y=0, fire_once=True, sprite=None, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="FallingHazard"):
         super().__init__(level, controller, x, y, width, height, image_master, sprite_master, audios, difficulty, hit_sides=hit_sides, sprite=sprite, coord_x=coord_x, coord_y=coord_y, attack_damage=attack_damage, name=name)
@@ -479,9 +477,7 @@ class FallingHazard(Hazard):
                     self.y_vel = 0
                     collided = True
                     self.play_sound("block_land")
-                    self.cooldowns["landing_effect"] = FallingHazard.LANDING_EFFECT
-                    if self.level.visual_effects_manager.images.get("LANDBURST") is not None:
-                        self.active_visual_effects["landing_effect"] = VisualEffect(self, self.level.visual_effects_manager.images["LANDBURST"], direction="BOTTOM", alpha=128, scale=(self.rect.width * 2, self.rect.height / 2))
+                    self.level.visual_effects_manager.spawn(VisualEffect(self, self.level.visual_effects_manager.image_master, image_name="LANDBURST", direction=ImageDirection.BOTTOM, alpha=128, scale=(self.rect.width * 2, self.rect.height / 2)), time=FallingHazard.LANDING_EFFECT)
                     if isinstance(ent, FallingHazard):
                         ent.should_fire = True
                     else:

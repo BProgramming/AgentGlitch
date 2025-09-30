@@ -223,6 +223,8 @@ class Level:
         return [row[int(offset_x // self.block_size):int((offset_x + (1.5 * win.get_width())) // self.block_size)] for row in self.static_blocks[int(offset_y // self.block_size):int((offset_y + (1.5 * win.get_height())) // self.block_size)]]
 
     def draw(self, win, offset_x, offset_y, master_volume, fps) -> None:
+        self.visual_effects_manager.draw(win, (offset_x, offset_y))
+
         above_player = []
 
         for ent in self.triggers + self.__get_static_block_slice__(win, offset_x, offset_y) + self.dynamic_blocks + list(self.doors.values()) + self.hazards + self.enemies + self.objectives:

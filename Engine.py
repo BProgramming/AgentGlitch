@@ -2,9 +2,8 @@ import pygame
 from SteamworksConnection import SteamworksConnection
 from Helpers import load_json_dict, load_object_dicts, load_levels, load_audios, display_text, DifficultyScale, handle_exception, load_text_from_file, ASSETS_FOLDER, GAME_DATA_FOLDER, FIRST_LEVEL_NAME
 from os.path import join, isfile
-from VisualEffects import VisualEffectsManager
 from DiscordConnection import DiscordConnection
-
+from SimpleVFX.SimpleVFX import VisualEffectsManager
 
 # This stuff happens in the middle of imports because some classes require pygame display available before they can be imported
 # And steam is initialized first because it doesn't work having it after pygame.init for... reasons?
@@ -131,7 +130,7 @@ def main(win):
             player_audio = enemy_audio = load_audios("Actors")
             block_audio = load_audios("Blocks")
             message_audio = load_audios("Messages", dir2=cur_level)
-            vfx_manager = VisualEffectsManager(controller)
+            vfx_manager = VisualEffectsManager(join(ASSETS_FOLDER, "VisualEffects"))
             win.fill((0, 0, 0))
             display_text("Loading mission... [3/3]", controller, min_pause_time=0, should_sleep=False)
             controller.level = level = Level(cur_level, levels, meta_dict, objects_dict, sprite_master, image_master, player_audio, enemy_audio, block_audio, message_audio, vfx_manager, win, controller)
@@ -237,6 +236,7 @@ def main(win):
                     else:
                         dtime_offset += level.get_player().revert()
 
+                vfx_manager.manage(dtime)
                 for ent in level.get_entities():
                     if (not isinstance(ent, Actor) and type(ent).__name__.upper() != "BLOCK") or (isinstance(ent, Actor) and math.dist(ent.rect.center, (camera.focus_x, camera.focus_y)) < win.get_width() * 1.5):
                         if hasattr(ent, "patrol") and callable(ent.patrol):
