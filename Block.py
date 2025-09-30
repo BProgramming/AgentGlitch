@@ -48,6 +48,7 @@ class Block(Entity):
 
 class BreakableBlock(Block):
     GET_HIT_COOLDOWN = 1
+    BREAK_EFFECT = 50
 
     def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=0, coord_y=0, coord_x2=0, coord_y2=0, name="BreakableBlock"):
         super().__init__(level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=coord_x, coord_y=coord_y, name=name)
@@ -63,6 +64,7 @@ class BreakableBlock(Block):
                 self.cooldowns["get_hit"] += BreakableBlock.GET_HIT_COOLDOWN
             else:
                 self.hp = 0
+                self.level.visual_effects_manager.spawn(self.level.visual_effects_manager.spawn(VisualEffect(self, self.level.visual_effects_manager.image_master, image_name="BREAKBURST", alpha=128, scale=(self.rect.width, self.rect.height)), time=BreakableBlock.BREAK_EFFECT))
             self.play_sound("smash_box")
 
 
