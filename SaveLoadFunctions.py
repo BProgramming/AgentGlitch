@@ -8,15 +8,16 @@ from Helpers import GAME_DATA_FOLDER, FIRST_LEVEL_NAME
 
 def save_player_profile(controller, level):
     profile_file = join(GAME_DATA_FOLDER, "profile.p")
-    with open(profile_file, "rb") as f:
-        data = pickle.load(open(profile_file, "rb"))
 
     if level is not None:
         cur_level = level.name
-    elif data is not None and data.get("level") is not None:
-        cur_level = data["level"]
     else:
         cur_level = FIRST_LEVEL_NAME
+        if isfile(profile_file):
+            with open(profile_file, "rb") as f:
+                data = pickle.load(open(profile_file, "rb"))
+            if data is not None and data.get("level") is not None:
+                cur_level = data["level"]
 
     data = {"level": cur_level, "master volume": controller.master_volume, "keyboard layout": controller.active_keyboard_layout, "gamepad layout": controller.active_gamepad_layout, "is fullscreen": pygame.display.is_fullscreen(), "difficulty": controller.difficulty, "selected sprite": controller.player_sprite_selected, "player abilities": controller.player_abilities, "force grayscale": controller.force_grayscale}
     with open(profile_file, "wb") as f:
@@ -68,15 +69,15 @@ def save(level, hud):
 
 def load_part1():
     save_file = join(GAME_DATA_FOLDER, "save.p")
-    if not isfile(save_file):
-        return None
-    else:
+    if isfile(save_file):
         with open(save_file, "rb") as f:
             data = pickle.load(f)
         if data is None:
             return None
         else:
             return data
+    else:
+        return None
 
 
 def load_part2(data, level):

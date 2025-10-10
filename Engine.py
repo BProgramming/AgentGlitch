@@ -101,7 +101,7 @@ def main(win):
                 pygame.display.update()
                 time.sleep(0.01)
         else:
-            handle_exception(f'File {FileNotFoundError(title_screen_file)} not found.')
+            handle_exception(f'File {FileNotFoundError(abspath(title_screen_file))} not found.')
         controller.goto_main = False
         load_data = None
         cur_level = None
