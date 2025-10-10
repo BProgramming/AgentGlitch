@@ -42,7 +42,7 @@ class Block(Entity):
                 surface = pygame.transform.grayscale(surface)
             return pygame.transform.scale2x(surface)
         else:
-            handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
+            handle_exception(f'File {str(FileNotFoundError(path))} not found.')
             return None
 
 

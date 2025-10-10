@@ -87,23 +87,23 @@ class Level:
         minutes = self.time // 60000
         seconds = (self.time - (minutes * 60000)) // 1000
         milliseconds = self.time - ((minutes * 60000) + (seconds * 1000))
-        return ("0" if minutes < 10 else "") + str(minutes) + ":" + ("0" if seconds < 10 else "") + str(seconds) + "." + ("0" if milliseconds < 100 else "") + ("0" if milliseconds < 10 else "") + str(milliseconds)
+        return f'{"0" if minutes < 10 else ""}{minutes}:{"0" if seconds < 10 else ""}{seconds}.{"0" if milliseconds < 100 else ""}{"0" if milliseconds < 10 else ""}{milliseconds}'
 
     def get_recap_text(self) -> list:
-        text = ["Mission time: " + self.get_formatted_time() + ".",
-                "Packets collected: " + str(len(self.objectives_collected)) + " of " + str(self.objectives_available) + " (" + str(100 * len(self.objectives_collected) // self.objectives_available) + "%)."]
+        text = [f'Mission time: {self.get_formatted_time()}.',
+                f'Packets collected: {len(self.objectives_collected)} of {self.objectives_available} ({100 * len(self.objectives_collected) // self.objectives_available}%).']
         if self.get_player().kills_this_level == 0:
-            text.append("Nonlethal: You didn't dispatch any enemies.")
+            text.append('Nonlethal: You didn\'t dispatch any enemies.')
         else:
-            text.append("Enemies dispatched: " + str(self.get_player().kills_this_level) + " of " + str(self.enemies_available) + " (" + str(100 * self.get_player().kills_this_level // self.enemies_available) + "%).")
+            text.append(f'Enemies dispatched: {self.get_player().kills_this_level} of {self.enemies_available} ({100 * self.get_player().kills_this_level // self.enemies_available} %).')
         if self.get_player().deaths_this_level == 0:
-            text.append("Survivor: You never died.")
+            text.append('Survivor: You never died.')
         else:
-            text.append("Deaths: " + str(self.get_player().deaths_this_level) + ".")
+            text.append(f'Deaths: {self.get_player().deaths_this_level}.')
         if not self.get_player().been_hit_this_level:
-            text.append("Untouchable: You never got hit.")
+            text.append('Untouchable: You never got hit.')
         if not self.get_player().been_seen_this_level:
-            text.append("Shadow: You were never even seen!")
+            text.append('Shadow: You were never even seen!')
         return text
 
     def get_player(self) -> Player:
@@ -270,7 +270,7 @@ class Level:
             bar = pygame.Surface((int(win.get_width() * ((i + 1) / len(layout))), 10), pygame.SRCALPHA)
             bar.fill((255, 255, 255))
             win.blit(bar, (0, win.get_height() - 12))
-            display_text("Building level." + ("." if i%3 <= 1 else " ") + ("." if i%3 <= 2 else " ") + "[" + str(i + 1) + "/" + str(len(layout)) + "]", controller, min_pause_time=0, should_sleep=False)
+            display_text(f'Building level.{"." if i%3 <= 1 else " "}{"." if i%3 <= 2 else " "}[{i + 1}/{len(layout)}]', controller, min_pause_time=0, should_sleep=False)
             static_blocks.append([])
             for j in range(len(layout[i])):
                 static_blocks[-1].append(None)

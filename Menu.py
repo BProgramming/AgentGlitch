@@ -190,9 +190,9 @@ class Menu:
 
             if self.buttons[i][3] == ButtonType.BAR:
                 if len(self.buttons[i]) > 4:
-                    label = str(DifficultyScale((self.notch_val[i] * (self.buttons[i][4][-1] - self.buttons[i][4][0])) + self.buttons[i][4][0]))
+                    label = f'{str(DifficultyScale((self.notch_val[i] * (self.buttons[i][4][-1] - self.buttons[i][4][0])) + self.buttons[i][4][0]))}'
                 else:
-                    label = str(int(self.notch_val[i] * 100)) + "%"
+                    label = f'{int(self.notch_val[i] * 100)}%'
                 text = pygame.font.SysFont("courier", 32).render(label, True, (255, 255, 255))
                 screen.blit(text, ((self.buttons[i][button_type].get_width() - text.get_width()) - (self.buttons[i][button_type].get_width() - text.get_width()) // 10, ((i + 1) * self.buttons[i][button_type].get_height()) - text.get_height()))
                 if button_type == 1:
@@ -237,7 +237,7 @@ class Selector(Menu):
         self.image_index = index
         if isinstance(images, dict):
             if list(images.keys()) != ["normal", "retro"]:
-                handle_exception("Picker sprites error: " + str(ValueError(images.keys())))
+                handle_exception(f'Picker sprites error: {str(ValueError(images.keys()))}')
             else:
                 self.images = {}
                 for key in images.keys():

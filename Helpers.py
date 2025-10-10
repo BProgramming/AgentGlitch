@@ -46,11 +46,11 @@ def handle_exception(msg) -> None:
     cur_time = time.gmtime(time.time())
     filename_time = time.strftime("%Y%m%d_%H%M%S", cur_time)
     printable_time = time.strftime("%Y-%m-%d, %H:%M:%S", cur_time)
-    log_file = join(GAME_DATA_FOLDER, "glitch_" + filename_time + ".log")
+    log_file = join(GAME_DATA_FOLDER, f'glitch_{filename_time}.log')
     with open(log_file, "w") as log:
         print(f"Error encountered at GMT {printable_time}:", file=log)
         traceback.print_exc(file=log)
-    messagebox.showerror(title="Even the agent couldn't glitch out of this!", message="ERROR: " + msg + "\nMore info available in " + log_file)
+    messagebox.showerror(title="Even the agent couldn't glitch out of this!", message='ERROR: {msg}\nMore info available in {log_file}.')
     sys.exit()
 
 
@@ -83,22 +83,22 @@ def load_picker_sprites(dir) -> tuple | None:
                     surface.blit(asset, (0, 0), rect)
                     images["normal"].append(surface)
                     values.append([folder])
-                    retro_path = join(path, "Retro" + folder, "picker.png")
+                    retro_path = join(path, f'Retro{folder}', "picker.png")
                     if isfile(retro_path):
                         asset = pygame.transform.grayscale(pygame.transform.smoothscale_by(pygame.image.load(retro_path).convert_alpha(), 4))
                         surface = pygame.Surface((asset.get_width(), asset.get_height()), pygame.SRCALPHA)
                         rect = pygame.Rect(0, 0, asset.get_width(), asset.get_height())
                         surface.blit(asset, (0, 0), rect)
                         images["retro"].append(surface)
-                        values[-1].append("Retro" + folder)
+                        values[-1].append(f'Retro{folder}')
                     else:
                         images["retro"].append(None)
                         values[-1].append(None)
         if len(images) == 0:
-            handle_exception("No sprite images found in " + str(FileNotFoundError(path)) + ".")
+            handle_exception(f'No sprite images found in {str(FileNotFoundError(path))}.')
         return images, values
     else:
-        handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
+        handle_exception(f'File {str(FileNotFoundError(path))} not found.')
         return None
 
 
@@ -116,10 +116,10 @@ def load_level_images(dir) -> tuple | None:
             images.append(surface)
             values.append(file.replace(".png", "").upper())
         if len(images) == 0:
-            handle_exception("No level images found in " + str(FileNotFoundError(path)) + ".")
+            handle_exception(f'No level images found in {str(FileNotFoundError(path))}.')
         return images, values
     else:
-        handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
+        handle_exception(f'File {str(FileNotFoundError(path))} not found.')
         return None
 
 
@@ -160,7 +160,7 @@ def load_images(dir1, dir2) -> dict | None:
 
         return all_images
     else:
-        handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
+        handle_exception(f'File {str(FileNotFoundError(path))} not found.')
         return None
 
 
@@ -182,7 +182,7 @@ def load_sprite_sheets(dir1, dir2, sprite_master, direction=False, grayscale=Fal
                 dir2 = options[i]
                 path = join(ASSETS_FOLDER, dir1, dir2)
             else:
-                handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
+                handle_exception(f'File {str(FileNotFoundError(path))} not found.')
 
         images = [f for f in listdir(path) if isfile(join(path, f))]
 
@@ -219,7 +219,7 @@ def load_json_dict(dir, file) -> dict | None:
         else:
             return {}
     except FileNotFoundError:
-        handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
+        handle_exception(f'File {str(FileNotFoundError(path))} not found.')
         return None
 
 
@@ -232,7 +232,7 @@ def load_object_dicts(dir) -> dict | None:
             dicts[str.upper(f.replace(".agd", ""))] = load_json_dict(dir, f)
         return dicts
     else:
-        handle_exception("File or folder " + str(FileNotFoundError(path)) + " not found.")
+        handle_exception(f'File or folder {str(FileNotFoundError(path))} not found.')
         return None
 
 
@@ -250,7 +250,7 @@ def load_levels(dir) -> dict | None:
 
         return levels
     else:
-        handle_exception("File or folder " + str(FileNotFoundError(path)) + " not found.")
+        handle_exception(f'File pr fp;der {str(FileNotFoundError(path))} not found.')
         return None
 
 
@@ -261,10 +261,10 @@ def __load_single_audio__(dir1, dir2) -> dict | None:
         for file in [f for f in listdir(path) if isfile(join(path, f))]:
             if sounds.get(dir2.upper()) is None:
                 sounds[dir2.upper()] = []
-            sounds[dir2.upper()].append(path + "\\" + file)
+            sounds[dir2.upper()].append(f'{path}\\{file}')
         return sounds
     else:
-        handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
+        handle_exception(f'File {str(FileNotFoundError(path))} not found.')
         return None
 
 
@@ -288,7 +288,7 @@ def load_audios(dir, dir2=None) -> dict | None:
 
         return sounds
     else:
-        handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
+        handle_exception(f'File {str(FileNotFoundError(path))} not found.')
         return None
 
 
@@ -317,7 +317,7 @@ def load_text_from_file(file) -> list | None:
                 text.append(line.replace("\n", ""))
         return text
     else:
-        handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
+        handle_exception(f'File {str(FileNotFoundError(path))} not found.')
         return None
 
 

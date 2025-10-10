@@ -19,7 +19,7 @@ icon = join(ASSETS_FOLDER, "Icons", "icon_small.png")
 if isfile(icon):
     pygame.display.set_icon(pygame.image.load(icon))
 else:
-    handle_exception("File " + str(FileNotFoundError(icon)) + " not found.")
+    handle_exception(f'File {str(FileNotFoundError(icon))} not found.')
 
 WINDOW = pygame.display.set_mode((WIDTH, HEIGHT), flags=pygame.SCALED)
 pygame.display.set_caption("AGENT GLITCH")
@@ -101,7 +101,7 @@ def main(win):
                 pygame.display.update()
                 time.sleep(0.01)
         else:
-            handle_exception("File " + str(FileNotFoundError(title_screen_file)) + " not found.")
+            handle_exception(f'File {str(FileNotFoundError(title_screen_file))} not found.')
         controller.goto_main = False
         load_data = None
         cur_level = None

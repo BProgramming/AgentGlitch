@@ -30,7 +30,7 @@ class CinematicsManager:
                     elif file["type"].upper() == "VIDEO":
                         self.cinematics[file["name"]] = Cinematic(self.__load_video__(path), CinematicType.VIDEO, controller, pause_key=(None if file.get("pause_key") is None else file["pause_key"]), text=(None if file.get("text") is None else file["text"]), should_glitch=(False if file.get("should_glitch") is None or file["should_glitch"].upper() == "FALSE" else True), should_fade_in=(True if file.get("should_fade_in") is None or file["should_fade_in"].upper() == "TRUE" else False), should_fade_out=(True if file.get("should_fade_out") is None or file["should_fade_out"].upper() == "TRUE" else False))
                 else:
-                    handle_exception("File " + str(FileNotFoundError(path)) + " not found.")
+                    handle_exception(f'File {str(FileNotFoundError(path))} not found.')
 
     @staticmethod
     def __load_slide__(file: str) -> pygame.Surface:
@@ -171,7 +171,7 @@ class Cinematic:
     @staticmethod
     def __play_video__(video: cv2.VideoCapture, controller, win: pygame.Surface, text: str | None=None, should_glitch: bool=False, pause_key: int | list[int] | tuple[int] | None=None, should_fade_in: bool=True, should_fade_out: bool=True) -> None:
         if not video.isOpened():
-            raise IOError("Video file " + str(video) + " could not be opened.")
+            raise IOError(f'Video file {str(video)} could not be opened.')
 
         ret, frame = video.read()
         if ret:

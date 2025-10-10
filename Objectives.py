@@ -8,7 +8,7 @@ from Helpers import handle_exception, set_sound_source, load_sprite_sheets, ASSE
 
 class Objective(Entity):
     if not isfile(join(ASSETS_FOLDER, "Icons", "Pointer", "pointer.png")):
-        handle_exception("File " + str(FileNotFoundError(join(ASSETS_FOLDER, "Icons", "Pointer", "pointer.png"))) + " not found.")
+        handle_exception(f'File {str(FileNotFoundError(join(ASSETS_FOLDER, "Icons", "Pointer", "pointer.png")))} not found.')
     else:
         POINTER_SPRITE: pygame.Surface = pygame.transform.scale2x(pygame.image.load(join(ASSETS_FOLDER, "Icons", "Pointer", "pointer.png")).convert_alpha())
         if isfile(join(ASSETS_FOLDER, "Icons", "Pointer", "pointer_grayscale.png")):

@@ -7,6 +7,7 @@ class Entity(pygame.sprite.Sprite):
 
     def __init__(self, level, controller, x: float, y: float, width: float, height: float, is_blocking: bool=True, name: str="Entity"):
         super().__init__()
+        self.attack_damage = None
         self.level = level
         self.controller = controller
         self.sprite: pygame.Surface | None = pygame.Surface((width, height), pygame.SRCALPHA)
@@ -15,7 +16,7 @@ class Entity(pygame.sprite.Sprite):
         self.width: float = width
         self.height: float = height
         self.is_blocking: bool = is_blocking
-        self.name: str = name + " (" + str(x) + ", " + str(y) + ")"
+        self.name: str = f'{name} ({x}, {y})'
         self.max_hp: float = 100
         self.hp: float = 100
         self.is_stacked: bool = False # this property is only used by blocks, but needed here for generic checks

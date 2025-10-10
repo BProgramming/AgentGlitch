@@ -64,7 +64,7 @@ class Boss(NonPlayer):
     def update_sprite(self, fps) -> int:
         active_index = super().update_sprite(fps)
         if self.audios is not None and (self.state in [MovementState.WIND_UP, MovementState.ATTACK_ANIM, MovementState.WIND_DOWN]) and self.audio_trigger_frames.get(str(self.state)) is not None:
-            audio_folder = self.name.upper().split(" ",1)[0] + "_" + str(self.state)
+            audio_folder = f'{self.name.upper().split(" ",1)[0]}_{str(self.state)}'
             if self.audios.get(audio_folder) is not None and active_index in self.audio_trigger_frames[str(self.state)]:
                 self.active_audio = self.audios[audio_folder][random.randrange(len(self.audios[audio_folder]))]
                 if self.active_audio_channel is not None:

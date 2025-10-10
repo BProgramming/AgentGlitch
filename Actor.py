@@ -122,7 +122,7 @@ class Actor(Entity):
         self.load_attribute(data, "can_resize")
         self.load_attribute(data, "max_jumps")
         for proj in data["projectiles"]:
-            self.active_projectiles.append(Projectile(self.level, self.controller, self.rect.centerx + (self.rect.width * self.facing // 3), self.rect.centery, None, 0, self.attack_damage, self.difficulty, sprite=self.proj_sprite, name=(self.name + "'s projectile #" + str(len(self.active_projectiles) + 1))))
+            self.active_projectiles.append(Projectile(self.level, self.controller, self.rect.centerx + (self.rect.width * self.facing // 3), self.rect.centery, None, 0, self.attack_damage, self.difficulty, sprite=self.proj_sprite, name=f'{self.name}\'s projectile #{len(self.active_projectiles) + 1}'))
             self.active_projectiles[-1].load(list(proj.values())[0])
         self.update_sprite(1)
         self.update_geo()
@@ -218,7 +218,7 @@ class Actor(Entity):
     def shoot_at_target(self, target) -> None:
         if self.cooldowns["launch_projectile"] <= 0:
             self.is_attacking = True
-            proj = Projectile(self.level, self.controller, self.rect.centerx, self.rect.centery, (target[0], self.rect.centery), Actor.MAX_SHOOT_DISTANCE, self.attack_damage, self.difficulty, sprite=self.proj_sprite, name=(self.name + "'s projectile #" + str(len(self.active_projectiles) + 1)))
+            proj = Projectile(self.level, self.controller, self.rect.centerx, self.rect.centery, (target[0], self.rect.centery), Actor.MAX_SHOOT_DISTANCE, self.attack_damage, self.difficulty, sprite=self.proj_sprite, name=f'{self.name}\'s projectile #{(len(self.active_projectiles) + 1)}')
             self.active_projectiles.append(proj)
             self.cooldowns["launch_projectile"] = Actor.LAUNCH_PROJECTILE_COOLDOWN
             self.play_attack_audio("ATTACK_RANGE")
@@ -226,7 +226,8 @@ class Actor(Entity):
     def get_hit(self, ent) -> None:
         self.cooldowns["get_hit"] = Actor.GET_HIT_COOLDOWN
         self.cooldowns["heal"] = Actor.HEAL_DELAY * self.difficulty
-        self.hp -= ent.attack_damage
+        if ent.attack_damage is not None:
+            self.hp -= ent.attack_damage
 
     def get_collisions(self) -> bool:
         collided = False
@@ -395,12 +396,12 @@ class Actor(Entity):
                     if self.state != MovementState.IDLE_ATTACK:
                         self.animation_count = 0
                     self.state = MovementState.IDLE
-            if str(self.state) + "_" + str(self.facing) not in self.sprites:
+            if f'{str(self.state)}_{str(self.facing)}' not in self.sprites:
                 self.state = old
         self.state_changed = bool(old != self.state)
 
     def update_sprite(self, fps) -> int:
-        active_sprites = self.sprites[str(self.state) + "_" + str(self.facing)]
+        active_sprites = self.sprites[f'{str(self.state)}_{str(self.facing)}']
         active_index = math.floor((self.animation_count // (1000 // (fps * Actor.ANIMATION_DELAY))) % len(active_sprites))
         if active_index == len(active_sprites) - 1:
             self.is_final_anim_frame = True

@@ -9,7 +9,7 @@ class SteamworksConnection:
     def __init__(self):
         self.connection = self.initialize()
         if not self.connection.UserStats.RequestCurrentStats():
-            handle_exception(str(ConnectionError("Couldn't retrieve Steam user info.")))
+            handle_exception(f'{str(ConnectionError("Couldn't retrieve Steam user info."))}')
 
     @staticmethod
     def initialize() -> STEAMWORKS:
