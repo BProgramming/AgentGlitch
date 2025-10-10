@@ -8,27 +8,26 @@ from Helpers import GAME_DATA_FOLDER, FIRST_LEVEL_NAME
 
 def save_player_profile(controller, level):
     profile_file = join(GAME_DATA_FOLDER, "profile.p")
-    if isfile(profile_file):
+    with open(profile_file, "rb") as f:
         data = pickle.load(open(profile_file, "rb"))
-    else:
-        data = None
 
-    if level is None:
-        if data is not None and data.get("level") is not None:
-            cur_level = data["level"]
-        else:
-            cur_level = FIRST_LEVEL_NAME
-    else:
+    if level is not None:
         cur_level = level.name
+    elif data is not None and data.get("level") is not None:
+        cur_level = data["level"]
+    else:
+        cur_level = FIRST_LEVEL_NAME
 
     data = {"level": cur_level, "master volume": controller.master_volume, "keyboard layout": controller.active_keyboard_layout, "gamepad layout": controller.active_gamepad_layout, "is fullscreen": pygame.display.is_fullscreen(), "difficulty": controller.difficulty, "selected sprite": controller.player_sprite_selected, "player abilities": controller.player_abilities, "force grayscale": controller.force_grayscale}
-    pickle.dump(data, open(profile_file, "wb"))
+    with open(profile_file, "wb") as f:
+        pickle.dump(data, f)
 
 
 def load_player_profile(controller):
     profile_file = join(GAME_DATA_FOLDER, "profile.p")
     if isfile(profile_file):
-        data = pickle.load(open(profile_file, "rb"))
+        with open(profile_file, "rb") as f:
+            data = pickle.load(f)
         if data.get("master volume") is not None:
             controller.master_volume = data["master volume"]
         if data.get("keyboard layout") is not None:
@@ -63,8 +62,8 @@ def save(level, hud):
             ent_data = ent.save()
             if ent_data is not None:
                 data.update(ent_data)
-        save_file = join(GAME_DATA_FOLDER, "save.p")
-        pickle.dump(data, open(save_file, "wb"))
+        with open(join(GAME_DATA_FOLDER, "save.p"), "wb") as f:
+            pickle.dump(data, f)
 
 
 def load_part1():
@@ -72,7 +71,8 @@ def load_part1():
     if not isfile(save_file):
         return None
     else:
-        data = pickle.load(open(save_file, "rb"))
+        with open(save_file, "rb") as f:
+            data = pickle.load(f)
         if data is None:
             return None
         else:

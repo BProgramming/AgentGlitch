@@ -258,8 +258,13 @@ class Controller:
         self.volume_menu.fade_in(self.win, grayscale=self.force_grayscale)
         joystick_movement = 0
         self.volume_menu.clear = clear
+        notch_val = None
         while True:
             time.sleep(0.01)
+            if notch_val != self.volume_menu.notch_val[0]:
+                notch_val = self.volume_menu.notch_val[0]
+                self.master_volume["background"] = notch_val
+                pygame.mixer.music.set_volume(self.master_volume["background"])
 
             match self.volume_menu.display(self.win, grayscale=self.force_grayscale):
                 case 0:
@@ -272,8 +277,6 @@ class Controller:
                     pass  #set cinematics volume
                 case 4:
                     self.volume_menu.fade_out(self.win, grayscale=self.force_grayscale)
-                    self.master_volume["background"] = self.volume_menu.notch_val[0]
-                    pygame.mixer.music.set_volume(self.master_volume["background"])
                     self.master_volume["player"] = self.volume_menu.notch_val[1]
                     self.master_volume["non-player"] = self.volume_menu.notch_val[2]
                     self.master_volume["cinematics"] = self.volume_menu.notch_val[3]

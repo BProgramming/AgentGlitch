@@ -1,7 +1,7 @@
 import math
 import random
 import pygame
-from os.path import join, isfile
+from os.path import join, isfile, abspath
 from Entity import Entity
 from Helpers import handle_exception, MovementDirection, load_sprite_sheets, set_sound_source, ASSETS_FOLDER
 from SimpleVFX.SimpleVFX import VisualEffect, ImageDirection
@@ -42,7 +42,7 @@ class Block(Entity):
                 surface = pygame.transform.grayscale(surface)
             return pygame.transform.scale2x(surface)
         else:
-            handle_exception(f'File {str(FileNotFoundError(path))} not found.')
+            handle_exception(f'File {FileNotFoundError(abspath(path))} not found.')
             return None
 
 

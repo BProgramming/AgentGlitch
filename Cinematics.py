@@ -4,7 +4,7 @@ import sys
 import time
 from enum import Enum
 from Helpers import glitch, handle_exception, ASSETS_FOLDER
-from os.path import join, isfile
+from os.path import join, isfile, abspath
 
 
 class CinematicType(Enum):
@@ -30,7 +30,7 @@ class CinematicsManager:
                     elif file["type"].upper() == "VIDEO":
                         self.cinematics[file["name"]] = Cinematic(self.__load_video__(path), CinematicType.VIDEO, controller, pause_key=(None if file.get("pause_key") is None else file["pause_key"]), text=(None if file.get("text") is None else file["text"]), should_glitch=(False if file.get("should_glitch") is None or file["should_glitch"].upper() == "FALSE" else True), should_fade_in=(True if file.get("should_fade_in") is None or file["should_fade_in"].upper() == "TRUE" else False), should_fade_out=(True if file.get("should_fade_out") is None or file["should_fade_out"].upper() == "TRUE" else False))
                 else:
-                    handle_exception(f'File {str(FileNotFoundError(path))} not found.')
+                    handle_exception(f'File {FileNotFoundError(abspath(path))} not found.')
 
     @staticmethod
     def __load_slide__(file: str) -> pygame.Surface:

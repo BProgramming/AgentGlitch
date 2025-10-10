@@ -237,7 +237,7 @@ class Selector(Menu):
         self.image_index = index
         if isinstance(images, dict):
             if list(images.keys()) != ["normal", "retro"]:
-                handle_exception(f'Picker sprites error: {str(ValueError(images.keys()))}')
+                handle_exception(f'Picker sprites error: {ValueError(images.keys())}')
             else:
                 self.images = {}
                 for key in images.keys():
