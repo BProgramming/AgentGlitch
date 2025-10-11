@@ -166,7 +166,7 @@ def main(win):
 
             win.fill((0, 0, 0))
             funny_loading_text = ["Applying finishing touches", "Applying one last coat of paint", "Almost done", "Any minute now", "Nearly there", "One more thing", "Tidying up", "Training agent", "Catching the train", "Finishing lunch", "Folding laundry"]
-            display_text(funny_loading_text[random.randint(0, len(funny_loading_text) - 1)] + "...", controller, min_pause_time=0, should_sleep=False)
+            display_text(f'{funny_loading_text[random.randint(0, len(funny_loading_text) - 1)]}...', controller, min_pause_time=0, should_sleep=False)
 
             camera.prepare(level, hud)
             camera.scroll_to_player(0)
