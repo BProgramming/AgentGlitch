@@ -270,7 +270,8 @@ class Level:
             bar = pygame.Surface((int(win.get_width() * ((i + 1) / len(layout))), 10), pygame.SRCALPHA)
             bar.fill((255, 255, 255))
             win.blit(bar, (0, win.get_height() - 12))
-            display_text(f'Building level.{"." if i%3 <= 1 else " "}{"." if i%3 <= 2 else " "}[{i + 1}/{len(layout)}]', controller, min_pause_time=0, should_sleep=False)
+            pct = 100 * (i + 1)//len(layout)
+            display_text(f'Building level... {" " if pct < 100 else ""}{" " if pct < 10 else ""}{pct}%', controller, min_pause_time=0, should_sleep=False)
             static_blocks.append([])
             for j in range(len(layout[i])):
                 static_blocks[-1].append(None)

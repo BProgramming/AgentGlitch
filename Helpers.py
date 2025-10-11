@@ -287,9 +287,9 @@ def load_audios(dir, dir2=None) -> dict | None:
                 sounds[key][i] = sound_master[file]["sound"]
 
         return sounds
-    else:
+    elif dir2 is not None:
         handle_exception(f'File {FileNotFoundError(abspath(path))} not found.')
-        return None
+    return None
 
 
 def set_sound_source(source_rect, player_rect, sound_type, channel) -> None:

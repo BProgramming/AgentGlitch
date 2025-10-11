@@ -53,11 +53,26 @@ def main(win):
     controller.get_gamepad(notify=False)
     controller.has_dlc.update(steamworks.has_dlc())
 
-    cinematics_files = [{"name": "credit1", "file": "credit1.png", "type": "SLIDE", "should_glitch": "TRUE"},
-                        {"name": "credit2", "file": "credit2.png", "type": "SLIDE", "should_glitch": "TRUE"},
-                        {"name": "recap", "file": "recap.png", "type": "SLIDE"},
-                        {"name": "all_done", "file": "all_done.png", "type": "SLIDE"}]
+    if meta_dict.get("MAIN_MENU") is not None and meta_dict["MAIN_MENU"].get("start_cinematics") is not None:
+        start_cinematics = meta_dict["MAIN_MENU"]["start_cinematics"]
+    else:
+        start_cinematics = {}
+    if meta_dict.get("MAIN_MENU") is not None and meta_dict["MAIN_MENU"].get("recap_cinematics") is not None:
+        recap_cinematics = meta_dict["MAIN_MENU"]["recap_cinematics"]
+    else:
+        recap_cinematics = {}
+    if meta_dict.get("MAIN_MENU") is not None and meta_dict["MAIN_MENU"].get("end_cinematics") is not None:
+        end_cinematics = meta_dict["MAIN_MENU"]["end_cinematics"]
+    else:
+        end_cinematics = {}
+
+    cinematics_files = start_cinematics + recap_cinematics + end_cinematics
     cinematics = CinematicsManager(cinematics_files, controller)
+
+    if meta_dict.get("MAIN_MENU") is not None and meta_dict["MAIN_MENU"].get("title_screen") is not None:
+        title_screen_file = join(ASSETS_FOLDER, "Screens", meta_dict["MAIN_MENU"]["title_screen"])
+    else:
+        title_screen_file = join(ASSETS_FOLDER, "Screens", "title.png")
 
     camera = Camera(win)
 
@@ -65,23 +80,20 @@ def main(win):
         if len(load_player_profile(controller)) == 0:
             pygame.display.toggle_fullscreen()
         if not controller.goto_main:
-            cinematics.play("credit1", win)
-            cinematics.play("credit2", win)
+            for cinematic in start_cinematics:
+                cinematics.play(cinematic["name"], win)
         pygame.mixer.music.set_volume(controller.master_volume["background"])
         new_game = False
-        title_screen_file = join(ASSETS_FOLDER, "Screens", "title2.0.png")
         if isfile(title_screen_file):
             slide = pygame.transform.scale2x(pygame.image.load(title_screen_file).convert_alpha())
             slide_grayscale = pygame.transform.grayscale(slide)
             controller.main_menu.clear = slide.copy()
             controller.main_menu.clear_grayscale = slide_grayscale.copy()
-            #overlay = pygame.image.load(join(ASSETS_FOLDER, "Screens", "title_overlay.png"))
             black = pygame.Surface((win.get_width(), win.get_height()), pygame.SRCALPHA)
             black.fill((0, 0, 0))
             if not controller.goto_main:
                 for i in range(64):
                     win.blit((slide_grayscale if controller.force_grayscale else slide), ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
-                    #win.blit(overlay, ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
                     black.set_alpha(255 - (4 * i))
                     win.blit(black, (0, 0))
                     pygame.display.update()
@@ -108,7 +120,7 @@ def main(win):
         while True:
             # THIS PART LOADS EVERYTHING: #
             win.fill((0, 0, 0))
-            display_text("Loading mission.   [1/3]", controller, min_pause_time=0, should_sleep=False)
+            display_text("Loading mission... [1/3]", controller, min_pause_time=0, should_sleep=False)
             should_load = False
             if new_game:
                 cur_level = FIRST_LEVEL_NAME
@@ -126,7 +138,7 @@ def main(win):
                 controller.level_selected = None
             controller.goto_load = False
             win.fill((0, 0, 0))
-            display_text("Loading mission..  [2/3]", controller, min_pause_time=0, should_sleep=False)
+            display_text("Loading mission... [2/3]", controller, min_pause_time=0, should_sleep=False)
             player_audio = enemy_audio = load_audios("Actors")
             block_audio = load_audios("Blocks")
             message_audio = load_audios("Messages", dir2=cur_level)
@@ -307,15 +319,17 @@ def main(win):
                 if level.end_cinematic is not None:
                     for cinematic in level.end_cinematic:
                         level.cinematics.play(cinematic, win)
-                cinematics.cinematics["recap"].text = ["Mission successful."] + level.get_recap_text()
-                cinematics.play("recap", win)
+                for cinematic in recap_cinematics:
+                    cinematics.cinematics[cinematic["name"]].text = ["Mission successful."] + level.get_recap_text()
+                    cinematics.play(cinematic["name"], win)
                 if level.grayscale:
                     sprite_master.clear()
                     image_master.clear()
                 cur_level = next_level
 
         if not controller.goto_main:
-            cinematics.play("all_done", win)
+            for cinematic in end_cinematics:
+                cinematics.play(cinematic["name"], win)
 
 
 if __name__ == "__main__":
