@@ -13,6 +13,11 @@ class HUD:
         self.hp_outline.fill((0, 0, 0))
         self.hp_pct: float = 0.0
         self.hp_bar: pygame.Surface | None = None
+        self.boss_hp_bar_alpha: int = 0
+        self.boss_hp_outline: pygame.Surface | None = pygame.Surface((990, 40), pygame.SRCALPHA)
+        self.boss_hp_outline.fill((0, 0, 0, self.boss_hp_bar_alpha))
+        self.boss_hp_pct: float | None = None
+        self.boss_hp_bar: pygame.Surface | None = None
         self.time_characters: dict[str, pygame.Surface | None] = load_images("Icons", "Timer")
         for i in range(10):
             c = str(i)
@@ -91,6 +96,31 @@ class HUD:
         self.win.blit(self.hp_outline, (10, 10))
         self.win.blit(self.hp_bar, (12, 12))
 
+    def __draw_boss_health_bar__(self) -> None:
+        if self.boss_hp_pct is not None:
+            self.boss_hp_bar = pygame.Surface((int((self.boss_hp_outline.get_width() - 4) * self.boss_hp_pct), 36), pygame.SRCALPHA)
+            if self.boss_hp_bar_alpha < 128:
+                self.boss_hp_bar_alpha += 1
+                self.boss_hp_outline.fill((0, 0, 0, self.boss_hp_bar_alpha))
+            if self.is_grayscale:
+                self.boss_hp_bar.fill((255, 255, 255, self.boss_hp_bar_alpha))
+            else:
+                self.boss_hp_bar.fill((255, 0, 0, self.boss_hp_bar_alpha))
+            self.win.blit(self.boss_hp_outline, ((self.win.get_width() - self.boss_hp_outline.get_width()) // 2, self.win.get_height() - (self.boss_hp_outline.get_height() + 100)))
+            self.win.blit(self.boss_hp_bar, (((self.win.get_width() - self.boss_hp_outline.get_width()) // 2) + 2, (self.win.get_height() - (self.boss_hp_outline.get_height() + 100)) + 2))
+        elif self.boss_hp_bar_alpha > 0:
+            self.boss_hp_bar_alpha -= 1
+            if self.is_grayscale:
+                self.boss_hp_bar.fill((255, 255, 255, self.boss_hp_bar_alpha))
+            else:
+                self.boss_hp_bar.fill((255, 0, 0, self.boss_hp_bar_alpha))
+            self.boss_hp_outline.fill((0, 0, 0, self.boss_hp_bar_alpha))
+            self.win.blit(self.boss_hp_outline, ((self.win.get_width() - self.boss_hp_outline.get_width()) // 2, self.win.get_height() - (self.boss_hp_outline.get_height() + 100)))
+            self.win.blit(self.boss_hp_bar, (((self.win.get_width() - self.boss_hp_outline.get_width()) // 2) + 2, (self.win.get_height() - (self.boss_hp_outline.get_height() + 100)) + 2))
+        else:
+            self.boss_hp_bar = None
+
+
     def __draw_icons__(self) -> None:
         if self.player.max_jumps > 0:
             if self.player.jump_count == 0 and self.player.max_jumps > 1:
@@ -136,6 +166,7 @@ class HUD:
 
     def draw(self, formatted_level_time: str) -> None:
         self.__draw_health_bar__()
+        self.__draw_boss_health_bar__()
         self.__draw_icons__()
         self.__draw_time__(formatted_level_time)
         if self.save_icon_timer > 0:

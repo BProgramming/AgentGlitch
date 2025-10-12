@@ -20,6 +20,7 @@ class Boss(NonPlayer):
         self.is_animated_attack = True
         self.audio_trigger_frames.update({"WIND_UP": [0], "ATTACK_ANIM": [0], "WIND_DOWN": [0]})
         self.death_triggers = {}
+        self.is_on_screen = False
         if death_triggers is not None:
             if death_triggers.get("properties") is not None:
                 self.death_triggers["properties"] = death_triggers["properties"]
@@ -31,6 +32,7 @@ class Boss(NonPlayer):
                 self.death_triggers["achievement"] = death_triggers["achievements"]
 
     def die(self) -> None:
+        self.level.boss_hp_pct = 0
         if self.death_triggers.get("discord_status") is not None and self.death_triggers["discord_status"].get("details") is not None and self.death_triggers["discord_status"].get("state") is not None:
             self.controller.discord.set_status(details=self.death_triggers["discord_status"]["details"], state=self.death_triggers["discord_status"]["state"])
         if self.death_triggers.get("properties") is not None:
@@ -45,13 +47,25 @@ class Boss(NonPlayer):
                     self.controller.steamworks.UserStats.SetAchievement(achievement)
                     self.controller.should_store_steam_stats = True
 
+    def __update_onscreen_presence__(self) -> None:
+        if self.level.boss_hp_pct is None and math.dist((self.level.get_player().rect.x, self.level.get_player().rect.y), (self.rect.x, self.rect.y)) <= self.spot_range:
+            self.is_on_screen = True
+        elif math.dist((self.level.get_player().rect.x, self.level.get_player().rect.y), (self.rect.x, self.rect.y)) >= 2 * self.spot_range:
+            self.is_on_screen = False
+
+    def __update_health_bar__(self) -> None:
+        if self.is_on_screen:
+            self.level.boss_hp_pct = self.hp / self. max_hp
+        elif self.level.boss_hp_pct is not None:
+            self.level.boss_hp_pct = None
+
     async def __queue_music__(self) -> None:
-        if self.music_is_playing and (self.hp <= 0 or math.dist((self.level.get_player().rect.x, self.level.get_player().rect.y), (self.rect.x, self.rect.y)) >= 2 * self.spot_range):
+        if self.music_is_playing and (self.hp <= 0 or not self.is_on_screen):
             if pygame.mixer.music.get_busy():
                 pygame.mixer.music.fadeout(1000)
             self.controller.queue_track_list()
             self.music_is_playing = False
-        elif not self.music_is_playing and self.hp > 0 and math.dist((self.level.get_player().rect.x, self.level.get_player().rect.y), (self.rect.x, self.rect.y)) <= self.spot_range:
+        elif not self.music_is_playing and self.hp > 0 and self.is_on_screen:
             if pygame.mixer.music.get_busy():
                 pygame.mixer.music.fadeout(1000)
             self.controller.queue_track_list(music=self.music)
@@ -74,5 +88,7 @@ class Boss(NonPlayer):
         return active_index
 
     def loop(self, dtime) -> bool:
+        self.__update_onscreen_presence__()
+        self.__update_health_bar__()
         asyncio.run(self.__toggle_music__())
         return super().loop(dtime)

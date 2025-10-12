@@ -56,6 +56,7 @@ class Level:
         self.objectives_collected = []
         self.objectives_available = len(self.objectives)
         self.enemies_available = len(self.enemies)
+        self.boss_hp_pct = None
         self.hot_swap_level = (None if meta_dict[name].get("hot_swap_level") is None or meta_dict.get(meta_dict[name]["hot_swap_level"]) is None else Level(meta_dict[name]["hot_swap_level"], levels, meta_dict, objects_dict, sprite_master, image_master, player_audios, enemy_audios, block_audios, message_audios, vfx_manager, win, controller))
 
     def award_achievements(self, steamworks):
