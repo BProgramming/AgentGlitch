@@ -74,6 +74,11 @@ def main(win):
     else:
         title_screen_file = join(ASSETS_FOLDER, "Screens", "title.png")
 
+    if meta_dict.get("MAIN_MENU") is not None and meta_dict["MAIN_MENU"].get("title_screen_retro") is not None:
+        title_screen_retro_file = join(ASSETS_FOLDER, "Screens", meta_dict["MAIN_MENU"]["title_screen_retro"])
+    else:
+        title_screen_retro_file = title_screen_file
+
     camera = Camera(win)
 
     while True:
@@ -85,8 +90,10 @@ def main(win):
         pygame.mixer.music.set_volume(controller.master_volume["background"])
         new_game = False
         if isfile(title_screen_file):
-            slide = pygame.transform.scale2x(pygame.image.load(title_screen_file).convert_alpha())
-            slide_grayscale = pygame.transform.grayscale(slide)
+            slide = pygame.image.load(title_screen_file).convert_alpha()
+            slide = pygame.transform.scale_by(slide, (win.get_width() / slide.get_width(), win.get_height() / slide.get_height()))
+            slide_grayscale = pygame.image.load(title_screen_retro_file).convert_alpha()
+            slide_grayscale = pygame.transform.grayscale(pygame.transform.scale_by(slide_grayscale, (win.get_width() / slide_grayscale.get_width(), win.get_height() / slide_grayscale.get_height())))
             controller.main_menu.clear = slide.copy()
             controller.main_menu.clear_grayscale = slide_grayscale.copy()
             black = pygame.Surface((win.get_width(), win.get_height()), pygame.SRCALPHA)
