@@ -474,7 +474,7 @@ class Actor(Entity):
                 if self.should_move_horiz:
                     scaled_target = dtime * self.target_vel
                     if abs(self.x_vel) < scaled_target:
-                        self.x_vel = self.direction * min(scaled_target, (abs(self.x_vel) * self.drag_vel) + (scaled_target * float(1 - self.drag_vel)))
+                        self.x_vel = self.direction * min(scaled_target, (abs(self.x_vel) * self.drag_vel) + (scaled_target * (1 - self.drag_vel)))
                 else:
                     self.x_vel = 0.0
 

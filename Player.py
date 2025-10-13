@@ -111,11 +111,15 @@ class Player(Actor):
         self.should_move_horiz = True
         if self.direction != MovementDirection.LEFT:
             self.direction = self.facing = MovementDirection.LEFT
+        if self.x_vel > 0:
+            self.x_vel = 0
 
     def move_right(self) -> None:
         self.should_move_horiz = True
         if self.direction != MovementDirection.RIGHT:
             self.direction = self.facing = MovementDirection.RIGHT
+        if self.x_vel < 0:
+            self.x_vel = 0
 
     def revert(self) -> int:
         start = time.perf_counter_ns()

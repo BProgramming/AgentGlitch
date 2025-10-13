@@ -10,11 +10,9 @@ from Helpers import set_property, validate_file_list
 class Boss(NonPlayer):
     PLAYER_SPOT_RANGE = 6
     PLAYER_SPOT_COOLDOWN = 3
-    VELOCITY_TARGET = 0.5
 
     def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, music=None, death_triggers=None, path=None, hp=100, show_health_bar=True, can_shoot=False, spot_range=PLAYER_SPOT_RANGE, sprite=None, proj_sprite=None, name="Boss"):
         super().__init__(level, controller, x, y, sprite_master, audios, difficulty, block_size, path=path, hp=hp, can_shoot=can_shoot, spot_range=spot_range, sprite=sprite, proj_sprite=proj_sprite, name=name)
-        self.target_vel = Boss.VELOCITY_TARGET
         self.music = (None if music is None else validate_file_list("Music", list(music.split(' ')), "mp3"))
         self.music_is_playing = False
         self.is_animated_attack = True
