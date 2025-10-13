@@ -445,9 +445,9 @@ class Actor(Entity):
 
         if (self == self.level.get_player() or self.patrol_path is not None) and self.state != MovementState.WIND_UP and self.state != MovementState.WIND_DOWN:
             if self.push_x > 0:
-                self.push_x = max(self.push_x - Actor.HORIZ_PUSH_DECAY_RATE * dtime, 0)
+                self.push_x = max(self.push_x - (Actor.HORIZ_PUSH_DECAY_RATE * dtime), 0)
             elif self.push_x < 0:
-                self.push_x = min(self.push_x + Actor.HORIZ_PUSH_DECAY_RATE * dtime, 0)
+                self.push_x = min(self.push_x + (Actor.HORIZ_PUSH_DECAY_RATE * dtime), 0)
             self.push_y = 0
 
             self.should_move_vert = True

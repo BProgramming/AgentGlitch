@@ -12,7 +12,7 @@ class Boss(NonPlayer):
     PLAYER_SPOT_COOLDOWN = 3
     VELOCITY_TARGET = 0.5
 
-    def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, music=None, death_triggers=None, path=None, hp=100, can_shoot=False, spot_range=PLAYER_SPOT_RANGE, sprite=None, proj_sprite=None, name="Boss"):
+    def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, music=None, death_triggers=None, path=None, hp=100, show_health_bar=True, can_shoot=False, spot_range=PLAYER_SPOT_RANGE, sprite=None, proj_sprite=None, name="Boss"):
         super().__init__(level, controller, x, y, sprite_master, audios, difficulty, block_size, path=path, hp=hp, can_shoot=can_shoot, spot_range=spot_range, sprite=sprite, proj_sprite=proj_sprite, name=name)
         self.target_vel = Boss.VELOCITY_TARGET
         self.music = (None if music is None else validate_file_list("Music", list(music.split(' ')), "mp3"))
@@ -21,6 +21,7 @@ class Boss(NonPlayer):
         self.audio_trigger_frames.update({"WIND_UP": [0], "ATTACK_ANIM": [0], "WIND_DOWN": [0]})
         self.death_triggers = {}
         self.is_on_screen = False
+        self.show_health_bar = show_health_bar
         if death_triggers is not None:
             if death_triggers.get("properties") is not None:
                 self.death_triggers["properties"] = death_triggers["properties"]
@@ -89,6 +90,7 @@ class Boss(NonPlayer):
 
     def loop(self, dtime) -> bool:
         self.__update_onscreen_presence__()
-        self.__update_health_bar__()
+        if self.show_health_bar:
+            self.__update_health_bar__()
         asyncio.run(self.__toggle_music__())
         return super().loop(dtime)
