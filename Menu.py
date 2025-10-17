@@ -18,10 +18,14 @@ class Menu:
         button_assets = load_images("Menu", "Buttons")
         self.notch_val = []
         self.buttons = self.__make_buttons__(button_labels, pygame.transform.smoothscale_by(button_assets["BUTTON_NORMAL"], 0.5), pygame.transform.smoothscale_by(button_assets["BUTTON_MOUSEOVER"], 0.5))
-        self.header = pygame.font.SysFont("courier", 32).render(header, True, (255, 255, 255))
-        self.screen = pygame.Surface((min(2 * win.get_width() // 3, max(self.buttons[0][0].width, self.header.get_width())), (self.buttons[0][0].height * len(self.buttons)) + self.header.get_height() + 10), pygame.SRCALPHA)
-        self.screen.fill((0, 0, 0, 128))
-        self.screen.blit(self.header, ((self.screen.get_width() - self.header.get_width()) // 2, 5))
+        if header is not None:
+            self.header = pygame.font.SysFont("courier", 32).render(header, True, (255, 255, 255))
+            self.screen = pygame.Surface((min(2 * win.get_width() // 3, max(self.buttons[0][0].width, self.header.get_width())), (self.buttons[0][0].height * len(self.buttons)) + self.header.get_height() + 10), pygame.SRCALPHA)
+            self.screen.fill((0, 0, 0, 128))
+            self.screen.blit(self.header, ((self.screen.get_width() - self.header.get_width()) // 2, 5))
+        else:
+            self.screen = pygame.Surface((min(2 * win.get_width() // 3, self.buttons[0][0].width), self.buttons[0][0].height * len(self.buttons)), pygame.SRCALPHA)
+            self.screen.fill((0, 0, 0, 128))
         self.music = (None if music is None else validate_file_list("Music", music, "mp3"))
         self.music_index = 0
         self.should_glitch = should_glitch
