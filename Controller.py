@@ -182,7 +182,7 @@ class Controller:
         self.button_shrink = layout["button_shrink"]
         self.active_gamepad_layout = (None if name == "NONE" else name)
 
-    def pick_from_selector(self, selector, clear=None) -> bool:
+    def pick_from_selector(self, selector, clear=None, clear_grayscale=None) -> bool:
         if isinstance(selector.images, dict):
             selector.image_selected = selector.images["retro" if self.force_grayscale else "normal"][selector.image_index]
         pygame.mouse.set_visible(True)
@@ -191,6 +191,7 @@ class Controller:
         selector.fade_in(self.win, grayscale=self.force_grayscale)
         joystick_movement = 0
         selector.clear = clear
+        selector.clear_grayscale = clear_grayscale
         while True:
             time.sleep(0.01)
 
@@ -247,7 +248,7 @@ class Controller:
                     selector.move_mouse_pos(self.win, 1 if joystick_movement >= 0 else -1)
                     joystick_movement = 0
 
-    def volume(self, clear=None) -> None:
+    def volume(self, clear=None, clear_grayscale=None) -> None:
         pygame.mouse.set_visible(True)
         self.volume_menu.notch_val[0] = self.master_volume["background"]
         self.volume_menu.notch_val[1] = self.master_volume["player"]
@@ -258,6 +259,7 @@ class Controller:
         self.volume_menu.fade_in(self.win, grayscale=self.force_grayscale)
         joystick_movement = 0
         self.volume_menu.clear = clear
+        self.volume_menu.clear_grayscale = clear_grayscale
         notch_val = None
         while True:
             time.sleep(0.01)
@@ -312,7 +314,7 @@ class Controller:
                     self.settings_menu.move_mouse_pos(self.win, 1 if joystick_movement >= 0 else -1)
                     joystick_movement = 0
 
-    def controls(self, clear=None) -> None:
+    def controls(self, clear=None, clear_grayscale=None) -> None:
         pygame.mouse.set_visible(True)
         if self.active_gamepad_layout is not None:
             self.controls_menu.set_mouse_pos(self.win)
@@ -324,6 +326,7 @@ class Controller:
         self.controls_menu.fade_in(self.win, grayscale=self.force_grayscale)
         joystick_movement = 0
         self.controls_menu.clear = clear
+        self.controls_menu.clear_grayscale = clear_grayscale
         while True:
             time.sleep(0.01)
             if self.active_gamepad_layout is not None:
@@ -337,7 +340,7 @@ class Controller:
                 case 0:
                     self.controls_menu.fade_out(self.win, grayscale=self.force_grayscale)
                     self.keyboard_layout_picker.set_index(self.keyboard_layout_picker.values.index(self.active_keyboard_layout))
-                    if self.pick_from_selector(self.keyboard_layout_picker, clear=self.controls_menu.clear):
+                    if self.pick_from_selector(self.keyboard_layout_picker, clear=self.controls_menu.clear, clear_grayscale=self.controls_menu.clear_grayscale):
                         self.set_keyboard_layout(self.keyboard_layout_picker.values[self.keyboard_layout_picker.image_index])
                     self.controls_menu.fade_in(self.win, grayscale=self.force_grayscale)
                     if self.active_gamepad_layout is not None:
@@ -346,7 +349,7 @@ class Controller:
                     if self.active_gamepad_layout is not None:
                         self.controls_menu.fade_out(self.win, grayscale=self.force_grayscale)
                         self.gamepad_layout_picker.set_index(self.gamepad_layout_picker.values.index(self.active_gamepad_layout))
-                        self.pick_from_selector(self.gamepad_layout_picker, clear=self.controls_menu.clear)
+                        self.pick_from_selector(self.gamepad_layout_picker, clear=self.controls_menu.clear, clear_grayscale=self.controls_menu.clear_grayscale)
                         self.controls_menu.fade_in(self.win, grayscale=self.force_grayscale)
                         if self.active_gamepad_layout is not None:
                             self.controls_menu.set_mouse_pos(self.win)
@@ -386,7 +389,7 @@ class Controller:
                     self.controls_menu.move_mouse_pos(self.win, 1 if joystick_movement >= 0 else -1)
                     joystick_movement = 0
 
-    def settings(self, clear=None) -> None:
+    def settings(self, clear=None, clear_grayscale=None) -> None:
         pygame.mouse.set_visible(True)
         self.settings_menu.notch_val[0] = (self.difficulty - DifficultyScale.EASIEST) / (DifficultyScale.HARDEST - DifficultyScale.EASIEST)
         if self.active_gamepad_layout is not None:
@@ -394,6 +397,7 @@ class Controller:
         self.settings_menu.fade_in(self.win, grayscale=self.force_grayscale)
         joystick_movement = 0
         self.settings_menu.clear = clear
+        self.settings_menu.clear_grayscale = clear_grayscale
         while True:
             time.sleep(0.01)
 
@@ -401,10 +405,10 @@ class Controller:
                 case 0:
                     pass #set difficulty
                 case 1:
-                    self.controls(self.settings_menu.clear)
+                    self.controls(clear=self.settings_menu.clear, clear_grayscale=self.settings_menu.clear_grayscale)
                 case 2:
                     time.sleep(0.01)
-                    self.volume(self.settings_menu.clear)
+                    self.volume(clear=self.settings_menu.clear, clear_grayscale=self.settings_menu.clear_grayscale)
                 case 3:
                     pygame.display.toggle_fullscreen()
                 case 4:
@@ -463,16 +467,18 @@ class Controller:
                     pygame.mixer.unpause()
                     pygame.mouse.set_visible(False)
                     self.pause_menu.clear = None
+                    self.pause_menu.clear_grayscale = None
                     return 0
                 case 2:
                     self.goto_restart = True
                     pygame.mixer.unpause()
                     pygame.mouse.set_visible(False)
                     self.pause_menu.clear = None
+                    self.pause_menu.clear_grayscale = None
                     return 0
                 case 3:
                     time.sleep(0.01)
-                    self.settings(self.pause_menu.clear)
+                    self.settings(clear=self.pause_menu.clear, clear_grayscale=self.pause_menu.clear_grayscale)
                 case 4:
                     self.save()
                     self.save_player_profile()
@@ -480,6 +486,7 @@ class Controller:
                     pygame.mixer.unpause()
                     pygame.mouse.set_visible(False)
                     self.pause_menu.clear = None
+                    self.pause_menu.clear_grayscale = None
                     return 0
                 case 5:
                     self.save()
@@ -518,6 +525,7 @@ class Controller:
 
         self.pause_menu.fade_out(self.win, grayscale=self.force_grayscale)
         self.pause_menu.clear = None
+        self.pause_menu.clear_grayscale = None
         pygame.mixer.unpause()
         pygame.mouse.set_visible(False)
         return (time.perf_counter_ns() - start) // 1000000
@@ -537,9 +545,9 @@ class Controller:
                 case 0:
                     self.main_menu.fade_out(self.win, grayscale=self.force_grayscale)
                     while True:
-                        if self.pick_from_selector(self.sprite_picker, clear=self.main_menu.clear):
+                        if self.pick_from_selector(self.sprite_picker, clear=self.main_menu.clear, clear_grayscale=self.main_menu.clear_grayscale):
                             self.player_sprite_selected = [self.sprite_picker.values[self.sprite_picker.image_index][0], self.sprite_picker.values[self.sprite_picker.image_index][1]]
-                            if self.pick_from_selector(self.difficulty_picker, clear=self.main_menu.clear):
+                            if self.pick_from_selector(self.difficulty_picker, clear=self.main_menu.clear, clear_grayscale=self.main_menu.clear_grayscale):
                                 self.difficulty = self.difficulty_picker.values[self.difficulty_picker.image_index]
                                 pygame.mouse.set_visible(False)
                                 self.main_menu.fade_music()
@@ -559,7 +567,7 @@ class Controller:
                     return False
                 case 2:
                     self.main_menu.fade_out(self.win, grayscale=self.force_grayscale)
-                    if self.pick_from_selector(self.level_picker, clear=self.main_menu.clear):
+                    if self.pick_from_selector(self.level_picker, clear=self.main_menu.clear, clear_grayscale=self.main_menu.clear_grayscale):
                         self.level_selected = self.level_picker.values[self.level_picker.image_index]
                         pygame.mouse.set_visible(False)
                         self.main_menu.fade_music()
@@ -570,7 +578,7 @@ class Controller:
                         self.main_menu.fade_in(self.win, grayscale=self.force_grayscale)
                 case 3:
                     time.sleep(0.01)
-                    self.settings(self.main_menu.clear)
+                    self.settings(clear=self.main_menu.clear, clear_grayscale=self.main_menu.clear_grayscale)
                 case 4:
                     if self.has_dlc.get("gumshoe") is not None and self.has_dlc["gumshoe"]:
                         self.force_grayscale = not self.force_grayscale

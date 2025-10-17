@@ -4,6 +4,7 @@ from Helpers import load_json_dict, load_object_dicts, load_levels, load_audios,
 from os.path import join, isfile, abspath
 from DiscordConnection import DiscordConnection
 from SimpleVFX.SimpleVFX import VisualEffectsManager
+from ParticleEffects import ParticleType
 
 # This stuff happens in the middle of imports because some classes require pygame display available before they can be imported
 # And steam is initialized first because it doesn't work having it after pygame.init for... reasons?
@@ -46,8 +47,6 @@ def main(win):
     levels = load_levels("Levels")
     objects_dict = load_object_dicts("ReferenceDicts\\GameObjects")
     meta_dict = load_json_dict("ReferenceDicts", "meta.agd")
-    sprite_master = {}
-    image_master = {}
 
     controller = Controller(None, win, main_menu_music=(None if meta_dict.get("MAIN_MENU") is None or meta_dict["MAIN_MENU"].get("music") is None else list(meta_dict["MAIN_MENU"]["music"].split(' '))), steamworks=steamworks, discord=discord)
     controller.get_gamepad(notify=False)
@@ -152,7 +151,7 @@ def main(win):
             vfx_manager = VisualEffectsManager(join(ASSETS_FOLDER, "VisualEffects"))
             win.fill((0, 0, 0))
             display_text("Loading mission... [3/3]", controller, min_pause_time=0, should_sleep=False)
-            controller.level = level = Level(cur_level, levels, meta_dict, objects_dict, sprite_master, image_master, player_audio, enemy_audio, block_audio, message_audio, vfx_manager, win, controller)
+            controller.level = level = Level(cur_level, levels, meta_dict, objects_dict, {}, {}, player_audio, enemy_audio, block_audio, message_audio, vfx_manager, win, controller)
 
             win.fill((0, 0, 0))
             display_text("Loading agent...", controller, min_pause_time=0, should_sleep=False)
@@ -266,8 +265,8 @@ def main(win):
 
                 level.purge()
 
-                if level.weather is not None:
-                    level.weather.move(dtime)
+                for effect in level.particle_effects:
+                    effect.loop(dtime)
 
                 if level.can_glitch and glitch_timer <= 0 and random.randint(0, 100) / 100 > level.get_player().hp / level.get_player().max_hp:
                     glitches = glitch((1 - max(level.get_player().hp / level.get_player().max_hp, 0)) / 2, win)
@@ -329,9 +328,6 @@ def main(win):
                 for cinematic in recap_cinematics:
                     cinematics.cinematics[cinematic["name"]].text = ["Mission successful."] + level.get_recap_text()
                     cinematics.play(cinematic["name"], win)
-                if level.grayscale:
-                    sprite_master.clear()
-                    image_master.clear()
                 cur_level = next_level
 
         if not controller.goto_main:

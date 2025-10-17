@@ -183,7 +183,7 @@ def load_sprite_sheets(dir1, dir2, sprite_master, direction=False, grayscale=Fal
                 path = join(ASSETS_FOLDER, dir1, dir2)
             else:
                 handle_exception(f'File {FileNotFoundError(abspath(path))} not found.')
-
+        print(f"loading images from {path}, grayscale={grayscale}")
         images = [f for f in listdir(path) if isfile(join(path, f))]
 
         all_sprites = {}

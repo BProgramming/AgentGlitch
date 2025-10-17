@@ -6,7 +6,7 @@ from Player import Player
 from NonPlayer import NonPlayer
 from Objectives import Objective
 from Trigger import Trigger, TriggerType
-from WeatherEffects import *
+from ParticleEffects import *
 from Helpers import load_path, validate_file_list, display_text, ASSETS_FOLDER
 
 
@@ -45,7 +45,11 @@ class Level:
         else:
             self.cinematics = (None if meta_dict[name].get("cinematics") is None else CinematicsManager(meta_dict[name]["cinematics"], controller))
         self.level_bounds, self.player, self.triggers, self.blocks, self.dynamic_blocks, self.doors, self.static_blocks, self.hazards, self.falling_hazards, self.enemies, self.objectives = self.build_level(self, levels[self.name], sprite_master, image_master, objects_dict[self.name], player_audios, enemy_audios, block_audios, message_audios, win, controller, None if meta_dict[name].get("player_sprite") is None or meta_dict[name]["player_sprite"].upper() == "NONE" else meta_dict[name]["player_sprite"], self.block_size)
-        self.weather = (None if meta_dict[name].get("weather") is None else self.get_weather(meta_dict[name]["weather"].upper()))
+        self.particle_effects: list[ParticleEffect] = []
+        if meta_dict[name].get("particle_effect") is not None:
+            self.particle_effects.append(self.gen_particle_effect(meta_dict[name]["particle_effect"].upper(), win))
+        if self.grayscale:
+            self.particle_effects.append(self.gen_particle_effect("FILM", win))
         if meta_dict[name].get("abilities") is not None:
             self.set_player_abilities(meta_dict[name]["abilities"])
         self.player.been_hit_this_level = False
@@ -189,7 +193,7 @@ class Level:
             self.purge_queue["objectives"].clear()
 
     #NOTE: having weather with lots of particles + lots of enemies + bullets will decrease the frame rate
-    def get_weather(self, name) -> ParticleEffect | None:
+    def gen_particle_effect(self, name, win) -> ParticleEffect | None:
         if name is None:
             return None
         else:
@@ -197,6 +201,8 @@ class Level:
                 return Rain(self)
             elif name == "SNOW":
                 return Snow(self)
+            elif "FILM" in name or "GRAIN" in name:
+                return FilmGrain(self, win)
             else:
                 return None
 
@@ -247,14 +253,14 @@ class Level:
         for ent in above_player:
             ent.draw(win, offset_x, offset_y, master_volume, fps)
 
-        if self.weather is not None:
-            self.weather.draw(win, offset_x, offset_y, master_volume, fps)
+        for effect in self.particle_effects:
+            effect.draw(win, offset_x, offset_y, master_volume, fps)
 
     @staticmethod
     def build_level(level, layout, sprite_master, image_master, objects_dict, player_audios, enemy_audios, block_audios, message_audios, win, controller, player_sprite, block_size) -> tuple:
         width = len(layout[-1]) * block_size
         height = len(layout) * block_size
-        level_bounds = [(0, 0), (width, height)]
+        level_bounds = ((0, 0), (width, height))
         player_start = (0, 0)
 
         blocks = []
