@@ -11,7 +11,7 @@ class ParticleType(Enum):
 class ParticleEffect:
     VARIABLE_IMAGE_DISPLAY_TIME = 100
 
-    def __init__(self, level, win, width: int, height: int, amount: int, color: tuple[int, int, int, int], x_vel: float=0.0, y_vel: float=0.0, effect_type: ParticleType=ParticleType.STATIC, should_move: bool=False):
+    def __init__(self, level, win, width: int, height: int, amount: int, color: tuple[int, int, int, int], x_vel: float=0.0, y_vel: float=0.0, effect_type: ParticleType=ParticleType.STATIC, should_move: bool=True):
         self.effect_type = effect_type
         self.image: pygame.Surface | list[pygame.Surface] | None = None
         self.image_index: int = 0
@@ -25,7 +25,7 @@ class ParticleEffect:
             self.image = self.generate_static_effect(width, height, amount, color, bounds, level.grayscale)
         elif self.effect_type == ParticleType.VARIABLE:
             self.image = self.generate_variable_effect(width, height, amount, color, bounds, level.grayscale)
-        self.rect: pygame.Rect = pygame.Rect(0, 0, width, height)
+        self.rect: pygame.Rect = pygame.Rect(0, 0, bounds[1][0], bounds[1][1])
         self.x_vel: float = x_vel
         self.y_vel: float = y_vel
 
@@ -109,31 +109,19 @@ class ParticleEffect:
 
     def draw(self, win, offset_x, offset_y, master_volume, fps) -> None:
         if self.should_move:
-            if isinstance(self.image, pygame.Surface):
-                win.blit(self.image, (self.rect.x - offset_x, self.rect.y - offset_y))
-                if self.y_vel > 0:
-                    win.blit(self.image, (self.rect.x - offset_x, self.rect.y - self.rect.height - offset_y))
-                    if self.x_vel > 0:
-                        win.blit(self.image, (self.rect.x - self.rect.width - offset_x, self.rect.y - offset_y))
-                        win.blit(self.image, (self.rect.x - self.rect.width - offset_x, self.rect.y - self.rect.height - offset_y))
-                    elif self.x_vel < 0:
-                        win.blit(self.image, (self.rect.x + self.rect.width - offset_x, self.rect.y - offset_y))
-                        win.blit(self.image, (self.rect.x + self.rect.width - offset_x, self.rect.y - self.rect.height - offset_y))
-                elif self.y_vel < 0:
-                    win.blit(self.image, (self.rect.x - offset_x, self.rect.y + self.rect.height - offset_y))
-                    if self.x_vel > 0:
-                        win.blit(self.image, (self.rect.x - self.rect.width - offset_x, self.rect.y - offset_y))
-                        win.blit(self.image, (self.rect.x - self.rect.width - offset_x, self.rect.y + self.rect.height - offset_y))
-                    elif self.x_vel < 0:
-                        win.blit(self.image, (self.rect.x + self.rect.width - offset_x, self.rect.y - offset_y))
-                        win.blit(self.image, (self.rect.x + self.rect.width - offset_x, self.rect.y + self.rect.height - offset_y))
-                else:
-                    if self.x_vel > 0:
-                        win.blit(self.image, (self.rect.x - self.rect.width - offset_x, self.rect.y - offset_y))
-                    elif self.x_vel < 0:
-                        win.blit(self.image, (self.rect.x + self.rect.width - offset_x, self.rect.y - offset_y))
-            elif isinstance(self.image, list):
-                win.blit(self.image[self.image_index], (self.rect.x - offset_x, self.rect.y - offset_y))
+            image = self.image[self.image_index] if isinstance(self.image, list) else self.image
+            coord = (self.rect.x - offset_x, self.rect.y - offset_y)
+            win.blit(image, coord)
+            coord2 = [coord[0], coord[1]]
+            if self.x_vel > 0:
+                coord2[0] -= self.rect.width
+            elif self.x_vel < 0:
+                coord2[0] += self.rect.width
+            if self.y_vel > 0:
+                coord2[1] -= self.rect.height
+            elif self.y_vel < 0:
+                coord2[1] += self.rect.height
+            win.blit(image, (coord2[0], coord2[1]))
         else:
             if isinstance(self.image, pygame.Surface):
                 win.blit(self.image, (0, 0))
@@ -142,7 +130,7 @@ class ParticleEffect:
 
 
 class Rain(ParticleEffect):
-    def __init__(self, level, angled=True):
+    def __init__(self, level, angled=False):
         color = (208, 244, 255, 200)
         amount = level.level_bounds[1][0] * level.level_bounds[1][1] // 600
         super().__init__(level, None, 1, 8, amount, color, x_vel=(0.0 if not angled else -0.05), y_vel=0.2)
@@ -159,4 +147,4 @@ class FilmGrain(ParticleEffect):
     def __init__(self, level, win):
         color = (255, 255, 255, 200)
         amount = win.get_width() * win.get_height() // 100000
-        super().__init__(level, win, 2, 1000, amount, color, effect_type=ParticleType.VARIABLE)
+        super().__init__(level, win, 2, 1000, amount, color, effect_type=ParticleType.VARIABLE, should_move=False)
