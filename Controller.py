@@ -103,7 +103,7 @@ class Controller:
 
     def set_difficulty(self) -> None:
         if self.level is not None:
-            for ent in [self.level.get_player()] + self.level.get_entities():
+            for ent in [self.level.player] + self.level.get_entities():
                 ent.set_difficulty(self.difficulty)
 
     def get_gamepad(self, notify=True) -> int:
@@ -675,17 +675,17 @@ class Controller:
         elif key in self.keys_fullscreen_toggle:
             pygame.display.toggle_fullscreen()
         elif (key in self.keys_crouch_uncrouch or (self.active_gamepad_layout is not None and self.button_crouch_uncrouch is not None and key == self.button_crouch_uncrouch)) and self.should_scroll_to_point is None:
-            self.level.get_player().toggle_crouch()
+            self.level.player.toggle_crouch()
         elif (key in self.keys_jump or (self.active_gamepad_layout is not None and self.button_jump is not None and key == self.button_jump)) and self.should_scroll_to_point is None:
-            self.level.get_player().jump()
+            self.level.player.jump()
         elif (key in self.keys_teleport_dash or (self.active_gamepad_layout is not None and self.button_teleport_dash is not None and key == self.button_teleport_dash)) and self.should_scroll_to_point is None:
-            self.level.get_player().teleport()
+            self.level.player.teleport()
         elif (key in self.keys_bullet_time or (self.active_gamepad_layout is not None and self.button_bullet_time is not None and key == self.button_bullet_time)) and self.should_scroll_to_point is None:
-            self.level.get_player().bullet_time()
+            self.level.player.bullet_time()
         elif (key in self.keys_grow or (self.active_gamepad_layout is not None and self.button_grow is not None and key == self.button_grow)) and self.should_scroll_to_point is None:
-            self.level.get_player().grow()
+            self.level.player.grow()
         elif (key in self.keys_shrink or (self.active_gamepad_layout is not None and self.button_shrink is not None and key == self.button_shrink)) and self.should_scroll_to_point is None:
-            self.level.get_player().shrink()
+            self.level.player.shrink()
         return 0
 
     def handle_continuous_input(self) -> None:
@@ -701,64 +701,64 @@ class Controller:
             if not player_is_moving and stick is not None:
                 if stick > Controller.JOYSTICK_TOLERANCE:
                     player_is_moving = True
-                    self.level.get_player().move_right()
+                    self.level.player.move_right()
                 elif stick < -Controller.JOYSTICK_TOLERANCE:
                     player_is_moving = True
-                    self.level.get_player().move_left()
+                    self.level.player.move_left()
 
             if not player_is_moving and hat is not None:
                 if hat[0] > 0:
                     player_is_moving = True
-                    self.level.get_player().move_right()
+                    self.level.player.move_right()
                 elif hat[0] < 0:
                     player_is_moving = True
-                    self.level.get_player().move_left()
+                    self.level.player.move_left()
 
             if not player_is_moving and self.button_right is not None and self.button_left is not None:
                 if self.gamepad.get_button(self.button_right) > 0:
                     player_is_moving = True
-                    self.level.get_player().move_right()
+                    self.level.player.move_right()
                 elif self.gamepad.get_button(self.button_left) > 0:
                     player_is_moving = True
-                    self.level.get_player().move_left()
+                    self.level.player.move_left()
 
             stick = self.gamepad.get_axis(self.axis_attack)
             if not player_is_attacking and stick is not None and stick > Controller.JOYSTICK_TOLERANCE:
                 player_is_attacking = True
-                self.level.get_player().attack()
+                self.level.player.attack()
 
         keys = pygame.key.get_pressed()
         if not player_is_moving:
             for input_key in self.keys_right:
                 if keys[input_key]:
                     player_is_moving = True
-                    self.level.get_player().move_right()
+                    self.level.player.move_right()
                     break
         if not player_is_moving:
             for input_key in self.keys_left:
                 if keys[input_key]:
                     player_is_moving = True
-                    self.level.get_player().move_left()
+                    self.level.player.move_left()
                     break
 
         if not player_is_attacking:
             for input_key in self.keys_attack:
                 if keys[input_key]:
                     player_is_attacking = True
-                    self.level.get_player().attack()
+                    self.level.player.attack()
                     break
 
         if not player_is_attacking:
-            self.level.get_player().is_attacking = False
+            self.level.player.is_attacking = False
 
         if not player_is_moving:
-            self.level.get_player().stop()
+            self.level.player.stop()
 
         if self.active_gamepad_layout is not None:
             stick = self.gamepad.get_axis(self.axis_block)
             if stick is not None and stick > Controller.JOYSTICK_TOLERANCE:
-                self.level.get_player().block()
+                self.level.player.block()
         for input_key in self.keys_block:
             if keys[input_key]:
-                self.level.get_player().block()
+                self.level.player.block()
                 break

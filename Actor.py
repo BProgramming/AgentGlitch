@@ -210,10 +210,10 @@ class Actor(Entity):
             active_audio_channel = pygame.mixer.find_channel()
             if active_audio_channel is not None:
                 active_audio_channel.play(self.audios[attack_type][random.randrange(len(self.audios[attack_type]))])
-                if self == self.level.get_player():
+                if self == self.level.player:
                     active_audio_channel.set_volume(self.controller.master_volume["player"])
                 else:
-                    set_sound_source(self.rect, self.level.get_player().rect, self.controller.master_volume["non-player"], active_audio_channel)
+                    set_sound_source(self.rect, self.level.player.rect, self.controller.master_volume["non-player"], active_audio_channel)
 
     def shoot_at_target(self, target) -> None:
         if self.cooldowns["launch_projectile"] <= 0:
@@ -232,10 +232,10 @@ class Actor(Entity):
     def get_collisions(self) -> bool:
         collided = False
 
-        if self == self.level.get_player():
+        if self == self.level.player:
             ents = self.level.get_entities_in_range((self.rect.x, self.rect.y))
         elif self.is_hostile:
-            ents = [self.level.get_player()] + self.level.get_entities_in_range((self.rect.x, self.rect.y), blocks_only=True)
+            ents = [self.level.player] + self.level.get_entities_in_range((self.rect.x, self.rect.y), blocks_only=True)
         else:
             ents = self.level.get_entities_in_range((self.rect.x, self.rect.y), blocks_only=True)
         for ent in ents:
@@ -245,7 +245,7 @@ class Actor(Entity):
                         overlap = self.mask.overlap_mask(ent.mask, (0, 0)).get_rect()
                     else:
                         overlap = self.rect.clip(ent.rect)
-                    if isinstance(ent, Actor) and ent != self.level.get_player():
+                    if isinstance(ent, Actor) and ent != self.level.player:
                         if ent.facing == (MovementDirection.RIGHT if self.rect.centerx - ent.rect.centerx >= 0 else MovementDirection.LEFT) and ent.is_attacking and self.cooldowns["get_hit"] <= 0:
                             self.get_hit(ent)
                     elif isinstance(ent, Hazard):
@@ -254,7 +254,7 @@ class Actor(Entity):
                                 self.get_hit(ent)
                             if overlap.width >= overlap.height and ((self.rect.y <= ent.rect.y and "U" in ent.hit_sides) or (self.rect.y >= ent.rect.y and "D" in ent.hit_sides)):
                                 self.get_hit(ent)
-                    elif isinstance(ent, Objective) and self == self.level.get_player():
+                    elif isinstance(ent, Objective) and self == self.level.player:
                         ent.get_hit(self)
                     if ent.collide(self):
                         self.collide(ent)
@@ -282,7 +282,7 @@ class Actor(Entity):
                             self.y_vel = min(self.y_vel, 0.0)
                             self.jump_count = 0
                             self.is_wall_jumping = True
-                elif isinstance(ent, Objective) and self == self.level.get_player() and ent.sprite is None:
+                elif isinstance(ent, Objective) and self == self.level.player and ent.sprite is None:
                     ent.get_hit(self)
             elif ent.rect.top <= self.rect.bottom <= ent.rect.bottom and self.rect.left + (self.rect.width // 4) <= ent.rect.right and self.rect.right - (self.rect.width // 4) >= ent.rect.left:
                 if isinstance(ent, MovingBlock) or isinstance(ent, MovableBlock) :
@@ -443,7 +443,7 @@ class Actor(Entity):
                 else:
                     proj.loop(dtime)
 
-        if (self == self.level.get_player() or self.patrol_path is not None) and self.state != MovementState.WIND_UP and self.state != MovementState.WIND_DOWN:
+        if (self == self.level.player or self.patrol_path is not None) and self.state != MovementState.WIND_UP and self.state != MovementState.WIND_DOWN:
             if self.push_x > 0:
                 self.push_x = max(self.push_x - (Actor.HORIZ_PUSH_DECAY_RATE * dtime), 0)
             elif self.push_x < 0:
@@ -482,7 +482,7 @@ class Actor(Entity):
                     self.y_vel += dtime * Actor.GRAVITY * self.size / (1 + (3 if self.is_wall_jumping and self.y_vel > 0 else 0))
 
                 if (self.x_vel + self.push_x != 0 or self.y_vel + self.push_y != 0) and self.hp > 0:
-                    if self.level.get_player().is_slow_time and self != self.level.get_player():
+                    if self.level.player.is_slow_time and self != self.level.player:
                         self.x_vel /= 2
                         self.y_vel /= 2
 
@@ -502,8 +502,8 @@ class Actor(Entity):
     def draw(self, win, offset_x, offset_y, master_volume, fps) -> None:
         adj_x_image = self.rect.x - offset_x
         adj_y_image = self.rect.y - offset_y
-        #adj_x_audio = self.level.get_player().rect.x - self.rect.x
-        #adj_y_audio = self.level.get_player().rect.y - self.rect.y
+        #adj_x_audio = self.level.player.rect.x - self.rect.x
+        #adj_y_audio = self.level.player.rect.y - self.rect.y
         window_width = win.get_width()
         window_height = win.get_height()
         if len(self.active_projectiles) > 0:
@@ -520,10 +520,10 @@ class Actor(Entity):
                 if self.active_audio_channel is not None:
                     self.active_audio_channel.play(self.active_audio)
             if self.active_audio_channel is not None and self.active_audio_channel.get_busy():
-                if self == self.level.get_player():
+                if self == self.level.player:
                     self.active_audio_channel.set_volume(master_volume["player"])
                 else:
-                    set_sound_source(self.rect, self.level.get_player().rect, self.controller.master_volume["non-player"], self.active_audio_channel)
+                    set_sound_source(self.rect, self.level.player.rect, self.controller.master_volume["non-player"], self.active_audio_channel)
             else:
                 self.active_audio = None
                 self.active_audio_channel = None

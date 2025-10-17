@@ -177,9 +177,9 @@ class Trigger(Entity):
                 elif isinstance(self.value, Block):
                     self.level.blocks.append(self.value)
         elif self.type == TriggerType.REVERT:
-            self.level.get_player().revert()
+            self.level.player.revert()
         elif self.type == TriggerType.SAVE:
-            self.level.get_player().save()
+            self.level.player.save()
         elif self.type == TriggerType.CHANGE_LEVEL:
             next_level = self.value
         elif self.type == TriggerType.SET_PROPERTY:

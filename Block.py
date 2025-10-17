@@ -27,7 +27,7 @@ class Block(Entity):
             active_audio_channel = pygame.mixer.find_channel()
             if active_audio_channel is not None:
                 active_audio_channel.play(self.audios[name.upper()][random.randrange(len(self.audios[name.upper()]))])
-                set_sound_source(self.rect, self.level.get_player().rect, self.controller.master_volume["non-player"], active_audio_channel)
+                set_sound_source(self.rect, self.level.player.rect, self.controller.master_volume["non-player"], active_audio_channel)
 
     @staticmethod
     def load_image(path, width, height, image_master, coord_x, coord_y, retro=False) -> pygame.Surface | None:
@@ -120,7 +120,7 @@ class MovingBlock(Block):
                 self.increment_patrol_index()
 
     def collide(self, ent) -> bool:
-        if self.hold and ent == self.level.get_player():
+        if self.hold and ent == self.level.player:
             self.hold = False
         if hasattr(ent, "push_x"):
             ent.push_x = self.x_vel
@@ -166,7 +166,7 @@ class MovingBlock(Block):
                 self.y_vel = 0.0
 
             if self.x_vel != 0 or self.y_vel != 0:
-                if self.level.get_player().is_slow_time:
+                if self.level.player.is_slow_time:
                     self.x_vel /= 2
                     self.y_vel /= 2
 
@@ -251,7 +251,7 @@ class Door(MovingBlock):
         if not self.is_open and self.rect.y == self.patrol_path_closed[0][1]:
             return
         else:
-            if math.dist((self.level.get_player().rect.centerx, self.level.get_player().rect.centery), (self.rect.centerx, self.rect.centery)) > math.sqrt(self.rect.height**2 + (1.5 * self.rect.width)**2):
+            if math.dist((self.level.player.rect.centerx, self.level.player.rect.centery), (self.rect.centerx, self.rect.centery)) > math.sqrt(self.rect.height**2 + (1.5 * self.rect.width)**2):
                 self.close()
             super().loop(dtime)
 
@@ -439,7 +439,7 @@ class FallingHazard(Hazard):
 
     def loop(self, dtime) -> bool:
         if not self.has_fired:
-            if abs(self.level.get_player().rect.x - self.rect.x) <= self.drop_x and self.level.get_player().rect.top >= self.rect.bottom and abs(self.level.get_player().rect.y - self.rect.y) <= self.drop_y:
+            if abs(self.level.player.rect.x - self.rect.x) <= self.drop_x and self.level.player.rect.top >= self.rect.bottom and abs(self.level.player.rect.y - self.rect.y) <= self.drop_y:
                 self.should_fire = True
 
             if self.should_fire:

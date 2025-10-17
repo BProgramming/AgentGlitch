@@ -97,20 +97,20 @@ class NonPlayer(Actor):
         if self.cooldowns["get_hit"] <= 0 and self.state != MovementState.WIND_UP and self.state != MovementState.WIND_DOWN:
             if self.patrol_path is None:
                 self.should_move_vert = False
-                self.direction = self.facing = (MovementDirection.RIGHT if self.level.get_player().rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT)
+                self.direction = self.facing = (MovementDirection.RIGHT if self.level.player.rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT)
                 if self.is_hostile and self.cooldowns["spot_player"] <= 0:
                     _ = self.__spot_player__()
-                    if math.dist(self.level.get_player().rect.center, self.rect.center) >= self.spot_range // 3:
+                    if math.dist(self.level.player.rect.center, self.rect.center) >= self.spot_range // 3:
                         self.is_attacking = True
                     elif not self.is_animated_attack:
                         self.is_attacking = False
             else:
                 if self.is_hostile and (self.__spot_player__() or self.cooldowns["spot_player"] > 0):
-                    dist = math.dist(self.level.get_player().rect.center, self.rect.center)
+                    dist = math.dist(self.level.player.rect.center, self.rect.center)
                     if self.can_shoot:
                         if dist < self.spot_range // 3:
-                            if abs(self.rect.x - self.level.get_player().rect.x) > 5:
-                                self.direction = (MovementDirection.RIGHT if self.rect.centerx - self.level.get_player().rect.centerx >= 0 else MovementDirection.LEFT)
+                            if abs(self.rect.x - self.level.player.rect.x) > 5:
+                                self.direction = (MovementDirection.RIGHT if self.rect.centerx - self.level.player.rect.centerx >= 0 else MovementDirection.LEFT)
                                 self.facing = self.direction.swap()
                                 self.x_vel = float(self.direction) * self.target_vel
                                 self.should_move_horiz = self.__find_floor__(self.x_vel * dtime)
@@ -120,19 +120,19 @@ class NonPlayer(Actor):
                             self.is_attacking = True
                             self.x_vel = 0.0
                     else:
-                        if pygame.sprite.collide_rect(self, self.level.get_player()):
+                        if pygame.sprite.collide_rect(self, self.level.player):
                             self.is_attacking = True
-                            if abs(self.rect.x - self.level.get_player().rect.x) <= 5 or pygame.sprite.collide_mask(self, self.level.get_player()):
+                            if abs(self.rect.x - self.level.player.rect.x) <= 5 or pygame.sprite.collide_mask(self, self.level.player):
                                 self.x_vel = 0.0
                                 if not self.is_animated_attack:
                                     self.play_attack_audio("ATTACK_MELEE")
                             else:
-                                self.direction = self.facing = (MovementDirection.RIGHT if self.level.get_player().rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT)
+                                self.direction = self.facing = (MovementDirection.RIGHT if self.level.player.rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT)
                                 self.x_vel = float(self.direction) * min(self.target_vel, dist / dtime)
                                 self.should_move_horiz = self.__find_floor__(self.x_vel * dtime)
                         else:
                             if dist < self.rect.width:
-                                self.direction = self.facing = (MovementDirection.RIGHT if self.level.get_player().rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT)
+                                self.direction = self.facing = (MovementDirection.RIGHT if self.level.player.rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT)
                             if not self.is_animated_attack:
                                 self.is_attacking = False
                             self.x_vel = float(self.direction) * min(self.target_vel, dist / dtime)
@@ -155,24 +155,24 @@ class NonPlayer(Actor):
                         self.__increment_patrol_index__()
 
     def __adj_spot_range__(self) -> float:
-        return self.spot_range * self.level.get_player().size / (1.5 if self.level.get_player().is_crouching else 1)
+        return self.spot_range * self.level.player.size / (1.5 if self.level.player.is_crouching else 1)
 
     def __spot_player__(self) -> bool:
-        dist = math.dist(self.level.get_player().rect.center, self.rect.center)
-        if dist <= self.__adj_spot_range__() and(self.facing == (MovementDirection.RIGHT if self.level.get_player().rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT) or self.cooldowns["get_hit"] > 0):
+        dist = math.dist(self.level.player.rect.center, self.rect.center)
+        if dist <= self.__adj_spot_range__() and(self.facing == (MovementDirection.RIGHT if self.level.player.rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT) or self.cooldowns["get_hit"] > 0):
             for i in range(round(dist)):
                 for ent in self.level.get_entities_in_range((self.rect.centerx + (self.facing * ((self.rect.width // 2) + i)), self.rect.y), blocks_only=True):
                     if ent.rect.collidepoint(self.rect.centerx + (self.facing * ((self.rect.width // 2) + i)), self.rect.y):
                         return False
             self.cooldowns["spot_player"] = NonPlayer.PLAYER_SPOT_COOLDOWN
             if self.state in [MovementState.IDLE, MovementState.CROUCH, MovementState.RUN, MovementState.IDLE_ATTACK, MovementState.CROUCH_ATTACK, MovementState.RUN_ATTACK] and self.can_shoot and dist > self.spot_range // 3:
-                self.shoot_at_target(self.level.get_player().rect.center)
-            self.level.get_player().been_seen_this_level = True
+                self.shoot_at_target(self.level.player.rect.center)
+            self.level.player.been_seen_this_level = True
             return True
         return False
 
     def collide(self, ent) -> bool:
-        if ent != self.level.get_player():
+        if ent != self.level.player:
             if self.direction == (MovementDirection.RIGHT if ent.rect.centerx - self.rect.centerx > 0 else MovementDirection.LEFT):
                 if ent.is_stacked or isinstance(ent, Door):
                     if self.patrol_path is not None:

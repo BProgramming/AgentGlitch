@@ -44,7 +44,7 @@ class Level:
             self.cinematics = CinematicsManager(meta_dict[name]["retro_cinematics"], controller)
         else:
             self.cinematics = (None if meta_dict[name].get("cinematics") is None else CinematicsManager(meta_dict[name]["cinematics"], controller))
-        self.level_bounds, self.player, self.triggers, self.blocks, self.dynamic_blocks, self.doors, self.static_blocks, self.hazards, self.falling_hazards, self.enemies, self.objectives = self.build_level(self, levels[self.name], sprite_master, image_master, objects_dict[self.name], player_audios, enemy_audios, block_audios, message_audios, win, controller, None if meta_dict[name].get("player_sprite") is None or meta_dict[name]["player_sprite"].upper() == "NONE" else meta_dict[name]["player_sprite"], self.block_size)
+        self.level_bounds, self._player, self.triggers, self.blocks, self.dynamic_blocks, self.doors, self.static_blocks, self.hazards, self.falling_hazards, self.enemies, self.objectives = self.build_level(self, levels[self.name], sprite_master, image_master, objects_dict[self.name], player_audios, enemy_audios, block_audios, message_audios, win, controller, None if meta_dict[name].get("player_sprite") is None or meta_dict[name]["player_sprite"].upper() == "NONE" else meta_dict[name]["player_sprite"], self.block_size)
         self.particle_effects: list[ParticleEffect] = []
         if meta_dict[name].get("particle_effect") is not None:
             self.particle_effects.append(self.gen_particle_effect(meta_dict[name]["particle_effect"].upper(), win))
@@ -52,10 +52,10 @@ class Level:
             self.particle_effects.append(self.gen_particle_effect("FILM", win))
         if meta_dict[name].get("abilities") is not None:
             self.set_player_abilities(meta_dict[name]["abilities"])
-        self.player.been_hit_this_level = False
-        self.player.been_seen_this_level = False
-        self.player.deaths_this_level = 0
-        self.player.kills_this_level = 0
+        self._player.been_hit_this_level = False
+        self._player.been_seen_this_level = False
+        self._player.deaths_this_level = 0
+        self._player.kills_this_level = 0
         self.target_time = (0 if meta_dict[name].get("target_time") is None else meta_dict[name]["target_time"])
         self.objectives_collected = []
         self.objectives_available = len(self.objectives)
@@ -69,15 +69,15 @@ class Level:
             unlocked_achievements.append(self.achievements["target_time"])
         if 0 < self.objectives_available == len(self.objectives_collected) and self.achievements.get("all_objectives") is not None and self.achievements["all_objectives"].upper() != "NONE":
             unlocked_achievements.append(self.achievements["all_objectives"])
-        if self.get_player().kills_this_level == 0 and self.achievements.get("no_kills") is not None and self.achievements["no_kills"].upper() != "NONE":
+        if self.player.kills_this_level == 0 and self.achievements.get("no_kills") is not None and self.achievements["no_kills"].upper() != "NONE":
             unlocked_achievements.append(self.achievements["no_kills"])
-        elif self.get_player().kills_this_level == self.enemies_available and self.achievements.get("all_kills") is not None and self.achievements["all_kills"].upper() != "NONE":
+        elif self.player.kills_this_level == self.enemies_available and self.achievements.get("all_kills") is not None and self.achievements["all_kills"].upper() != "NONE":
             unlocked_achievements.append(self.achievements["all_kills"])
-        if self.get_player().deaths_this_level == 0 and self.achievements.get("no_death") is not None and self.achievements["no_death"].upper() != "NONE":
+        if self.player.deaths_this_level == 0 and self.achievements.get("no_death") is not None and self.achievements["no_death"].upper() != "NONE":
             unlocked_achievements.append(self.achievements["no_death"])
-        if not self.get_player().been_hit_this_level and self.achievements.get("no_hit") is not None and self.achievements["no_hit"].upper() != "NONE":
+        if not self.player.been_hit_this_level and self.achievements.get("no_hit") is not None and self.achievements["no_hit"].upper() != "NONE":
             unlocked_achievements.append(self.achievements["no_hit"])
-        if not self.get_player().been_seen_this_level and self.achievements.get("no_seen") is not None and self.achievements["no_seen"].upper() != "NONE":
+        if not self.player.been_seen_this_level and self.achievements.get("no_seen") is not None and self.achievements["no_seen"].upper() != "NONE":
             unlocked_achievements.append(self.achievements["no_seen"])
 
         if len(unlocked_achievements) > 0 and steamworks is not None:
@@ -97,22 +97,23 @@ class Level:
     def get_recap_text(self) -> list:
         text = [f'Mission time: {self.get_formatted_time()}.',
                 f'Packets collected: {len(self.objectives_collected)} of {self.objectives_available} ({100 * len(self.objectives_collected) // self.objectives_available}%).']
-        if self.get_player().kills_this_level == 0:
+        if self.player.kills_this_level == 0:
             text.append('Nonlethal: You didn\'t dispatch any enemies.')
         else:
-            text.append(f'Enemies dispatched: {self.get_player().kills_this_level} of {self.enemies_available} ({100 * self.get_player().kills_this_level // self.enemies_available} %).')
-        if self.get_player().deaths_this_level == 0:
+            text.append(f'Enemies dispatched: {self.player.kills_this_level} of {self.enemies_available} ({100 * self.player.kills_this_level // self.enemies_available} %).')
+        if self.player.deaths_this_level == 0:
             text.append('Survivor: You never died.')
         else:
-            text.append(f'Deaths: {self.get_player().deaths_this_level}.')
-        if not self.get_player().been_hit_this_level:
+            text.append(f'Deaths: {self.player.deaths_this_level}.')
+        if not self.player.been_hit_this_level:
             text.append('Untouchable: You never got hit.')
-        if not self.get_player().been_seen_this_level:
+        if not self.player.been_seen_this_level:
             text.append('Shadow: You were never even seen!')
         return text
 
-    def get_player(self) -> Player:
-        return self.player
+    @property
+    def player(self) -> Player:
+        return self._player
 
     def set_player_abilities(self, abilities) -> None:
         if abilities.get("can_open_doors") is not None:
@@ -208,7 +209,7 @@ class Level:
 
     def gen_image(self) -> None:
         img = pygame.Surface((self.level_bounds[1][0], self.level_bounds[1][1]), pygame.SRCALPHA)
-        for ent in self.get_entities() + [self.get_player()]:
+        for ent in self.get_entities() + [self.player]:
             img.blit(ent.sprite, (ent.rect.x, ent.rect.y))
         pygame.image.save(img, join(ASSETS_FOLDER, "Misc", self.name + ".png"))
 

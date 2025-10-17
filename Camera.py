@@ -42,7 +42,7 @@ class Camera:
         self.focus_y = y
 
     def scroll_to_player(self, dtime: float) -> bool:
-        player_rect = self.level.get_player().rect
+        player_rect = self.level.player.rect
         if self.focus_player:
             self.focus_x = player_rect.centerx
             self.focus_y = player_rect.centery

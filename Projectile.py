@@ -33,9 +33,9 @@ class Projectile(Entity):
         self.angle = ent["angle"]
 
     def move(self, speed) -> None:
-        if self.rect.colliderect(self.level.get_player()) and pygame.sprite.collide_mask(self, self.level.get_player()):
+        if self.rect.colliderect(self.level.player) and pygame.sprite.collide_mask(self, self.level.player):
             self.collide(None)
-            self.level.get_player().get_hit(self)
+            self.level.player.get_hit(self)
             return
 
         for ent in self.level.get_entities_in_range((self.rect.x, self.rect.y), blocks_only=True):
@@ -54,7 +54,7 @@ class Projectile(Entity):
             self.rect.center = [((1 - delta) * self.rect.centerx) + (delta * self.dest[0]), ((1 - delta) * self.rect.centery) + (delta * self.dest[1])]
 
     def loop(self, dtime) -> None:
-        self.move(self.speed * dtime * (0.5 if self.level.get_player() is not None and self.level.get_player().is_slow_time else 1))
+        self.move(self.speed * dtime * (0.5 if self.level.player is not None and self.level.player.is_slow_time else 1))
 
     def collide(self, ent) -> bool:
         self.hp = 0

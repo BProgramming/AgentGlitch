@@ -71,7 +71,7 @@ class Objective(Entity):
             active_audio_channel = pygame.mixer.find_channel(force=True)
             if active_audio_channel is not None:
                 active_audio_channel.play(self.audios[name.upper()][random.randrange(len(self.audios[name.upper()]))])
-                set_sound_source(self.rect, self.level.get_player().rect, self.controller.master_volume["non-player"], active_audio_channel)
+                set_sound_source(self.rect, self.level.player.rect, self.controller.master_volume["non-player"], active_audio_channel)
 
     def update_sprite(self, fps) -> int:
         active_index = math.floor((self.animation_count // (1000 // (fps * Objective.ANIMATION_DELAY))) % len(self.sprites))
@@ -117,6 +117,6 @@ class Objective(Entity):
                 else:
                     pointer_y = adj_y + self.pointer_offset[1][1]
 
-                rotation = math.degrees(math.atan2(self.rect.x - self.level.get_player().rect.x, self.rect.y - self.level.get_player().rect.y))
+                rotation = math.degrees(math.atan2(self.rect.x - self.level.player.rect.x, self.rect.y - self.level.player.rect.y))
 
                 win.blit(pygame.transform.rotate(self.pointer, rotation), (pointer_x, pointer_y))

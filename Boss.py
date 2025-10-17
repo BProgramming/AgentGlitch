@@ -47,9 +47,9 @@ class Boss(NonPlayer):
                     self.controller.should_store_steam_stats = True
 
     def __update_onscreen_presence__(self) -> None:
-        if self.level.boss_hp_pct is None and math.dist((self.level.get_player().rect.x, self.level.get_player().rect.y), (self.rect.x, self.rect.y)) <= self.spot_range:
+        if self.level.boss_hp_pct is None and math.dist((self.level.player.rect.x, self.level.player.rect.y), (self.rect.x, self.rect.y)) <= self.spot_range:
             self.is_on_screen = True
-        elif math.dist((self.level.get_player().rect.x, self.level.get_player().rect.y), (self.rect.x, self.rect.y)) >= 2 * self.spot_range:
+        elif math.dist((self.level.player.rect.x, self.level.player.rect.y), (self.rect.x, self.rect.y)) >= 2 * self.spot_range:
             self.is_on_screen = False
 
     def __update_health_bar__(self) -> None:
