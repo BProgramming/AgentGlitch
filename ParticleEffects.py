@@ -110,18 +110,19 @@ class ParticleEffect:
     def draw(self, win, offset_x, offset_y, master_volume, fps) -> None:
         if self.should_move:
             image = self.image[self.image_index] if isinstance(self.image, list) else self.image
-            coord = (self.rect.x - offset_x, self.rect.y - offset_y)
-            win.blit(image, coord)
-            coord2 = [coord[0], coord[1]]
+            coord_x = [self.rect.x - offset_x]
+            coord_y = [self.rect.y - offset_y]
             if self.x_vel > 0:
-                coord2[0] -= self.rect.width
+                coord_x.append(coord_x[0] - self.rect.width)
             elif self.x_vel < 0:
-                coord2[0] += self.rect.width
+                coord_x.append(coord_x[0] + self.rect.width)
             if self.y_vel > 0:
-                coord2[1] -= self.rect.height
+                coord_y.append(coord_y[0] - self.rect.height)
             elif self.y_vel < 0:
-                coord2[1] += self.rect.height
-            win.blit(image, (coord2[0], coord2[1]))
+                coord_y.append(coord_y[0] + self.rect.height)
+            for x in coord_x:
+                for y in coord_y:
+                    win.blit(image, (x, y))
         else:
             if isinstance(self.image, pygame.Surface):
                 win.blit(self.image, (0, 0))
