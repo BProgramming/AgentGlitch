@@ -3,7 +3,7 @@ import pygame
 import time
 from Actor import Actor, MovementState
 from Block import Door
-from Helpers import DifficultyScale, MovementDirection, load_text_from_file, display_text, ASSETS_FOLDER
+from Helpers import DifficultyScale, MovementDirection, load_text_from_file, display_text, ASSETS_FOLDER, retroify_image
 from os.path import isfile, join
 
 
@@ -59,9 +59,9 @@ class NonPlayer(Actor):
         for i in range(256):
             chunk.set_alpha(i)
             vision_spotted.blit(chunk, (i, 0))
-        if self.level.grayscale:
-            vision_hidden = pygame.transform.grayscale(vision_hidden)
-            vision_spotted = pygame.transform.grayscale(vision_spotted)
+        if self.level.retro:
+            vision_hidden = retroify_image(vision_hidden)
+            vision_spotted = retroify_image(vision_spotted)
         self.vision = {"hidden": {MovementDirection.LEFT: vision_hidden, MovementDirection.RIGHT: pygame.transform.flip(vision_hidden, True, False)}, "spotted": {MovementDirection.LEFT: vision_spotted, MovementDirection.RIGHT: pygame.transform.flip(vision_spotted, True, False)}}
 
     def __increment_patrol_index__(self) -> None:

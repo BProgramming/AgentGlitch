@@ -1,7 +1,7 @@
 import time
 import pygame
 from enum import Enum
-from Helpers import load_images, glitch, DifficultyScale, validate_file_list, handle_exception
+from Helpers import load_images, glitch, DifficultyScale, validate_file_list, handle_exception, retroify_image
 
 
 class ButtonType(Enum):
@@ -14,7 +14,7 @@ class Menu:
 
     def __init__(self, win, header, button_labels, music=None, should_glitch=True):
         self.clear = None
-        self.clear_grayscale = None
+        self.clear_retro = None
         button_assets = load_images("Menu", "Buttons")
         self.notch_val = []
         self.buttons = self.__make_buttons__(button_labels, pygame.transform.smoothscale_by(button_assets["BUTTON_NORMAL"], 0.5), pygame.transform.smoothscale_by(button_assets["BUTTON_MOUSEOVER"], 0.5))
@@ -59,18 +59,18 @@ class Menu:
             self.notch_val.append(notch_val)
         return buttons
 
-    def fade_in(self, win: pygame.Surface, grayscale: bool = False) -> None:
+    def fade_in(self, win: pygame.Surface, retro: bool = False) -> None:
         if self.clear is None:
             self.clear = pygame.display.get_surface().copy()
         for i in range(32):
             self.screen.set_alpha(8 * i)
-            self.display(win, grayscale=grayscale)
+            self.display(win, retro=retro)
             pygame.display.update()
 
             for event in pygame.event.get():
                 if event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
                     self.screen.set_alpha(248)
-                    self.display(win, grayscale=grayscale)
+                    self.display(win, retro=retro)
                     pygame.display.update()
                     return
             time.sleep(0.01)
@@ -87,19 +87,19 @@ class Menu:
                 self.cycle_music()
                 pygame.mixer.music.queue(self.music[self.music_index])
 
-    def fade_out(self, win: pygame.Surface, grayscale: bool = False) -> None:
+    def fade_out(self, win: pygame.Surface, retro: bool = False) -> None:
         if self.clear is None:
             return
         else:
             for i in range(32, 0, -1):
                 self.screen.set_alpha(8 * i)
-                self.display(win, grayscale=grayscale)
+                self.display(win, retro=retro)
                 pygame.display.update()
 
                 for event in pygame.event.get():
                     if event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
                         self.screen.set_alpha(0)
-                        self.display(win, grayscale=grayscale)
+                        self.display(win, retro=retro)
                         pygame.display.update()
                         return
                 time.sleep(0.005)
@@ -121,12 +121,12 @@ class Menu:
 
         pygame.mouse.set_pos((x, y))
 
-    def display(self, win: pygame.Surface, grayscale: bool=False) -> int | None:
+    def display(self, win: pygame.Surface, retro: bool=False) -> int | None:
         if self.clear is not None:
-            if grayscale:
-                if self.clear_grayscale is None:
-                    self.clear_grayscale = pygame.transform.grayscale(self.clear)
-                win.blit(self.clear_grayscale, (0, 0))
+            if retro:
+                if self.clear_retro is None:
+                    self.clear_retro = retroify_image(self.clear)
+                win.blit(self.clear_retro, (0, 0))
             else:
                 win.blit(self.clear, (0, 0))
 
@@ -224,9 +224,9 @@ class Menu:
 
 
 class Selector(Menu):
-    def __init__(self, win, header, note, images, values, index=0, music=None, should_glitch=True, accept_only=False, grayscale=False):
+    def __init__(self, win, header, note, images, values, index=0, music=None, should_glitch=True, accept_only=False, retro=False):
         self.clear = None
-        self.clear_grayscale = None
+        self.clear_retro = None
         self.notch_val = [None, None, None]
         self.arrow_asset = pygame.transform.smoothscale_by(load_images("Menu", "Arrows")["ARROW_WHITE"], 0.5)
         button_assets = load_images("Menu", "Buttons")
@@ -250,7 +250,7 @@ class Selector(Menu):
                         image_width = max(image_width, image.get_width())
                         image_height = max(image_height, image.get_height())
                         self.images[key].append([pygame.Rect(0, 0, image_width, image_height), image])
-                self.image_selected = self.images["retro" if grayscale else "normal"][self.image_index]
+                self.image_selected = self.images["retro" if retro else "normal"][self.image_index]
         else:
             self.images = []
             for image in images:
@@ -297,24 +297,24 @@ class Selector(Menu):
 
         pygame.mouse.set_pos((x, y))
 
-    def set_index(self, index: int, grayscale: bool = False) -> None:
+    def set_index(self, index: int, retro: bool = False) -> None:
         self.image_index = index
         if isinstance(self.images, dict):
-            self.image_selected = self.images["retro" if grayscale else "normal"][index]
+            self.image_selected = self.images["retro" if retro else "normal"][index]
         else:
             self.image_selected = self.images[index]
 
-    def cycle_images(self, direction: int, grayscale: bool = False) -> None:
+    def cycle_images(self, direction: int, retro: bool = False) -> None:
         if direction > 0:
             self.image_index += 1
         else:
             self.image_index -= 1
         if isinstance(self.images, dict):
-            if self.image_index >= len(self.images["retro" if grayscale else "normal"]):
+            if self.image_index >= len(self.images["retro" if retro else "normal"]):
                 self.image_index = 0
             elif self.image_index < 0:
-                self.image_index = len(self.images["retro" if grayscale else "normal"]) - 1
-            self.image_selected = self.images["retro" if grayscale else "normal"][self.image_index]
+                self.image_index = len(self.images["retro" if retro else "normal"]) - 1
+            self.image_selected = self.images["retro" if retro else "normal"][self.image_index]
         else:
             if self.image_index >= len(self.images):
                 self.image_index = 0
@@ -346,12 +346,12 @@ class Selector(Menu):
             buttons.append([pygame.Rect(0, 0, max(normal.get_width(), mouseover.get_width()), max(normal.get_height(), mouseover.get_height())), normal, mouseover, ButtonType.CLICK])
         return buttons
 
-    def display(self, win: pygame.Surface, grayscale: bool = False) -> int | None:
+    def display(self, win: pygame.Surface, retro: bool = False) -> int | None:
         if self.clear is not None:
-            if grayscale:
-                if self.clear_grayscale is None:
-                    self.clear_grayscale = pygame.transform.grayscale(self.clear)
-                win.blit(self.clear_grayscale, (0, 0))
+            if retro:
+                if self.clear_retro is None:
+                    self.clear_retro = retroify_image(self.clear)
+                win.blit(self.clear_retro, (0, 0))
             else:
                 win.blit(self.clear, (0, 0))
 

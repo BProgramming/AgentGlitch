@@ -3,14 +3,15 @@ import random
 import pygame
 from os.path import join, isfile, abspath
 from Entity import Entity
-from Helpers import handle_exception, MovementDirection, load_sprite_sheets, set_sound_source, ASSETS_FOLDER
+from Helpers import handle_exception, MovementDirection, load_sprite_sheets, set_sound_source, ASSETS_FOLDER, \
+    retroify_image
 from SimpleVFX.SimpleVFX import VisualEffect, ImageDirection
 
 
 class Block(Entity):
     def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=0, coord_y=0, is_blocking=True, name="Block"):
         super().__init__(level, controller, x, y, width, height, is_blocking=is_blocking, name=name)
-        self.sprite = self.load_image(join(ASSETS_FOLDER, "Terrain", "Terrain.png"), width, height, image_master, coord_x, coord_y, grayscale=self.level.grayscale)
+        self.sprite = self.load_image(join(ASSETS_FOLDER, "Terrain", "Terrain.png"), width, height, image_master, coord_x, coord_y, retro=self.level.retro)
         self.mask = pygame.mask.from_surface(self.sprite)
         self.is_stacked = is_stacked
         self.audios = audios
@@ -29,17 +30,17 @@ class Block(Entity):
                 set_sound_source(self.rect, self.level.get_player().rect, self.controller.master_volume["non-player"], active_audio_channel)
 
     @staticmethod
-    def load_image(path, width, height, image_master, coord_x, coord_y, grayscale=False) -> pygame.Surface | None:
+    def load_image(path, width, height, image_master, coord_x, coord_y, retro=False) -> pygame.Surface | None:
         if isfile(path):
-            if grayscale and isfile(path[:-3] + "_grayscale.png"):
-                path = path[:-3] + "_grayscale.png"
+            if retro and isfile(path[:-3] + "_retro.png"):
+                path = path[:-3] + "_retro.png"
             if image_master.get(path) is None:
                 image_master[path] = pygame.image.load(path).convert_alpha()
             surface = pygame.Surface((width // 2, height // 2), pygame.SRCALPHA)
             rect = pygame.Rect(coord_x, coord_y, width // 2, height // 2)
             surface.blit(image_master[path], (0, 0), rect)
-            if grayscale:
-                surface = pygame.transform.grayscale(surface)
+            if retro:
+                surface = retroify_image(surface)
             return pygame.transform.scale2x(surface)
         else:
             handle_exception(f'File {FileNotFoundError(abspath(path))} not found.')
@@ -52,7 +53,7 @@ class BreakableBlock(Block):
 
     def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=0, coord_y=0, coord_x2=0, coord_y2=0, name="BreakableBlock"):
         super().__init__(level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=coord_x, coord_y=coord_y, name=name)
-        self.sprite_damaged = self.load_image(join(ASSETS_FOLDER, "Terrain", "Terrain.png"), width, height, image_master, coord_x2, coord_y2, grayscale=self.level.grayscale)
+        self.sprite_damaged = self.load_image(join(ASSETS_FOLDER, "Terrain", "Terrain.png"), width, height, image_master, coord_x2, coord_y2, retro=self.level.retro)
         self.cooldowns = {"get_hit": 0}
 
     def get_hit(self, ent) -> None:
@@ -180,9 +181,9 @@ class Door(MovingBlock):
         if is_locked:
             self.is_locked = True
             if locked_coord_x is not None and locked_coord_y is not None and unlocked_coord_x is not None and unlocked_coord_y is not None:
-                self.locked_sprite = self.load_image(join(ASSETS_FOLDER, "Terrain", "Terrain.png"), width, height, image_master, locked_coord_x, locked_coord_y, grayscale=self.level.grayscale)
+                self.locked_sprite = self.load_image(join(ASSETS_FOLDER, "Terrain", "Terrain.png"), width, height, image_master, locked_coord_x, locked_coord_y, retro=self.level.retro)
                 self.locked_mask = pygame.mask.from_surface(self.locked_sprite)
-                self.unlocked_sprite = self.load_image(join(ASSETS_FOLDER, "Terrain", "Terrain.png"), width, height, image_master, unlocked_coord_x, unlocked_coord_y, grayscale=self.level.grayscale)
+                self.unlocked_sprite = self.load_image(join(ASSETS_FOLDER, "Terrain", "Terrain.png"), width, height, image_master, unlocked_coord_x, unlocked_coord_y, retro=self.level.retro)
                 self.locked_mask = pygame.mask.from_surface(self.unlocked_sprite)
                 self.sprite = self.locked_sprite
                 self.mask = self.locked_mask
@@ -192,9 +193,9 @@ class Door(MovingBlock):
         else:
             self.is_locked = False
             if locked_coord_x is not None and locked_coord_y is not None and unlocked_coord_x is not None and unlocked_coord_y is not None:
-                self.locked_sprite = self.load_image(join(ASSETS_FOLDER, "Terrain", "Terrain.png"), width, height, image_master, locked_coord_x, locked_coord_y, grayscale=self.level.grayscale)
+                self.locked_sprite = self.load_image(join(ASSETS_FOLDER, "Terrain", "Terrain.png"), width, height, image_master, locked_coord_x, locked_coord_y, retro=self.level.retro)
                 self.locked_mask = pygame.mask.from_surface(self.locked_sprite)
-                self.unlocked_sprite = self.load_image(join(ASSETS_FOLDER, "Terrain", "Terrain.png"), width, height, image_master, unlocked_coord_x, unlocked_coord_y, grayscale=self.level.grayscale)
+                self.unlocked_sprite = self.load_image(join(ASSETS_FOLDER, "Terrain", "Terrain.png"), width, height, image_master, unlocked_coord_x, unlocked_coord_y, retro=self.level.retro)
                 self.unlocked_mask = pygame.mask.from_surface(self.unlocked_sprite)
                 self.sprite = self.unlocked_sprite
                 self.mask = self.unlocked_mask
@@ -344,9 +345,9 @@ class Hazard(Block):
         self.is_attacking = True
         self.hit_sides = hit_sides.upper()
         if sprite is not None:
-            avail_sprites = load_sprite_sheets("Sprites", sprite, sprite_master, direction=False, grayscale=self.level.grayscale)
-            if self.level.grayscale and avail_sprites.get("ANIMATE_GRAYSCALE") is not None:
-                self.sprites = avail_sprites["ANIMATE_GRAYSCALE"]
+            avail_sprites = load_sprite_sheets("Sprites", sprite, sprite_master, direction=False, retro=self.level.retro)
+            if self.level.retro and avail_sprites.get("ANIMATE_RETRO") is not None:
+                self.sprites = avail_sprites["ANIMATE_RETRO"]
             else:
                 self.sprites = avail_sprites["ANIMATE"]
         else:
@@ -394,7 +395,7 @@ class MovingHazard(MovingBlock, Hazard):
         self.is_attacking = True
         self.hit_sides = hit_sides.upper()
         if sprite is not None:
-            self.sprites = load_sprite_sheets("Sprites", sprite, sprite_master, direction=False, grayscale=self.level.grayscale)
+            self.sprites = load_sprite_sheets("Sprites", sprite, sprite_master, direction=False, retro=self.level.retro)
         else:
             self.sprites = {"ANIMATE": self.sprite}
         self.animation_count = 0

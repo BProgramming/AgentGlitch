@@ -67,6 +67,10 @@ def validate_file_list(dir, lst, ext=None) -> list | None:
         return None
 
 
+def retroify_image(image: pygame.Surface) -> pygame.Surface:
+    return pygame.transform.grayscale(image)
+
+
 def load_picker_sprites(dir) -> tuple | None:
     images = {"normal": [], "retro": []}
     values = []
@@ -85,7 +89,7 @@ def load_picker_sprites(dir) -> tuple | None:
                     values.append([folder])
                     retro_path = join(path, f'Retro{folder}', "picker.png")
                     if isfile(retro_path):
-                        asset = pygame.transform.grayscale(pygame.transform.smoothscale_by(pygame.image.load(retro_path).convert_alpha(), 4))
+                        asset = retroify_image(pygame.transform.smoothscale_by(pygame.image.load(retro_path).convert_alpha(), 4))
                         surface = pygame.Surface((asset.get_width(), asset.get_height()), pygame.SRCALPHA)
                         rect = pygame.Rect(0, 0, asset.get_width(), asset.get_height())
                         surface.blit(asset, (0, 0), rect)
@@ -168,7 +172,7 @@ def flip(sprites) -> list:
     return [pygame.transform.flip(sprite, True, False) for sprite in sprites]
 
 
-def load_sprite_sheets(dir1, dir2, sprite_master, direction=False, grayscale=False) -> dict:
+def load_sprite_sheets(dir1, dir2, sprite_master, direction=False, retro=False) -> dict:
     if sprite_master.get(dir2) is None:
         path = join(ASSETS_FOLDER, dir1, dir2)
 
@@ -189,8 +193,8 @@ def load_sprite_sheets(dir1, dir2, sprite_master, direction=False, grayscale=Fal
         all_sprites = {}
         for image in images:
             sprite_sheet = pygame.image.load(join(path, image)).convert_alpha()
-            if grayscale:
-                sprite_sheet = pygame.transform.grayscale(sprite_sheet)
+            if retro:
+                sprite_sheet = retroify_image(sprite_sheet)
             width = height = sprite_sheet.get_height()
 
             sprites = []

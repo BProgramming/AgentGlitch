@@ -19,7 +19,7 @@ def save_player_profile(controller, level):
             if data is not None and data.get("level") is not None:
                 cur_level = data["level"]
 
-    data = {"level": cur_level, "master volume": controller.master_volume, "keyboard layout": controller.active_keyboard_layout, "gamepad layout": controller.active_gamepad_layout, "is fullscreen": pygame.display.is_fullscreen(), "difficulty": controller.difficulty, "selected sprite": controller.player_sprite_selected, "player abilities": controller.player_abilities, "force grayscale": controller.force_grayscale}
+    data = {"level": cur_level, "master volume": controller.master_volume, "keyboard layout": controller.active_keyboard_layout, "gamepad layout": controller.active_gamepad_layout, "is fullscreen": pygame.display.is_fullscreen(), "difficulty": controller.difficulty, "selected sprite": controller.player_sprite_selected, "player abilities": controller.player_abilities, "force retro": controller.force_retro}
     with open(profile_file, "wb") as f:
         pickle.dump(data, f)
 
@@ -39,8 +39,8 @@ def load_player_profile(controller):
             controller.player_sprite_selected = data["selected sprite"]
         if data.get("player abilities") is not None:
             controller.player_abilities = data["player abilities"]
-        if data.get("force grayscale") is not None:
-            controller.force_grayscale = controller.has_dlc.get("gumshoe") is not None and controller.has_dlc["gumshoe"] and data["force grayscale"]
+        if data.get("force retro") is not None:
+            controller.force_retro = controller.has_dlc.get("gumshoe") is not None and controller.has_dlc["gumshoe"] and data["force retro"]
         if data.get("is fullscreen") is not None and not data["is fullscreen"]:
             pygame.display.toggle_fullscreen()
         if data.get("level") is not None:

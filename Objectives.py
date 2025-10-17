@@ -3,7 +3,7 @@ import random
 import pygame
 from os.path import join, isfile, abspath
 from Entity import Entity
-from Helpers import handle_exception, set_sound_source, load_sprite_sheets, ASSETS_FOLDER
+from Helpers import handle_exception, set_sound_source, load_sprite_sheets, ASSETS_FOLDER, retroify_image
 
 
 class Objective(Entity):
@@ -11,19 +11,19 @@ class Objective(Entity):
         handle_exception(f'File {FileNotFoundError(abspath(join(ASSETS_FOLDER, "Icons", "Pointer", "pointer.png")))} not found.')
     else:
         POINTER_SPRITE: pygame.Surface = pygame.transform.scale2x(pygame.image.load(join(ASSETS_FOLDER, "Icons", "Pointer", "pointer.png")).convert_alpha())
-        if isfile(join(ASSETS_FOLDER, "Icons", "Pointer", "pointer_grayscale.png")):
-            POINTER_SPRITE_GRAYSCALE: pygame.Surface = pygame.transform.scale2x(pygame.image.load(join(ASSETS_FOLDER, "Icons", "Pointer", "pointer_grayscale.png")).convert_alpha())
+        if isfile(join(ASSETS_FOLDER, "Icons", "Pointer", "pointer_retro.png")):
+            POINTER_SPRITE_RETRO: pygame.Surface = pygame.transform.scale2x(pygame.image.load(join(ASSETS_FOLDER, "Icons", "Pointer", "pointer_retro.png")).convert_alpha())
         else:
-            POINTER_SPRITE_GRAYSCALE: pygame.Surface = pygame.transform.grayscale(POINTER_SPRITE)
+            POINTER_SPRITE_RETRO: pygame.Surface = retroify_image(POINTER_SPRITE)
         POINTER_SPRITE_HEIGHT: int = POINTER_SPRITE.get_height()
         POINTER_SPRITE_WIDTH: int = POINTER_SPRITE.get_width()
 
     def __init__(self, level, controller, x, y, width, height, sprite_master, audios, is_active=False, sprite=None, sound="objective", is_blocking=False, achievement=None, name="Objective"):
         super().__init__(level, controller, x, y, width, height, is_blocking=is_blocking, name=name)
         if sprite is not None:
-            avail_sprites = load_sprite_sheets("Sprites", sprite, sprite_master, direction=False, grayscale=self.level.grayscale)
-            if self.level.grayscale and avail_sprites.get("ANIMATE_GRAYSCALE") is not None:
-                self.sprites = avail_sprites["ANIMATE_GRAYSCALE"]
+            avail_sprites = load_sprite_sheets("Sprites", sprite, sprite_master, direction=False, retro=self.level.retro)
+            if self.level.retro and avail_sprites.get("ANIMATE_RETRO") is not None:
+                self.sprites = avail_sprites["ANIMATE_RETRO"]
             else:
                 self.sprites = avail_sprites["ANIMATE"]
         else:
@@ -38,7 +38,7 @@ class Objective(Entity):
         self.achievement = achievement
         self.name = name
         self.is_active = is_active
-        self.pointer = (Objective.POINTER_SPRITE_GRAYSCALE if self.level.grayscale == True else Objective.POINTER_SPRITE)
+        self.pointer = (Objective.POINTER_SPRITE_RETRO if self.level.retro == True else Objective.POINTER_SPRITE)
         self.pointer_offset = ((self.rect.width - Objective.POINTER_SPRITE_WIDTH) / 2, (-(Objective.POINTER_SPRITE_HEIGHT + 2), -(self.rect.height - Objective.POINTER_SPRITE_HEIGHT / 2)))
 
     def collide(self, ent) -> bool:

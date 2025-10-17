@@ -1,14 +1,14 @@
 import pygame
 from os.path import join, isfile, abspath
-from Helpers import handle_exception, load_images, ASSETS_FOLDER
+from Helpers import handle_exception, load_images, ASSETS_FOLDER, retroify_image
 
 
 class HUD:
-    def __init__(self, player, win, grayscale: bool=False):
+    def __init__(self, player, win, retro: bool=False):
         self.player = player
         self.win = win
         self.scale_factor: tuple[float, float] = (self.win.get_width() / 1920, self.win.get_height() / 1080)
-        self.is_grayscale: bool = grayscale
+        self.is_retro: bool = retro
         self.save_icon_timer: float = 0.0
         self.hp_outline: pygame.Surface | None = pygame.Surface((324 * self.scale_factor[0], 16 * self.scale_factor[1]), pygame.SRCALPHA)
         self.hp_outline.fill((0, 0, 0))
@@ -39,58 +39,58 @@ class HUD:
             handle_exception(f'File {FileNotFoundError(abspath(file))} not found.')
         else:
             self.icon_jump: pygame.Surface | None = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
-            if grayscale:
-                self.icon_jump = pygame.transform.grayscale(self.icon_jump)
+            if retro:
+                self.icon_jump = retroify_image(self.icon_jump)
         file = join(ASSETS_FOLDER, "Icons", "double_jump.png")
         if not isfile(file):
             handle_exception(f'File {FileNotFoundError(abspath(file))} not found.')
         else:
             self.icon_double_jump: pygame.Surface | None = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
-            if grayscale:
-                self.icon_double_jump = pygame.transform.grayscale(self.icon_double_jump)
+            if retro:
+                self.icon_double_jump = retroify_image(self.icon_double_jump)
         file = join(ASSETS_FOLDER, "Icons", "block.png")
         if not isfile(file):
             handle_exception(f'File {FileNotFoundError(abspath(file))} not found.')
         else:
             self.icon_block: pygame.Surface | None = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
-            if grayscale:
-                self.icon_block = pygame.transform.grayscale(self.icon_block)
+            if retro:
+                self.icon_block = retroify_image(self.icon_block)
         file = join(ASSETS_FOLDER, "Icons", "teleport.png")
         if not isfile(file):
             handle_exception(f'File {FileNotFoundError(abspath(file))} not found.')
         else:
             self.icon_teleport: pygame.Surface | None = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
-            if grayscale:
-                self.icon_teleport = pygame.transform.grayscale(self.icon_teleport)
+            if retro:
+                self.icon_teleport = retroify_image(self.icon_teleport)
         file = join(ASSETS_FOLDER, "Icons", "resize.png")
         if not isfile(file):
             handle_exception(f'File {FileNotFoundError(abspath(file))} not found.')
         else:
             self.icon_resize: pygame.Surface | None = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
-            if grayscale:
-                self.icon_resize = pygame.transform.grayscale(self.icon_resize)
+            if retro:
+                self.icon_resize = retroify_image(self.icon_resize)
         file = join(ASSETS_FOLDER, "Icons", "bullet_time.png")
         if not isfile(file):
             handle_exception(f'File {FileNotFoundError(abspath(file))} not found.')
         else:
             self.icon_bullet_time: pygame.Surface | None = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
-            if grayscale:
-                self.icon_bullet_time = pygame.transform.grayscale(self.icon_bullet_time)
+            if retro:
+                self.icon_bullet_time = retroify_image(self.icon_bullet_time)
 
         file = join(ASSETS_FOLDER, "Icons", "save.png")
         if not isfile(file):
             handle_exception(f'File {FileNotFoundError(abspath(file))} not found.')
         else:
             self.save_icon: pygame.Surface | None = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
-            if grayscale:
-                self.save_icon = pygame.transform.grayscale(self.save_icon)
+            if retro:
+                self.save_icon = retroify_image(self.save_icon)
 
     def __draw_health_bar__(self) -> None:
         hp_pct: float = min(1.0, max(0.01, self.player.hp / self.player.max_hp))
         if self.hp_pct != hp_pct:
             self.hp_pct = hp_pct
             self.hp_bar = pygame.Surface((int((self.hp_outline.get_width() - 4) * hp_pct) * self.scale_factor[0], 12 * self.scale_factor[1]), pygame.SRCALPHA)
-            if self.is_grayscale:
+            if self.is_retro:
                 self.hp_bar.fill((255, 255, 255))
             else:
                 self.hp_bar.fill((min(int(2 * 255 * (1 - hp_pct)), 255), min(int(2 * 255 * hp_pct), 255), 0))
@@ -103,7 +103,7 @@ class HUD:
             if self.boss_hp_bar_alpha < 128:
                 self.boss_hp_bar_alpha += 1
                 self.boss_hp_outline.fill((0, 0, 0, self.boss_hp_bar_alpha))
-            if self.is_grayscale:
+            if self.is_retro:
                 self.boss_hp_bar.fill((255, 255, 255, self.boss_hp_bar_alpha))
             else:
                 self.boss_hp_bar.fill((255, 0, 0, self.boss_hp_bar_alpha))
@@ -117,7 +117,7 @@ class HUD:
             self.win.blit(rendered_hp_bar, (((self.win.get_width() - rendered_hp_outline.get_width()) // 2) + 2, (self.win.get_height() - (rendered_hp_outline.get_height() + 100)) + 2))
         elif self.boss_hp_bar_alpha > 0:
             self.boss_hp_bar_alpha -= 1
-            if self.is_grayscale:
+            if self.is_retro:
                 self.boss_hp_bar.fill((255, 255, 255, self.boss_hp_bar_alpha))
             else:
                 self.boss_hp_bar.fill((255, 0, 0, self.boss_hp_bar_alpha))

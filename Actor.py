@@ -81,7 +81,7 @@ class Actor(Entity):
         self.is_animated_attack = False
         self.size = self.size_target = self.cached_size = self.cached_size_target = 1
         self.sprite_name = ("UnarmedAgent" if sprite is None else sprite)
-        self.sprites = load_sprite_sheets("Sprites", ("UnarmedAgent" if sprite is None else sprite), sprite_master, direction=True, grayscale=self.level.grayscale)
+        self.sprites = load_sprite_sheets("Sprites", ("UnarmedAgent" if sprite is None else sprite), sprite_master, direction=True, retro=self.level.retro)
         self.sprite = None
         self.audios = audios
         self.update_sprite(1)
@@ -98,7 +98,7 @@ class Actor(Entity):
         self.can_shoot = can_shoot
         self.can_resize = can_resize
         self.can_heal = False
-        self.proj_sprite = load_sprite_sheets("Projectiles", ("Bullet" if proj_sprite is None else proj_sprite), sprite_master, grayscale=self.level.grayscale)[("Bullet" if proj_sprite is None else proj_sprite).upper()][0]
+        self.proj_sprite = load_sprite_sheets("Projectiles", ("Bullet" if proj_sprite is None else proj_sprite), sprite_master, retro=self.level.retro)[("Bullet" if proj_sprite is None else proj_sprite).upper()][0]
         self.active_projectiles = []
         self.cached_x, self.cached_y = self.rect.x, self.rect.y
         self.cooldowns = {"get_hit": 0.0, "launch_projectile": 0.0, "resize": 0.0, "resize_delay": 0.0, "resize_effect": 0.0, "heal": 0.0, "attack": 0.0, "doublejump_effect_trail": 0.0}

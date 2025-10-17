@@ -2,6 +2,8 @@ import pygame
 import random
 from enum import Enum
 
+from Helpers import retroify_image
+
 
 class ParticleType(Enum):
     STATIC = 0
@@ -22,9 +24,9 @@ class ParticleEffect:
         else:
             bounds: tuple[tuple[int, int], tuple[int, int]] = ((0, 0), (win.get_width(), win.get_height()))
         if self.effect_type == ParticleType.STATIC:
-            self.image = self.generate_static_effect(width, height, amount, color, bounds, level.grayscale)
+            self.image = self.generate_static_effect(width, height, amount, color, bounds, level.retro)
         elif self.effect_type == ParticleType.VARIABLE:
-            self.image = self.generate_variable_effect(width, height, amount, color, bounds, level.grayscale)
+            self.image = self.generate_variable_effect(width, height, amount, color, bounds, level.retro)
         self.rect: pygame.Rect = pygame.Rect(0, 0, bounds[1][0], bounds[1][1])
         self.x_vel: float = x_vel
         self.y_vel: float = y_vel
@@ -34,7 +36,7 @@ class ParticleEffect:
         return self.effect_type
 
     @staticmethod
-    def generate_static_effect(width, height, amount, color, bounds, is_grayscale) -> pygame.Surface:
+    def generate_static_effect(width, height, amount, color, bounds, is_retro) -> pygame.Surface:
         points = []
         for i in range(amount):
             points.append((random.randint(0, bounds[1][0]), random.randint(0, bounds[1][1])))
@@ -43,8 +45,8 @@ class ParticleEffect:
         image.set_colorkey((0, 0, 0))
         particle = pygame.Surface((width, height), pygame.SRCALPHA)
         particle.fill(color)
-        if is_grayscale:
-            particle = pygame.transform.grayscale(particle)
+        if is_retro:
+            particle = retroify_image(particle)
 
         for point in points:
             image.blit(particle, point)
@@ -52,7 +54,7 @@ class ParticleEffect:
         return image
 
     @staticmethod
-    def generate_variable_effect(width, height, amount, color, bounds, is_grayscale) -> list[pygame.Surface]:
+    def generate_variable_effect(width, height, amount, color, bounds, is_retro) -> list[pygame.Surface]:
         images = []
         min_screens = 12
         max_screens = 24
@@ -72,8 +74,8 @@ class ParticleEffect:
                 else:
                     particle = pygame.Surface((random.randint(0, width), random.randint(0, height)), pygame.SRCALPHA)
                     particle.fill(color)
-                if is_grayscale:
-                    particle = pygame.transform.grayscale(particle)
+                if is_retro:
+                    particle = retroify_image(particle)
                 image.blit(particle, point)
             images.append(image)
 

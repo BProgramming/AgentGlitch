@@ -1,6 +1,7 @@
 import pygame
 from SteamworksConnection import SteamworksConnection
-from Helpers import load_json_dict, load_object_dicts, load_levels, load_audios, display_text, DifficultyScale, handle_exception, load_text_from_file, ASSETS_FOLDER, GAME_DATA_FOLDER, FIRST_LEVEL_NAME
+from Helpers import load_json_dict, load_object_dicts, load_levels, load_audios, display_text, DifficultyScale, \
+    handle_exception, load_text_from_file, ASSETS_FOLDER, GAME_DATA_FOLDER, FIRST_LEVEL_NAME, retroify_image
 from os.path import join, isfile, abspath
 from DiscordConnection import DiscordConnection
 from SimpleVFX.SimpleVFX import VisualEffectsManager
@@ -91,15 +92,15 @@ def main(win):
         if isfile(title_screen_file):
             slide = pygame.image.load(title_screen_file).convert_alpha()
             slide = pygame.transform.scale_by(slide, (win.get_width() / slide.get_width(), win.get_height() / slide.get_height()))
-            slide_grayscale = pygame.image.load(title_screen_retro_file).convert_alpha()
-            slide_grayscale = pygame.transform.grayscale(pygame.transform.scale_by(slide_grayscale, (win.get_width() / slide_grayscale.get_width(), win.get_height() / slide_grayscale.get_height())))
+            slide_retro = pygame.image.load(title_screen_retro_file).convert_alpha()
+            slide_retro = retroify_image(pygame.transform.scale_by(slide_retro, (win.get_width() / slide_retro.get_width(), win.get_height() / slide_retro.get_height())))
             controller.main_menu.clear = slide.copy()
-            controller.main_menu.clear_grayscale = slide_grayscale.copy()
+            controller.main_menu.clear_retro = slide_retro.copy()
             black = pygame.Surface((win.get_width(), win.get_height()), pygame.SRCALPHA)
             black.fill((0, 0, 0))
             if not controller.goto_main:
                 for i in range(64):
-                    win.blit((slide_grayscale if controller.force_grayscale else slide), ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
+                    win.blit((slide_retro if controller.force_retro else slide), ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
                     black.set_alpha(255 - (4 * i))
                     win.blit(black, (0, 0))
                     pygame.display.update()
@@ -112,7 +113,7 @@ def main(win):
                 controller.main_menu.buttons[1][2].set_alpha(128)
             new_game = controller.main()
             for i in range(64):
-                win.blit((slide_grayscale if controller.force_grayscale else slide), ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
+                win.blit((slide_retro if controller.force_retro else slide), ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
                 #win.blit(overlay, ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
                 black.set_alpha(4 * i)
                 win.blit(black, (0, 0))
@@ -163,7 +164,7 @@ def main(win):
 
             win.fill((0, 0, 0))
             display_text("Initializing controls...", controller, min_pause_time=0, should_sleep=False)
-            controller.hud = hud = HUD(level.get_player(), win, grayscale=level.grayscale)
+            controller.hud = hud = HUD(level.get_player(), win, retro=level.retro)
 
             if should_load:
                 load_part2(load_data, controller.level)

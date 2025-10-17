@@ -20,10 +20,10 @@ class Level:
         self.achievements = ({} if meta_dict[name].get("achievements") is None else meta_dict[name]["achievements"])
         self.block_size = Level.BLOCK_SIZE if meta_dict[name].get("block_size") is None or not meta_dict[name]["block_size"].isnumeric() else int(meta_dict[name]["block_size"])
         self.purge_queue = {"triggers": set(), "hazards": set(), "blocks": set(), "doors": set(), "enemies": set(), "objectives": set()}
-        if controller.force_grayscale:
-            self.grayscale = True
+        if controller.force_retro:
+            self.retro = True
         else:
-            self.grayscale = (False if meta_dict[name].get("grayscale") is None else bool(meta_dict[name]["grayscale"].upper() == "TRUE"))
+            self.retro = (False if meta_dict[name].get("retro") is None else bool(meta_dict[name]["retro"].upper() == "TRUE"))
         self.can_glitch = (False if meta_dict[name].get("can_glitch") is None else bool(meta_dict[name]["can_glitch"].upper() == "TRUE"))
         self.visual_effects_manager = vfx_manager
         self.background = (None if meta_dict[name].get("background") is None else meta_dict[name]["background"])
@@ -36,11 +36,11 @@ class Level:
             self.end_cinematic = [self.end_cinematic]
         self.start_message = (None if meta_dict[name].get("start_message") is None else meta_dict[name]["start_message"])
         self.end_message = (None if meta_dict[name].get("end_message") is None else meta_dict[name]["end_message"])
-        if self.grayscale and meta_dict[name].get("retro_music") is not None:
+        if self.retro and meta_dict[name].get("retro_music") is not None:
             self.music = validate_file_list("Music", list(meta_dict[name]["retro_music"].split(' ')), "mp3")
         else:
             self.music = (None if meta_dict[name].get("music") is None else validate_file_list("Music", list(meta_dict[name]["music"].split(' ')), "mp3"))
-        if self.grayscale and meta_dict[name].get("retro_cinematics") is not None:
+        if self.retro and meta_dict[name].get("retro_cinematics") is not None:
             self.cinematics = CinematicsManager(meta_dict[name]["retro_cinematics"], controller)
         else:
             self.cinematics = (None if meta_dict[name].get("cinematics") is None else CinematicsManager(meta_dict[name]["cinematics"], controller))
@@ -48,7 +48,7 @@ class Level:
         self.particle_effects: list[ParticleEffect] = []
         if meta_dict[name].get("particle_effect") is not None:
             self.particle_effects.append(self.gen_particle_effect(meta_dict[name]["particle_effect"].upper(), win))
-        if self.grayscale:
+        if self.retro:
             self.particle_effects.append(self.gen_particle_effect("FILM", win))
         if meta_dict[name].get("abilities") is not None:
             self.set_player_abilities(meta_dict[name]["abilities"])
