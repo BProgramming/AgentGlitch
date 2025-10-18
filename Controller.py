@@ -141,7 +141,7 @@ class Controller:
                     msg = "Sorry, this controller type is not supported."
 
             if notify:
-                display_text(msg, self)
+                display_text(msg, self, retro=self.level.retro)
         return (time.perf_counter_ns() - start) // 1000000
 
     def set_keyboard_layout(self, name) -> None:
@@ -354,7 +354,7 @@ class Controller:
                         if self.active_gamepad_layout is not None:
                             self.controls_menu.set_mouse_pos(self.win)
                     else:
-                        display_text("No controller connected.", self)
+                        display_text("No controller connected.", self, retro=self.force_retro)
                 case 2:
                     self.controls_menu.fade_out(self.win, retro=self.force_retro)
                     return

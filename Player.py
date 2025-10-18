@@ -124,7 +124,7 @@ class Player(Actor):
     def revert(self) -> int:
         start = time.perf_counter_ns()
         text = ["Careful!", "You died.", "Watch out!", "OUCH!", "Don't try that again!", "Agent? Agent?!", "Initiating respawn...", "Reverting time..."]
-        display_text(text[random.randrange(len(text))], self.controller, min_pause_time=0, should_sleep=True)
+        display_text(text[random.randrange(len(text))], self.controller, min_pause_time=0, should_sleep=True, retro=self.level.retro)
         self.should_move_vert = False
         self.rect.x, self.rect.y = self.cached_x, self.cached_y
         self.hp = self.cached_hp

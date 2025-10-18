@@ -86,9 +86,9 @@ class NonPlayer(Actor):
     def play_queued_message(self) -> int:
         start = time.perf_counter_ns()
         if type(self.queued_message) == dict and self.queued_message.get("text") is not None and self.queued_message.get("audio") is not None:
-            display_text(self.queued_message["text"], self.controller, audio=self.queued_message["audio"], should_type_text=True)
+            display_text(self.queued_message["text"], self.controller, audio=self.queued_message["audio"], should_type_text=True, retro=self.level.retro)
         else:
-            display_text(self.queued_message, self.controller, should_type_text=True)
+            display_text(self.queued_message, self.controller, should_type_text=True, retro=self.level.retro)
         self.queued_message = None
         return (time.perf_counter_ns() - start) // 1000000
 

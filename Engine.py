@@ -127,7 +127,7 @@ def main(win):
         while True:
             # THIS PART LOADS EVERYTHING: #
             win.fill((0, 0, 0)) ##LOADING SCREEN HERE
-            display_text("Loading mission... [1/3]", controller, min_pause_time=0, should_sleep=False)
+            display_text("Loading mission... [1/3]", controller, min_pause_time=0, should_sleep=False, retro=controller.force_retro)
             should_load = False
             if new_game:
                 cur_level = FIRST_LEVEL_NAME
@@ -145,18 +145,18 @@ def main(win):
                 controller.level_selected = None
             controller.goto_load = False
             win.fill((0, 0, 0)) ##LOADING SCREEN HERE
-            display_text("Loading mission... [2/3]", controller, min_pause_time=0, should_sleep=False)
+            display_text("Loading mission... [2/3]", controller, min_pause_time=0, should_sleep=False, retro=controller.force_retro)
             player_audio = enemy_audio = load_audios("Actors")
             block_audio = load_audios("Blocks")
             message_audio = load_audios("Messages", dir2=cur_level)
             vfx_manager = VisualEffectsManager(join(ASSETS_FOLDER, "VisualEffects"))
             win.fill((0, 0, 0)) ##LOADING SCREEN HERE
-            display_text("Loading mission... [3/3]", controller, min_pause_time=0, should_sleep=False)
+            display_text("Loading mission... [3/3]", controller, min_pause_time=0, should_sleep=False, retro=controller.force_retro)
             ##LOADING SCREEN HERE pass a loading screen to Level() init call so that it can be shown during build_levels()
             controller.level = level = Level(cur_level, levels, meta_dict, objects_dict, {}, {}, player_audio, enemy_audio, block_audio, message_audio, vfx_manager, win, controller)
 
             win.fill((0, 0, 0)) ##LOADING SCREEN HERE
-            display_text("Loading agent...", controller, min_pause_time=0, should_sleep=False)
+            display_text("Loading agent...", controller, min_pause_time=0, should_sleep=False, retro=controller.force_retro)
             if controller.player_abilities is not None:
                 for key in controller.player_abilities:
                     setattr(level.player, key, controller.player_abilities[key])
@@ -164,7 +164,7 @@ def main(win):
                 controller.player_abilities = {"can_wall_jump": level.player.can_wall_jump, "can_teleport": level.player.can_teleport, "can_bullet_time": level.player.can_bullet_time, "can_resize": level.player.can_resize, "can_heal": level.player.can_heal, "max_jumps": level.player.max_jumps}
 
             win.fill((0, 0, 0)) ##LOADING SCREEN HERE
-            display_text("Initializing controls...", controller, min_pause_time=0, should_sleep=False)
+            display_text("Initializing controls...", controller, min_pause_time=0, should_sleep=False, retro=controller.force_retro)
             controller.hud = hud = HUD(level.player, win, retro=level.retro)
 
             if should_load:
@@ -174,7 +174,7 @@ def main(win):
 
             win.fill((0, 0, 0))
             funny_loading_text = ["Applying finishing touches", "Applying one last coat of paint", "Almost done", "Any minute now", "Nearly there", "One more thing", "Tidying up", "Training agent", "Catching the train", "Finishing lunch", "Folding laundry"]
-            display_text(f'{funny_loading_text[random.randint(0, len(funny_loading_text) - 1)]}...', controller, min_pause_time=0, should_sleep=False)
+            display_text(f'{funny_loading_text[random.randint(0, len(funny_loading_text) - 1)]}...', controller, min_pause_time=0, should_sleep=False, retro=controller.force_retro)
 
             camera.prepare(level, hud)
             camera.scroll_to_player(0)
@@ -195,7 +195,7 @@ def main(win):
 
             camera.fade_in(controller)
             if level.start_message is not None:
-                display_text(load_text_from_file(level.start_message), controller, should_type_text=True)
+                display_text(load_text_from_file(level.start_message), controller, should_type_text=True, retro=level.retro)
     
             dtime_offset = 0
             glitch_timer = 0
@@ -308,7 +308,7 @@ def main(win):
             if controller.should_store_steam_stats and controller.steamworks is not None:
                 controller.should_store_steam_stats = False
                 win.fill((0, 0, 0))
-                display_text("Updating your steam achievements...", controller, min_pause_time=0, should_sleep=False)
+                display_text("Updating your steam achievements...", controller, min_pause_time=0, should_sleep=False, retro=level.retro)
                 while True:
                     if controller.steamworks.UserStats.StoreStats():
                         break
@@ -321,7 +321,7 @@ def main(win):
                 break
             elif next_level is not None:
                 if level.end_message is not None:
-                    display_text(load_text_from_file(level.end_message), controller, should_type_text=True)
+                    display_text(load_text_from_file(level.end_message), controller, should_type_text=True, retro=level.retro)
                 controller.save_player_profile()
                 camera.fade_out(controller)
                 if level.end_cinematic is not None:

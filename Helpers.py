@@ -330,7 +330,7 @@ def load_text_from_file(file) -> list | None:
         return None
 
 
-def display_text(output: list | str, controller, should_type_text=False, min_pause_time=80, should_sleep=True, audio=None) -> None:
+def display_text(output: list | str, controller, should_type_text=False, min_pause_time=80, should_sleep=True, audio=None, retro=False) -> None:
     if output is None or output == "":
         return
     else:
@@ -351,6 +351,8 @@ def display_text(output: list | str, controller, should_type_text=False, min_pau
                         text_box = pygame.Surface((text_line.get_width() + 10, text_line.get_height() + 10), pygame.SRCALPHA)
                         text_box.fill((0, 0, 0, 128))
                         text_box.blit(text_line, (5, 5))
+                        if retro:
+                            text_box = retroify_image(text_box)
                         win.blit(clear, (0, 0))
                         win.blit(text_box, ((win.get_width() - text_box.get_width()) // 2, win.get_height() - (text_box.get_height() + 100)))
                         pygame.display.update()
