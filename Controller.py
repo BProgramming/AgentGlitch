@@ -3,7 +3,8 @@ import time
 import pygame
 import sys
 from Menu import Menu, Selector, ButtonType
-from Helpers import display_text, DifficultyScale, load_images, load_level_images, load_picker_sprites, make_image_from_text
+from Helpers import display_text, DifficultyScale, load_images, load_level_images, load_picker_sprites, \
+    make_image_from_text, NORMAL_WHITE, RETRO_WHITE
 from SaveLoadFunctions import save, save_player_profile
 
 
@@ -642,7 +643,8 @@ class Controller:
 
         text_output = pygame.font.SysFont("courier", 18).render(text, True, (0, 0, 0))
         text_box = pygame.Surface((text_output.get_width() + 10, text_output.get_height() + 10), pygame.SRCALPHA)
-        text_box.fill((255, 255, 255, 128))
+        box_colour = RETRO_WHITE if self.force_retro or self.level.retro else NORMAL_WHITE
+        text_box.fill((box_colour[0], box_colour[1], box_colour[2], 128))
         win.blit(text_box, ((win.get_width() - text_box.get_width()) // 2, 3 * (win.get_height() - text_box.get_height()) // 4))
         win.blit(text_output, (((win.get_width() - text_box.get_width()) // 2) + 5, (3 * (win.get_height() - text_box.get_height()) // 4) + 5))
         pygame.display.update()

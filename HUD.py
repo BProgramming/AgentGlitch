@@ -1,6 +1,7 @@
 import pygame
 from os.path import join, isfile, abspath
-from Helpers import handle_exception, load_images, ASSETS_FOLDER, retroify_image
+from Helpers import handle_exception, load_images, ASSETS_FOLDER, retroify_image, NORMAL_BLACK, NORMAL_WHITE, \
+    RETRO_BLACK, RETRO_WHITE
 
 
 class HUD:
@@ -8,7 +9,8 @@ class HUD:
         self.player = player
         self.win = win
         self.scale_factor: tuple[float, float] = (self.win.get_width() / 1920, self.win.get_height() / 1080)
-        self.is_retro: bool = retro
+        self.retro: bool = retro
+        self.border = self.__make_border__(win, retro)
         self.save_icon_timer: float = 0.0
         self.hp_outline: pygame.Surface | None = pygame.Surface((324 * self.scale_factor[0], 16 * self.scale_factor[1]), pygame.SRCALPHA)
         self.hp_outline.fill((0, 0, 0))
@@ -85,13 +87,35 @@ class HUD:
             if retro:
                 self.save_icon = retroify_image(self.save_icon)
 
+    @staticmethod
+    def __make_border__(win, retro) -> pygame.Surface:
+        thickness = 8
+        surf = pygame.Surface((win.get_width(), win.get_height()), pygame.SRCALPHA)
+        line_colour = RETRO_WHITE if retro else NORMAL_WHITE
+        bar_colour = RETRO_BLACK if retro else NORMAL_BLACK
+        for x in [0, win.get_width()]:
+            pygame.draw.line(surf, bar_colour, (x, 0), (x, win.get_height()), thickness * 2)
+            if x == 0:
+                pygame.draw.line(surf, line_colour, (x + thickness, thickness), (x + thickness, win.get_height() - thickness), 1)
+            else:
+                pygame.draw.line(surf, line_colour, (x - thickness, thickness), (x - thickness, win.get_height() - thickness), 1)
+        for y in [0, win.get_height()]:
+            pygame.draw.line(surf, bar_colour, (0, y), (win.get_width(), y), thickness * 2)
+            if y == 0:
+                pygame.draw.line(surf, line_colour, (thickness, y + thickness), (win.get_width() - thickness, y + thickness), 1)
+            else:
+                pygame.draw.line(surf, line_colour, (thickness, y - thickness), (win.get_width() - thickness, y - thickness), 1)
+        ## blit a corner piece based on retro=true/false, maybe blit a middle piece, maybe make it slightly uneven too
+        return surf
+
+
     def __draw_health_bar__(self) -> None:
         hp_pct: float = min(1.0, max(0.01, self.player.hp / self.player.max_hp))
         if self.hp_pct != hp_pct:
             self.hp_pct = hp_pct
             self.hp_bar = pygame.Surface((int((self.hp_outline.get_width() - 4) * hp_pct) * self.scale_factor[0], 12 * self.scale_factor[1]), pygame.SRCALPHA)
-            if self.is_retro:
-                self.hp_bar.fill((255, 255, 255))
+            if self.retro:
+                self.hp_bar.fill((min(int(250 * hp_pct), 255), min(int(215 * hp_pct), 255), min(int(195 * hp_pct), 255)))
             else:
                 self.hp_bar.fill((min(int(2 * 255 * (1 - hp_pct)), 255), min(int(2 * 255 * hp_pct), 255), 0))
         self.win.blit(self.hp_outline, (10, 10))
@@ -103,8 +127,8 @@ class HUD:
             if self.boss_hp_bar_alpha < 128:
                 self.boss_hp_bar_alpha += 1
                 self.boss_hp_outline.fill((0, 0, 0, self.boss_hp_bar_alpha))
-            if self.is_retro:
-                self.boss_hp_bar.fill((255, 255, 255, self.boss_hp_bar_alpha))
+            if self.retro:
+                self.boss_hp_bar.fill((RETRO_WHITE[0], RETRO_WHITE[1], RETRO_WHITE[2], self.boss_hp_bar_alpha))
             else:
                 self.boss_hp_bar.fill((255, 0, 0, self.boss_hp_bar_alpha))
             if self.boss_hp_bar_alpha < 128:
@@ -117,8 +141,8 @@ class HUD:
             self.win.blit(rendered_hp_bar, (((self.win.get_width() - rendered_hp_outline.get_width()) // 2) + 2, (self.win.get_height() - (rendered_hp_outline.get_height() + 100)) + 2))
         elif self.boss_hp_bar_alpha > 0:
             self.boss_hp_bar_alpha -= 1
-            if self.is_retro:
-                self.boss_hp_bar.fill((255, 255, 255, self.boss_hp_bar_alpha))
+            if self.retro:
+                self.boss_hp_bar.fill((RETRO_WHITE[0], RETRO_WHITE[1], RETRO_WHITE[2], self.boss_hp_bar_alpha))
             else:
                 self.boss_hp_bar.fill((255, 0, 0, self.boss_hp_bar_alpha))
             self.boss_hp_outline.fill((0, 0, 0, self.boss_hp_bar_alpha))
@@ -177,3 +201,4 @@ class HUD:
         self.__draw_time__(formatted_level_time)
         if self.save_icon_timer > 0:
             self.__draw_save__()
+        self.win.blit(self.border, (0, 0))

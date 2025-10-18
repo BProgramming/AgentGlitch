@@ -6,8 +6,6 @@ from steamworks.exceptions import *
 
 
 class SteamworksConnection:
-    DLC_APP_ID = 0
-
     def __init__(self):
         self.connection = self.initialize()
         if not self.connection.UserStats.RequestCurrentStats():
@@ -28,4 +26,4 @@ class SteamworksConnection:
         return sw
 
     def has_dlc(self) -> dict[str, bool]:
-        return {"gumshoe": True}##self.connection.Apps.IsDLCInstalled(SteamworksConnection.DLC_APP_ID)}
+        return {"gumshoe": True}##self.connection.Apps.IsDLCInstalled(DLC_APP_ID)}

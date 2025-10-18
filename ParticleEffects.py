@@ -2,7 +2,7 @@ import pygame
 import random
 from enum import Enum
 
-from Helpers import retroify_image
+from Helpers import retroify_image, NORMAL_WHITE, RETRO_WHITE
 
 
 class ParticleType(Enum):
@@ -75,8 +75,6 @@ class ParticleEffect:
                 else:
                     particle = pygame.Surface((random.randint(0, width), random.randint(0, height)), pygame.SRCALPHA)
                     particle.fill(color)
-                if is_retro:
-                    particle = retroify_image(particle)
                 image.blit(particle, point)
             images.append(image)
 
@@ -151,6 +149,7 @@ class Snow(ParticleEffect):
 
 class FilmGrain(ParticleEffect):
     def __init__(self, level, win):
-        color = (255, 255, 255, 200)
+        color = RETRO_WHITE if level.retro else NORMAL_WHITE
+        color = (color[0], color[1], color[2], 200)
         amount = win.get_width() * win.get_height() // 100000
         super().__init__(level, win, 2, 1000, amount, color, effect_type=ParticleType.VARIABLE, should_move=False)

@@ -16,6 +16,10 @@ ASSETS_FOLDER: str = "Assets"
 GAME_DATA_FOLDER: str = "GameData"
 FIRST_LEVEL_NAME: str = "__START__"
 DLC_APP_ID: int = 0
+NORMAL_WHITE: tuple[int, int, int, int] = (255, 255, 255, 255)
+RETRO_WHITE: tuple[int, int, int, int] = (250, 215, 195, 255)
+NORMAL_BLACK: tuple[int, int, int, int] = (33, 31, 48, 255)
+RETRO_BLACK: tuple[int, int, int, int] = (0, 0, 0, 255)
 
 
 class MovementDirection(IntEnum):
@@ -69,7 +73,7 @@ def validate_file_list(dir, lst, ext=None) -> list | None:
 
 def retroify_image(image: pygame.Surface) -> pygame.Surface:
     image = pygame.transform.grayscale(image)
-    tint_color = (250, 215, 195, 255)
+    tint_color = RETRO_WHITE
     color_surface = pygame.Surface(image.get_size(), pygame.SRCALPHA)
     color_surface.fill(tint_color)
     image.blit(color_surface, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
@@ -132,15 +136,15 @@ def load_level_images(dir) -> tuple | None:
         return None
 
 
-def make_image_from_text(width, height, header, body, border=5) -> pygame.Surface:
-    text_header = pygame.font.SysFont("courier", 32).render(header, True, (255, 255, 255))
+def make_image_from_text(width, height, header, body, border=5, retro=False) -> pygame.Surface:
+    text_header = pygame.font.SysFont("courier", 32).render(header, True, RETRO_WHITE if retro else NORMAL_WHITE)
     box_header = pygame.Surface((text_header.get_width() + (border * 2), text_header.get_height() + (border * 2)), pygame.SRCALPHA)
     box_header.blit(text_header, (border, border))
     max_width = box_header.get_width()
     max_height = box_header.get_height()
     boxes_body = []
     for line in body:
-        text_body = pygame.font.SysFont("courier", 16).render(line, True, (255, 255, 255))
+        text_body = pygame.font.SysFont("courier", 16).render(line, True, RETRO_WHITE if retro else NORMAL_WHITE)
         box_body = pygame.Surface((text_body.get_width() + (border * 2), text_body.get_height()), pygame.SRCALPHA)
         box_body.blit(text_body, (border, 0))
         max_width = max(width, box_body.get_width())
@@ -334,6 +338,9 @@ def display_text(output: list | str, controller, should_type_text=False, min_pau
     if output is None or output == "":
         return
     else:
+        text_colour = RETRO_WHITE if retro else NORMAL_WHITE
+        box_colour = RETRO_BLACK if retro else NORMAL_BLACK
+        box_colour = (box_colour[0], box_colour[1], box_colour[2], 128)
         win = controller.win
         if not isinstance(output, list):
             output = [output]
@@ -347,12 +354,10 @@ def display_text(output: list | str, controller, should_type_text=False, min_pau
                     if (i == 0 and line[0] == "\"") or (i < len(line) - 1 and line[i + 1] == "\""):
                         pass
                     else:
-                        text_line = pygame.font.SysFont("courier", 32).render("".join(text), True, (255, 255, 255))
+                        text_line = pygame.font.SysFont("courier", 32).render("".join(text), True, text_colour)
                         text_box = pygame.Surface((text_line.get_width() + 10, text_line.get_height() + 10), pygame.SRCALPHA)
-                        text_box.fill((0, 0, 0, 128))
+                        text_box.fill(box_colour)
                         text_box.blit(text_line, (5, 5))
-                        if retro:
-                            text_box = retroify_image(text_box)
                         win.blit(clear, (0, 0))
                         win.blit(text_box, ((win.get_width() - text_box.get_width()) // 2, win.get_height() - (text_box.get_height() + 100)))
                         pygame.display.update()
@@ -371,9 +376,9 @@ def display_text(output: list | str, controller, should_type_text=False, min_pau
                             pause_dtime += 10
             else:
                 text = line
-                text_line = pygame.font.SysFont("courier", 32).render("".join(text), True, (255, 255, 255))
+                text_line = pygame.font.SysFont("courier", 32).render("".join(text), True, text_colour)
                 text_box = pygame.Surface((text_line.get_width() + 10, text_line.get_height() + 10), pygame.SRCALPHA)
-                text_box.fill((0, 0, 0, 128))
+                text_box.fill(box_colour)
                 text_box.blit(text_line, (5, 5))
                 win.blit(clear, (0, 0))
                 win.blit(text_box, ((win.get_width() - text_box.get_width()) // 2, win.get_height() - (text_box.get_height() + 100)))

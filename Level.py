@@ -7,7 +7,7 @@ from NonPlayer import NonPlayer
 from Objectives import Objective
 from Trigger import Trigger, TriggerType
 from ParticleEffects import *
-from Helpers import load_path, validate_file_list, display_text, ASSETS_FOLDER
+from Helpers import load_path, validate_file_list, display_text, ASSETS_FOLDER, NORMAL_WHITE, RETRO_WHITE
 
 
 class Level:
@@ -277,10 +277,11 @@ class Level:
         hazards = []
         falling_hazards = {}
         objectives = []
+        bar_colour = RETRO_WHITE if level.retro else NORMAL_WHITE
         for i in range(len(layout)):
             win.fill((0, 0, 0))
             bar = pygame.Surface((int(win.get_width() * ((i + 1) / len(layout))), 10), pygame.SRCALPHA)
-            bar.fill((255, 255, 255))
+            bar.fill(bar_colour)
             win.blit(bar, (0, win.get_height() - 12))
             pct = 100 * (i + 1)//len(layout)
             win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
