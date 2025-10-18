@@ -56,28 +56,16 @@ class ParticleEffect:
     @staticmethod
     def generate_variable_effect(width, height, amount, color, bounds, is_retro) -> list[pygame.Surface]:
         images = []
-        min_screens = 20
-        max_screens = 30
-        for i in range(random.randint(min_screens, max_screens)):
-            points = []
-            for j in range(random.randint(0, amount)):
-                points.append((random.randint(0, bounds[1][0]), random.randint(0, bounds[1][1])))
-
-            image = pygame.Surface(bounds[1], pygame.SRCALPHA)
-            image.set_colorkey((0, 0, 0))
-
-            for point in points:
-                if random.randint(0, 1) == 0:
-                    radius = random.randint(1, width) * random.randint(1, width)
-                    border_thickness = random.randint(0, 1)
-                    particle = pygame.Surface(((radius + border_thickness) * 2, (radius + border_thickness) * 2), pygame.SRCALPHA)
-                    pygame.draw.circle(particle, color, (radius, radius), radius, border_thickness)
-                else:
-                    particle = pygame.Surface((random.randint(0, width), random.randint(0, height)), pygame.SRCALPHA)
-                    particle.fill(color)
-                image.blit(particle, point)
-            images.append(image)
-
+        for i in range(amount):
+            if random.randint(0, 1) == 0:
+                radius = random.randint(1, width) * random.randint(1, width)
+                border_thickness = random.randint(0, 1)
+                particle = pygame.Surface(((radius + border_thickness) * 2, (radius + border_thickness) * 2), pygame.SRCALPHA)
+                pygame.draw.circle(particle, color, (radius, radius), radius, border_thickness)
+            else:
+                particle = pygame.Surface((random.randint(0, width), random.randint(0, height)), pygame.SRCALPHA)
+                particle.fill(color)
+            images.append(particle)
         return images
 
     def move(self, dtime) -> None:
@@ -107,8 +95,6 @@ class ParticleEffect:
     def loop(self, dtime):
         if self.should_move:
             self.move(dtime)
-        if isinstance(self.image, list):
-            self.cycle_image(dtime)
 
     def draw(self, win, offset_x, offset_y, master_volume, fps) -> None:
         if self.should_move:
@@ -130,7 +116,10 @@ class ParticleEffect:
             if isinstance(self.image, pygame.Surface):
                 win.blit(self.image, (0, 0))
             elif isinstance(self.image, list):
-                win.blit(self.image[self.image_index], (0, 0))
+                for image in self.image:
+                    if random.randint(0, 1) == 1:
+                        win.blit(image, (random.randint(-image.get_width(), win.get_width() + image.get_width()), random.randint(-image.get_height(), win.get_height() + image.get_height())))
+                return
 
 
 class Rain(ParticleEffect):
@@ -151,5 +140,5 @@ class FilmGrain(ParticleEffect):
     def __init__(self, level, win):
         color = RETRO_WHITE if level.retro else NORMAL_WHITE
         color = (color[0], color[1], color[2], 200)
-        amount = win.get_width() * win.get_height() // 100000
+        amount = win.get_width() * win.get_height() // 400000
         super().__init__(level, win, 2, 1000, amount, color, effect_type=ParticleType.VARIABLE, should_move=False)
