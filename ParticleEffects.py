@@ -56,8 +56,8 @@ class ParticleEffect:
     @staticmethod
     def generate_variable_effect(width, height, amount, color, bounds, is_retro) -> list[pygame.Surface]:
         images = []
-        min_screens = 12
-        max_screens = 24
+        min_screens = 20
+        max_screens = 30
         for i in range(random.randint(min_screens, max_screens)):
             points = []
             for j in range(random.randint(0, amount)):
@@ -68,9 +68,10 @@ class ParticleEffect:
 
             for point in points:
                 if random.randint(0, 1) == 0:
-                    rand_width = random.randint(1, width) * random.randint(1, width)
-                    particle = pygame.Surface((rand_width, rand_width), pygame.SRCALPHA)
-                    pygame.draw.circle(particle, color, (rand_width / 2, rand_width / 2), rand_width)
+                    radius = random.randint(1, width) * random.randint(1, width)
+                    border_thickness = random.randint(0, 1)
+                    particle = pygame.Surface(((radius + border_thickness) * 2, (radius + border_thickness) * 2), pygame.SRCALPHA)
+                    pygame.draw.circle(particle, color, (radius, radius), radius, border_thickness)
                 else:
                     particle = pygame.Surface((random.randint(0, width), random.randint(0, height)), pygame.SRCALPHA)
                     particle.fill(color)
@@ -99,9 +100,11 @@ class ParticleEffect:
         self.image_count += dtime
         if self.image_count > ParticleEffect.VARIABLE_IMAGE_DISPLAY_TIME:
             self.image_count = 0
-            self.image_index += 1
-            if self.image_index >= len(self.image):
-                self.image_index = 0
+            for i in range(2):
+                next_ind = random.randint(0, len(self.image) - 1)
+                if self.image_index != next_ind:
+                    self.image_index = next_ind
+                    break
 
     def loop(self, dtime):
         if self.should_move:

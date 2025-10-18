@@ -121,7 +121,7 @@ class Menu:
 
         pygame.mouse.set_pos((x, y))
 
-    def display(self, win: pygame.Surface, retro: bool=False) -> int | None:
+    def display(self, win: pygame.Surface, retro: bool = False) -> int | None:
         if self.clear is not None:
             if retro:
                 if self.clear_retro is None:
@@ -207,6 +207,9 @@ class Menu:
                     notch.fill((140, 0, 0))
                 screen.blit(bar, (bar_rect.x, bar_rect.y))
                 screen.blit(notch, (notch_rect.x, notch_rect.y))
+
+        if retro:
+            screen = retroify_image(screen)
 
         if self.should_glitch:
             if self.glitch_timer > 0:
@@ -395,6 +398,9 @@ class Selector(Menu):
                 button_type = 1
 
             screen.blit(self.buttons[i][button_type], (dest_x, dest_y))
+
+        if retro:
+            screen = retroify_image(screen)
 
         if self.should_glitch:
             if self.glitch_timer > 0:

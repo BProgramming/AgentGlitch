@@ -26,4 +26,4 @@ class SteamworksConnection:
         return sw
 
     def has_dlc(self) -> dict[str, bool]:
-        return {"gumshoe": self.connection.Apps.IsDLCInstalled(DLC_APP_ID)}
+        return {"gumshoe": True}##self.connection.Apps.IsDLCInstalled(DLC_APP_ID)}

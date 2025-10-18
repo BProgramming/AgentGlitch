@@ -68,7 +68,12 @@ def validate_file_list(dir, lst, ext=None) -> list | None:
 
 
 def retroify_image(image: pygame.Surface) -> pygame.Surface:
-    return pygame.transform.grayscale(image)
+    image = pygame.transform.grayscale(image)
+    tint_color = (250, 215, 195, 255)
+    color_surface = pygame.Surface(image.get_size(), pygame.SRCALPHA)
+    color_surface.fill(tint_color)
+    image.blit(color_surface, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    return image
 
 
 def load_picker_sprites(dir) -> tuple | None:
