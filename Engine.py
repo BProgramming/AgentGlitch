@@ -1,7 +1,8 @@
 import pygame
 from SteamworksConnection import SteamworksConnection
 from Helpers import load_json_dict, load_object_dicts, load_levels, load_audios, display_text, DifficultyScale, \
-    handle_exception, load_text_from_file, ASSETS_FOLDER, GAME_DATA_FOLDER, FIRST_LEVEL_NAME, retroify_image
+    handle_exception, load_text_from_file, ASSETS_FOLDER, GAME_DATA_FOLDER, FIRST_LEVEL_NAME, retroify_image, \
+    load_images
 from os.path import join, isfile, abspath
 from DiscordConnection import DiscordConnection
 from SimpleVFX.SimpleVFX import VisualEffectsManager
@@ -68,6 +69,7 @@ def main(win):
 
     cinematics_files = start_cinematics + recap_cinematics + end_cinematics
     cinematics = CinematicsManager(cinematics_files, controller)
+    loading_screens = load_images("LoadingScreens", None)
 
     if meta_dict.get("MAIN_MENU") is not None and meta_dict["MAIN_MENU"].get("title_screen") is not None:
         title_screen_file = join(ASSETS_FOLDER, "Screens", meta_dict["MAIN_MENU"]["title_screen"])
@@ -126,7 +128,11 @@ def main(win):
         cur_level = None
         while True:
             # THIS PART LOADS EVERYTHING: #
-            win.fill((0, 0, 0)) ##LOADING SCREEN HERE
+            loading_screen = list(loading_screens.values())[random.randint(0, len(loading_screens) - 1)]
+            if controller.force_retro:
+                loading_screen = retroify_image(loading_screen)
+            win.fill((0, 0, 0))
+            win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
             display_text("Loading mission... [1/3]", controller, min_pause_time=0, should_sleep=False, retro=controller.force_retro)
             should_load = False
             if new_game:
@@ -144,18 +150,21 @@ def main(win):
                 cur_level = controller.level_selected
                 controller.level_selected = None
             controller.goto_load = False
-            win.fill((0, 0, 0)) ##LOADING SCREEN HERE
+            win.fill((0, 0, 0))
+            win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
             display_text("Loading mission... [2/3]", controller, min_pause_time=0, should_sleep=False, retro=controller.force_retro)
             player_audio = enemy_audio = load_audios("Actors")
             block_audio = load_audios("Blocks")
             message_audio = load_audios("Messages", dir2=cur_level)
             vfx_manager = VisualEffectsManager(join(ASSETS_FOLDER, "VisualEffects"))
-            win.fill((0, 0, 0)) ##LOADING SCREEN HERE
+            win.fill((0, 0, 0))
+            win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
             display_text("Loading mission... [3/3]", controller, min_pause_time=0, should_sleep=False, retro=controller.force_retro)
             ##LOADING SCREEN HERE pass a loading screen to Level() init call so that it can be shown during build_levels()
-            controller.level = level = Level(cur_level, levels, meta_dict, objects_dict, {}, {}, player_audio, enemy_audio, block_audio, message_audio, vfx_manager, win, controller)
+            controller.level = level = Level(cur_level, levels, meta_dict, objects_dict, {}, {}, player_audio, enemy_audio, block_audio, message_audio, vfx_manager, win, controller, loading_screen)
 
-            win.fill((0, 0, 0)) ##LOADING SCREEN HERE
+            win.fill((0, 0, 0))
+            win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
             display_text("Loading agent...", controller, min_pause_time=0, should_sleep=False, retro=controller.force_retro)
             if controller.player_abilities is not None:
                 for key in controller.player_abilities:
@@ -163,7 +172,8 @@ def main(win):
             else:
                 controller.player_abilities = {"can_wall_jump": level.player.can_wall_jump, "can_teleport": level.player.can_teleport, "can_bullet_time": level.player.can_bullet_time, "can_resize": level.player.can_resize, "can_heal": level.player.can_heal, "max_jumps": level.player.max_jumps}
 
-            win.fill((0, 0, 0)) ##LOADING SCREEN HERE
+            win.fill((0, 0, 0))
+            win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
             display_text("Initializing controls...", controller, min_pause_time=0, should_sleep=False, retro=controller.force_retro)
             controller.hud = hud = HUD(level.player, win, retro=level.retro)
 
@@ -173,6 +183,7 @@ def main(win):
             controller.get_gamepad()
 
             win.fill((0, 0, 0))
+            win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
             funny_loading_text = ["Applying finishing touches", "Applying one last coat of paint", "Almost done", "Any minute now", "Nearly there", "One more thing", "Tidying up", "Training agent", "Catching the train", "Finishing lunch", "Folding laundry"]
             display_text(f'{funny_loading_text[random.randint(0, len(funny_loading_text) - 1)]}...', controller, min_pause_time=0, should_sleep=False, retro=controller.force_retro)
 

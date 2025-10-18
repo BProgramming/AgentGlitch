@@ -13,7 +13,7 @@ from Helpers import load_path, validate_file_list, display_text, ASSETS_FOLDER
 class Level:
     BLOCK_SIZE = 96
 
-    def __init__(self, name, levels, meta_dict, objects_dict, sprite_master, image_master, player_audios, enemy_audios, block_audios, message_audios, vfx_manager, win, controller):
+    def __init__(self, name, levels, meta_dict, objects_dict, sprite_master, image_master, player_audios, enemy_audios, block_audios, message_audios, vfx_manager, win, controller, loading_screen):
         self.name = name.upper()
         self.display_name = self.name if meta_dict[name].get("name") is None else meta_dict[name]["name"]
         self.time = 0
@@ -44,7 +44,7 @@ class Level:
             self.cinematics = CinematicsManager(meta_dict[name]["retro_cinematics"], controller)
         else:
             self.cinematics = (None if meta_dict[name].get("cinematics") is None else CinematicsManager(meta_dict[name]["cinematics"], controller))
-        self.level_bounds, self._player, self.triggers, self.blocks, self.dynamic_blocks, self.doors, self.static_blocks, self.hazards, self.falling_hazards, self.enemies, self.objectives = self.build_level(self, levels[self.name], sprite_master, image_master, objects_dict[self.name], player_audios, enemy_audios, block_audios, message_audios, win, controller, None if meta_dict[name].get("player_sprite") is None or meta_dict[name]["player_sprite"].upper() == "NONE" else meta_dict[name]["player_sprite"], self.block_size)
+        self.level_bounds, self._player, self.triggers, self.blocks, self.dynamic_blocks, self.doors, self.static_blocks, self.hazards, self.falling_hazards, self.enemies, self.objectives = self.build_level(self, levels[self.name], sprite_master, image_master, objects_dict[self.name], player_audios, enemy_audios, block_audios, message_audios, win, controller, None if meta_dict[name].get("player_sprite") is None or meta_dict[name]["player_sprite"].upper() == "NONE" else meta_dict[name]["player_sprite"], self.block_size, loading_screen)
         self.particle_effects: list[ParticleEffect] = []
         if meta_dict[name].get("particle_effect") is not None:
             self.particle_effects.append(self.gen_particle_effect(meta_dict[name]["particle_effect"].upper(), win))
@@ -61,7 +61,7 @@ class Level:
         self.objectives_available = len(self.objectives)
         self.enemies_available = len(self.enemies)
         self.boss_hp_pct = None
-        self.hot_swap_level = (None if meta_dict[name].get("hot_swap_level") is None or meta_dict.get(meta_dict[name]["hot_swap_level"]) is None else Level(meta_dict[name]["hot_swap_level"], levels, meta_dict, objects_dict, sprite_master, image_master, player_audios, enemy_audios, block_audios, message_audios, vfx_manager, win, controller))
+        self.hot_swap_level = (None if meta_dict[name].get("hot_swap_level") is None or meta_dict.get(meta_dict[name]["hot_swap_level"]) is None else Level(meta_dict[name]["hot_swap_level"], levels, meta_dict, objects_dict, sprite_master, image_master, player_audios, enemy_audios, block_audios, message_audios, vfx_manager, win, controller, loading_screen))
 
     @property
     def player(self) -> Player:
@@ -262,7 +262,7 @@ class Level:
             effect.draw(win, offset_x, offset_y, master_volume, fps)
 
     @staticmethod
-    def build_level(level, layout, sprite_master, image_master, objects_dict, player_audios, enemy_audios, block_audios, message_audios, win, controller, player_sprite, block_size) -> tuple:
+    def build_level(level, layout, sprite_master, image_master, objects_dict, player_audios, enemy_audios, block_audios, message_audios, win, controller, player_sprite, block_size, loading_screen) -> tuple:
         width = len(layout[-1]) * block_size
         height = len(layout) * block_size
         level_bounds = ((0, 0), (width, height))
@@ -283,6 +283,7 @@ class Level:
             bar.fill((255, 255, 255))
             win.blit(bar, (0, win.get_height() - 12))
             pct = 100 * (i + 1)//len(layout)
+            win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
             display_text(f'Building level... {" " if pct < 100 else ""}{" " if pct < 10 else ""}{pct}%', controller, min_pause_time=0, should_sleep=False, retro=level.retro)
             static_blocks.append([])
             for j in range(len(layout[i])):
