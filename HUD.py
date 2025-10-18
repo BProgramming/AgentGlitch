@@ -105,7 +105,17 @@ class HUD:
                 pygame.draw.line(surf, line_colour, (thickness, y + thickness), (win.get_width() - thickness, y + thickness), 1)
             else:
                 pygame.draw.line(surf, line_colour, (thickness, y - thickness), (win.get_width() - thickness, y - thickness), 1)
-        ## blit a corner piece based on retro=true/false, maybe blit a middle piece, maybe make it slightly uneven too
+        file = join(ASSETS_FOLDER, "Foreground", "border_retro.png")
+        corner: pygame.Surface | None
+        if not isfile(file):
+            handle_exception(f'File {FileNotFoundError(abspath(file))} not found.')
+            corner = None
+        else:
+            corner = pygame.image.load(file).convert_alpha()
+        if corner is not None:
+            coords = ((0, 0, 0), (win.get_width() - corner.get_width(), 0, 270), (win.get_width() - corner.get_width(), win.get_height() - corner.get_height(), 180), (0, win.get_height() - corner.get_height(), 90))
+            for coord in coords:
+                surf.blit(pygame.transform.rotate(corner, coord[2]), (coord[0], coord[1]))
         return surf
 
 
@@ -201,4 +211,5 @@ class HUD:
         self.__draw_time__(formatted_level_time)
         if self.save_icon_timer > 0:
             self.__draw_save__()
-        self.win.blit(self.border, (0, 0))
+        if self.retro:
+            self.win.blit(self.border, (0, 0))
