@@ -39,8 +39,8 @@ class MovementState(Enum):
 class Actor(Entity):
     SIZE = 64
     VELOCITY_TARGET = 0.4
-    VELOCITY_JUMP = 0.75
-    JUMP_TIME = 120
+    VELOCITY_JUMP = 0.625
+    JUMP_TIME = 16
     GET_HIT_COOLDOWN = 1
     MAX_SHOOT_DISTANCE = 500
     ATTACK_DAMAGE = 10
@@ -490,7 +490,7 @@ class Actor(Entity):
                 else:
                     self.x_vel = 0.0
 
-                if self.should_move_vert:
+                if self.should_move_vert and self.jump_time <= 0:
                     self.y_vel += dtime * Actor.GRAVITY * self.size / (1 + (3 if self.is_wall_jumping and self.y_vel > 0 else 0))
 
                 if (self.x_vel + self.push_x != 0 or self.y_vel + self.push_y != 0) and self.hp > 0:
