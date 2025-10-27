@@ -5,7 +5,7 @@ from enum import Enum
 from Entity import Entity
 from Projectile import Projectile
 from Block import Hazard, MovableBlock, MovingBlock
-from Objectives import Objective
+from Objective import Objective
 from Helpers import load_sprite_sheets, MovementDirection, set_sound_source
 from SimpleVFX.SimpleVFX import VisualEffect, ImageDirection
 

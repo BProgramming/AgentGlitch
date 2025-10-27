@@ -4,9 +4,9 @@ from Boss import Boss
 from Cinematics import CinematicsManager
 from Player import Player
 from NonPlayer import NonPlayer
-from Objectives import Objective
+from Objective import Objective
 from Trigger import Trigger, TriggerType
-from ParticleEffects import *
+from ParticleEffect import *
 from Helpers import load_path, validate_file_list, display_text, ASSETS_FOLDER, NORMAL_WHITE, RETRO_WHITE
 
 
@@ -20,7 +20,7 @@ class Level:
         self.achievements = ({} if meta_dict[name].get("achievements") is None else meta_dict[name]["achievements"])
         self.block_size = Level.BLOCK_SIZE if meta_dict[name].get("block_size") is None or not meta_dict[name]["block_size"].isnumeric() else int(meta_dict[name]["block_size"])
         self.purge_queue = {"triggers": set(), "hazards": set(), "blocks": set(), "doors": set(), "enemies": set(), "objectives": set()}
-        if controller.force_retro:
+        if controller.retro:
             self._retro = True
         else:
             self._retro = (False if meta_dict[name].get("retro") is None else bool(meta_dict[name]["retro"].upper() == "TRUE"))

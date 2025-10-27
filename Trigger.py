@@ -5,7 +5,7 @@ from os.path import join, isfile
 from Helpers import display_text, load_text_from_file, load_path, set_property, ASSETS_FOLDER
 from Entity import Entity
 from Block import Block, BreakableBlock, MovableBlock, Hazard, MovingBlock, MovingHazard, Door, FallingHazard
-from Objectives import Objective
+from Objective import Objective
 from NonPlayer import NonPlayer
 from Boss import Boss
 

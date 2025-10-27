@@ -6,7 +6,6 @@ from Helpers import load_json_dict, load_object_dicts, load_levels, load_audios,
 from os.path import join, isfile, abspath
 from DiscordConnection import DiscordConnection
 from SimpleVFX.SimpleVFX import VisualEffectsManager
-from ParticleEffects import ParticleType
 
 # This stuff happens in the middle of imports because some classes require pygame display available before they can be imported
 # And steam is initialized first because it doesn't work having it after pygame.init for... reasons?
@@ -89,6 +88,7 @@ def main(win):
         if not controller.goto_main:
             for cinematic in start_cinematics:
                 cinematics.play(cinematic["name"], win)
+        controller.refresh_selector_images()
         pygame.mixer.music.set_volume(controller.master_volume["background"])
         new_game = False
         if isfile(title_screen_file):
@@ -96,26 +96,21 @@ def main(win):
             slide = pygame.transform.scale_by(slide, (win.get_width() / slide.get_width(), win.get_height() / slide.get_height()))
             slide_retro = pygame.image.load(title_screen_retro_file).convert_alpha()
             slide_retro = retroify_image(pygame.transform.scale_by(slide_retro, (win.get_width() / slide_retro.get_width(), win.get_height() / slide_retro.get_height())))
-            controller.main_menu.clear = slide.copy()
+            controller.main_menu.clear_normal = slide.copy()
             controller.main_menu.clear_retro = slide_retro.copy()
             black = pygame.Surface((win.get_width(), win.get_height()), pygame.SRCALPHA)
             black.fill((0, 0, 0))
             if not controller.goto_main:
                 for i in range(64):
-                    win.blit((slide_retro if controller.force_retro else slide), ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
+                    win.blit((slide_retro if controller.retro else slide), ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
                     black.set_alpha(255 - (4 * i))
                     win.blit(black, (0, 0))
                     pygame.display.update()
                     time.sleep(0.01)
-            if isfile(join(GAME_DATA_FOLDER, "save.p")):
-                controller.main_menu.buttons[1][1].set_alpha(255)
-                controller.main_menu.buttons[1][2].set_alpha(255)
-            else:
-                controller.main_menu.buttons[1][1].set_alpha(128)
-                controller.main_menu.buttons[1][2].set_alpha(128)
+            controller.main_menu.buttons[1].is_enabled = isfile(join(GAME_DATA_FOLDER, "save.p"))
             new_game = controller.main()
             for i in range(64):
-                win.blit((slide_retro if controller.force_retro else slide), ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
+                win.blit((slide_retro if controller.retro else slide), ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
                 #win.blit(overlay, ((win.get_width() - slide.get_width()) // 2, (win.get_height() - slide.get_height()) // 2))
                 black.set_alpha(4 * i)
                 win.blit(black, (0, 0))
@@ -129,11 +124,11 @@ def main(win):
         while True:
             # THIS PART LOADS EVERYTHING: #
             loading_screen = list(loading_screens.values())[random.randint(0, len(loading_screens) - 1)]
-            if controller.force_retro:
+            if controller.retro:
                 loading_screen = retroify_image(loading_screen)
             win.fill((0, 0, 0))
             win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
-            display_text("Loading mission... [1/3]", controller, min_pause_time=0, should_sleep=False, retro=controller.force_retro)
+            display_text("Loading mission... [1/3]", controller, min_pause_time=0, should_sleep=False, retro=controller.retro)
             should_load = False
             if new_game:
                 cur_level = FIRST_LEVEL_NAME
@@ -152,14 +147,14 @@ def main(win):
             controller.goto_load = False
             win.fill((0, 0, 0))
             win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
-            display_text("Loading mission... [2/3]", controller, min_pause_time=0, should_sleep=False, retro=controller.force_retro)
+            display_text("Loading mission... [2/3]", controller, min_pause_time=0, should_sleep=False, retro=controller.retro)
             player_audio = enemy_audio = load_audios("Actors")
             block_audio = load_audios("Blocks")
             message_audio = load_audios("Messages", dir2=cur_level)
             vfx_manager = VisualEffectsManager(join(ASSETS_FOLDER, "VisualEffects"))
             win.fill((0, 0, 0))
             win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
-            display_text("Loading mission... [3/3]", controller, min_pause_time=0, should_sleep=False, retro=controller.force_retro)
+            display_text("Loading mission... [3/3]", controller, min_pause_time=0, should_sleep=False, retro=controller.retro)
             controller.level = level = Level(cur_level, levels, meta_dict, objects_dict, {}, {}, player_audio, enemy_audio, block_audio, message_audio, vfx_manager, win, controller, loading_screen)
 
             win.fill((0, 0, 0))

@@ -138,10 +138,8 @@ def load_level_images(dir) -> tuple | None:
 
 def make_image_from_text(width, height, header, body, border=5, retro=False) -> pygame.Surface:
     text_header = pygame.font.SysFont("courier", 32).render(header, True, RETRO_WHITE if retro else NORMAL_WHITE)
-    box_header = pygame.Surface((text_header.get_width() + (border * 2), text_header.get_height() + (border * 2)), pygame.SRCALPHA)
-    box_header.blit(text_header, (border, border))
-    max_width = box_header.get_width()
-    max_height = box_header.get_height()
+    max_width = text_header.get_width()
+    max_height = text_header.get_height()
     boxes_body = []
     for line in body:
         text_body = pygame.font.SysFont("courier", 16).render(line, True, RETRO_WHITE if retro else NORMAL_WHITE)
@@ -151,11 +149,10 @@ def make_image_from_text(width, height, header, body, border=5, retro=False) -> 
         max_height += box_body.get_height()
         boxes_body.append(box_body)
     box = pygame.Surface((max(width, max_width), max(height, max_height)), pygame.SRCALPHA)
-    box.blit(box_header, ((box.get_width() - box_header.get_width()) // 2, (box.get_height() - max_height) // 2))
+    box.blit(text_header, ((box.get_width() - text_header.get_width()) / 2, (box.get_height() - max_height) / 2))
     for i in range(len(boxes_body)):
-        box.blit(boxes_body[i], ((box.get_width() - max_width) // 2, ((box.get_height() - max_height) // 2) + box_header.get_height() + (i * boxes_body[i].get_height())))
+        box.blit(boxes_body[i], ((box.get_width() - max_width) / 2, ((box.get_height() - max_height) / 2) + text_header.get_height() + (i * boxes_body[i].get_height())))
     return box
-
 
 
 def load_images(dir1, dir2) -> dict | None:

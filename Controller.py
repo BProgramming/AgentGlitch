@@ -40,32 +40,40 @@ class Controller:
         vol_fx = {"label": "Effects", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["non-player"], "range": (0, 100)}
         vol_cn = {"label": "Cinematics", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["cinematics"], "range": (0, 100)}
         if self.has_dlc.get("gumshoe") is not None and self.has_dlc["gumshoe"]:
-            self.main_menu = Menu(win, None, [{"label": "New game", "type": ButtonType.CLICK}, {"label": "Continue", "type": ButtonType.CLICK}, {"label": "Select a level", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Toggle retro style", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}], music=main_menu_music)
+            self.main_menu = Menu(self, None, [{"label": "New game", "type": ButtonType.CLICK}, {"label": "Continue", "type": ButtonType.CLICK}, {"label": "Select a level", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Toggle retro style", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}], music=main_menu_music)
         else:
-            self.main_menu = Menu(win, None, [{"label": "New game", "type": ButtonType.CLICK}, {"label": "Continue", "type": ButtonType.CLICK}, {"label": "Select a level", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}], music=main_menu_music)
-        self.pause_menu = Menu(win, "PAUSED", [{"label": "Resume", "type": ButtonType.CLICK}, {"label": "Load last save", "type": ButtonType.CLICK}, {"label": "Restart level", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Quit to menu", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}])
-        self.settings_menu = Menu(win, "SETTINGS", [dif, {"label": "Controls", "type": ButtonType.CLICK}, {"label": "Volume", "type": ButtonType.CLICK}, {"label": "Toggle fullscreen", "type": ButtonType.CLICK}, {"label": "Back", "type": ButtonType.CLICK}])
-        self.volume_menu = Menu(win, "VOLUME", [vol_bg, vol_pc, vol_fx, vol_cn, {"label": "Back", "type": ButtonType.CLICK}])
-        self.controls_menu = Menu(win, "CONTROLS", [{"label": "Keyboard", "type": ButtonType.CLICK}, {"label": "Controller", "type": ButtonType.CLICK}, {"label": "Back", "type": ButtonType.CLICK}])
+            self.main_menu = Menu(self, None, [{"label": "New game", "type": ButtonType.CLICK}, {"label": "Continue", "type": ButtonType.CLICK}, {"label": "Select a level", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}], music=main_menu_music)
+        self.pause_menu = Menu(self, "PAUSED", [{"label": "Resume", "type": ButtonType.CLICK}, {"label": "Load last save", "type": ButtonType.CLICK}, {"label": "Restart level", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Quit to menu", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}])
+        self.settings_menu = Menu(self, "SETTINGS", [dif, {"label": "Controls", "type": ButtonType.CLICK}, {"label": "Volume", "type": ButtonType.CLICK}, {"label": "Toggle fullscreen", "type": ButtonType.CLICK}, {"label": "Back", "type": ButtonType.CLICK}])
+        self.volume_menu = Menu(self, "VOLUME", [vol_bg, vol_pc, vol_fx, vol_cn, {"label": "Back", "type": ButtonType.CLICK}])
+        self.controls_menu = Menu(self, "CONTROLS", [{"label": "Keyboard", "type": ButtonType.CLICK}, {"label": "Controller", "type": ButtonType.CLICK}, {"label": "Back", "type": ButtonType.CLICK}])
         difficulty_images = [make_image_from_text(256, 128, "EASIEST", ["Agent is much stronger", "Enemies are much weaker", "Enemy sight ranges are visible"], border=5), make_image_from_text(256, 128, "EASY", ["Agent is stronger", "Enemies are weaker", "Enemy sight ranges are visible"], border=5), make_image_from_text(256, 128, "MEDIUM", ["Agent is normal strength", "Enemies are normal strength", "Enemy sight ranges are not visible"], border=5), make_image_from_text(256, 128, "HARD", ["Agent is weaker", "Enemies are stronger", "Enemy sight ranges are not visible"], border=5), make_image_from_text(256, 128, "HARDEST", ["Agent is much weaker", "Enemies are much stronger", "Enemy sight ranges are not visible"], border=5)]
-        self.difficulty_picker = Selector(win, "CHOOSE DIFFICULTY", ["You can change this at any time."], difficulty_images, [DifficultyScale.EASIEST, DifficultyScale.EASY, DifficultyScale.MEDIUM, DifficultyScale.HARD, DifficultyScale.HARDEST], index=2)
+        self.difficulty_picker = Selector(self, "CHOOSE DIFFICULTY", ["You can change this at any time."], difficulty_images, [DifficultyScale.EASIEST, DifficultyScale.EASY, DifficultyScale.MEDIUM, DifficultyScale.HARD, DifficultyScale.HARDEST], index=2)
         sprite_images, sprite_values = load_picker_sprites("Sprites")
-        self.sprite_picker = Selector(win, "CHOOSE PLAYER", ["This is a visual choice only.", "Anyone can be an Agent."], sprite_images, sprite_values, index=2 * random.randrange(0, len(sprite_images) // 2), retro=self.force_retro)
+        self.sprite_picker = Selector(self, "CHOOSE PLAYER", ["This is a visual choice only.", "Anyone can be an Agent."], sprite_images, sprite_values, index=2 * random.randrange(0, len(sprite_images) // 2))
         self.level_selected = None
         level_images, level_values = load_level_images("LevelImages")
-        self.level_picker = Selector(win, "CHOOSE LEVEL", None, level_images, level_values)
+        self.level_picker = Selector(self, "CHOOSE LEVEL", None, level_images, level_values)
         if layout is None:
             self.set_keyboard_layout("ARROW_MOVE")
         else:
             self.set_keyboard_layout(layout)
         self.gamepad = None
         self.active_gamepad_layout = None
-        self.keyboard_layout_picker = Selector(win, "KEYBOARD LAYOUT", ["This can be cycled with the F9 key."], load_images("Menu", "Keyboards").values(), list(self.KEYBOARD_LAYOUTS.keys()))
-        self.gamepad_layout_picker = Selector(win, "CONTROLLER LAYOUT", ["This is detected when you connect a controller."], load_images("Menu", "Controllers").values(), list(self.GAMEPAD_LAYOUTS.keys()), accept_only=True)
+        self.keyboard_layout_picker = Selector(self, "KEYBOARD LAYOUT", ["This can be cycled with the F9 key."], load_images("Menu", "Keyboards").values(), list(self.KEYBOARD_LAYOUTS.keys()))
+        self.gamepad_layout_picker = Selector(self, "CONTROLLER LAYOUT", ["This is detected when you connect a controller."], load_images("Menu", "Controllers").values(), list(self.GAMEPAD_LAYOUTS.keys()), accept_only=True)
         self.music = None
         self.music_index = 0
         self.should_hot_swap_level = False
         self.should_scroll_to_point = None
+
+    def refresh_selector_images(self) -> None:
+        for sel in [self.difficulty_picker, self.sprite_picker, self.level_picker, self.keyboard_layout_picker, self.gamepad_layout_picker]:
+            sel.cycle_images(0)
+
+    @property
+    def retro(self) -> bool:
+        return self.force_retro or (self.level is not None and self.level.retro)
 
     def save(self):
         save(self.level, self.hud)
@@ -183,41 +191,11 @@ class Controller:
         self.button_shrink = layout["button_shrink"]
         self.active_gamepad_layout = (None if name == "NONE" else name)
 
-    def pick_from_selector(self, selector, clear=None, clear_retro=None) -> bool:
-        if isinstance(selector.images, dict):
-            selector.image_selected = selector.images["retro" if self.force_retro else "normal"][selector.image_index]
-        pygame.mouse.set_visible(True)
-        if self.active_gamepad_layout is not None:
-            selector.set_mouse_pos(self.win, retro=self.force_retro)
-        selector.fade_in(self.win, retro=self.force_retro)
-        joystick_movement = 0
-        selector.clear = clear
+    def pick_from_selector(self, selector, clear_normal=None, clear_retro=None) -> bool:
+        selector.fade_in()
+        selector.clear_normal = clear_normal
         selector.clear_retro = clear_retro
         while True:
-            time.sleep(0.01)
-
-            if len(selector.buttons) > 1:
-                match selector.display(self.win, retro=self.force_retro):
-                    case 0:
-                        selector.cycle_images(-1, retro=self.force_retro)
-                    case 1:
-                        selector.cycle_images(1, retro=self.force_retro)
-                    case 2:
-                        selector.fade_out(self.win, retro=self.force_retro)
-                        return False
-                    case 3:
-                        selector.fade_out(self.win, retro=self.force_retro)
-                        return True
-                    case _:
-                        pass
-            else:
-                match selector.display(self.win, retro=self.force_retro):
-                    case 0:
-                        selector.fade_out(self.win, retro=self.force_retro)
-                        return False
-                    case _:
-                        pass
-
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.save()
@@ -226,50 +204,62 @@ class Controller:
                     pygame.mouse.set_visible(False)
                     return False
 
-            self.get_gamepad()
-            if self.active_gamepad_layout is not None:
-                should_process_event = True
-                if abs(self.gamepad.get_axis(0)) > Menu.JOYSTICK_TOLERANCE and len(selector.buttons) > 1:
-                    selector.move_mouse_sideways(1 if self.gamepad.get_axis(0) >= 0 else -1)
-                    should_process_event = False
-                elif abs(self.gamepad.get_axis(1)) > Menu.JOYSTICK_TOLERANCE:
-                    joystick_movement = self.gamepad.get_axis(1)
-                    should_process_event = False
-                elif self.gamepad.get_numhats() > 0 and abs(self.gamepad.get_hat(0)[1]) == 1:
-                    joystick_movement = -self.gamepad.get_hat(0)[1]
-                    should_process_event = False
-                elif self.button_menu_up is not None and self.gamepad.get_button(self.button_menu_up):
-                    joystick_movement = -1
-                    should_process_event = False
-                elif self.button_menu_down is not None and self.gamepad.get_button(self.button_menu_down):
-                    joystick_movement = 1
-                    should_process_event = False
+            selector.draw()
+            pygame.display.update()
+            val = selector.loop()
 
-                if should_process_event and abs(joystick_movement) > Menu.JOYSTICK_TOLERANCE:
-                    selector.move_mouse_pos(self.win, 1 if joystick_movement >= 0 else -1)
-                    joystick_movement = 0
+            if len(selector.buttons) > 1:
+                match val:
+                    case 0:
+                        selector.cycle_images(-1)
+                    case 1:
+                        selector.cycle_images(1)
+                    case 2:
+                        selector.fade_out()
+                        return False
+                    case 3:
+                        selector.fade_out()
+                        return True
+                    case _:
+                        pass
+            else:
+                match val:
+                    case 0:
+                        selector.fade_out()
+                        return False
+                    case _:
+                        pass
 
-    def volume(self, clear=None, clear_retro=None) -> None:
-        pygame.mouse.set_visible(True)
-        self.volume_menu.notch_val[0] = self.master_volume["background"]
-        self.volume_menu.notch_val[1] = self.master_volume["player"]
-        self.volume_menu.notch_val[2] = self.master_volume["non-player"]
-        self.volume_menu.notch_val[3] = self.master_volume["cinematics"]
-        if self.active_gamepad_layout is not None:
-            self.volume_menu.set_mouse_pos(self.win)
-        self.volume_menu.fade_in(self.win, retro=self.force_retro)
-        joystick_movement = 0
-        self.volume_menu.clear = clear
+    def volume(self, clear_normal=None, clear_retro=None) -> None:
+        self.volume_menu.buttons[0].value = self.master_volume["background"] * 100
+        self.volume_menu.buttons[1].value = self.master_volume["player"] * 100
+        self.volume_menu.buttons[2].value = self.master_volume["non-player"] * 100
+        self.volume_menu.buttons[3].value = self.master_volume["cinematics"] * 100
+
+        self.volume_menu.fade_in()
+        self.volume_menu.clear_normal = clear_normal
         self.volume_menu.clear_retro = clear_retro
-        notch_val = None
+
+        notch_val = self.volume_menu.buttons[0].value
         while True:
-            time.sleep(0.01)
-            if notch_val != self.volume_menu.notch_val[0]:
-                notch_val = self.volume_menu.notch_val[0]
-                self.master_volume["background"] = notch_val
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.save()
+                    self.quit()
+                elif event.type == pygame.KEYDOWN and event.key in self.keys_pause_unpause:
+                    pygame.mouse.set_visible(False)
+                    return
+
+            if notch_val != self.volume_menu.buttons[0].value:
+                notch_val = self.volume_menu.buttons[0].value
+                self.master_volume["background"] = notch_val / 100
                 pygame.mixer.music.set_volume(self.master_volume["background"])
 
-            match self.volume_menu.display(self.win, retro=self.force_retro):
+            self.volume_menu.draw()
+            pygame.display.update()
+            val = self.volume_menu.loop()
+
+            match val:
                 case 0:
                     pass  #set background music volume
                 case 1:
@@ -279,89 +269,22 @@ class Controller:
                 case 3:
                     pass  #set cinematics volume
                 case 4:
-                    self.volume_menu.fade_out(self.win, retro=self.force_retro)
-                    self.master_volume["player"] = self.volume_menu.notch_val[1]
-                    self.master_volume["non-player"] = self.volume_menu.notch_val[2]
-                    self.master_volume["cinematics"] = self.volume_menu.notch_val[3]
+                    self.volume_menu.fade_out()
+                    self.master_volume["player"] = self.volume_menu.buttons[1].value / 100
+                    self.master_volume["non-player"] = self.volume_menu.buttons[2].value / 100
+                    self.master_volume["cinematics"] = self.volume_menu.buttons[3].value / 100
                     return
                 case _:
                     pass
 
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.save()
-                    self.quit()
-                elif event.type == pygame.KEYDOWN and event.key in self.keys_pause_unpause:
-                    pygame.mouse.set_visible(False)
-                    return
+    def controls(self, clear_normal=None, clear_retro=None) -> None:
+        self.controls_menu.buttons[1].is_enabled = bool(self.active_gamepad_layout is not None)
 
-            self.get_gamepad()
-            if self.active_gamepad_layout is not None:
-                should_process_event = True
-                if abs(self.gamepad.get_axis(1)) > Menu.JOYSTICK_TOLERANCE:
-                    joystick_movement = self.gamepad.get_axis(1)
-                    should_process_event = False
-                elif self.gamepad.get_numhats() > 0 and abs(self.gamepad.get_hat(0)[1]) == 1:
-                    joystick_movement = -self.gamepad.get_hat(0)[1]
-                    should_process_event = False
-                elif self.button_menu_up is not None and self.gamepad.get_button(self.button_menu_up):
-                    joystick_movement = -1
-                    should_process_event = False
-                elif self.button_menu_down is not None and self.gamepad.get_button(self.button_menu_down):
-                    joystick_movement = 1
-                    should_process_event = False
-
-                if should_process_event and abs(joystick_movement) > Menu.JOYSTICK_TOLERANCE:
-                    self.settings_menu.move_mouse_pos(self.win, 1 if joystick_movement >= 0 else -1)
-                    joystick_movement = 0
-
-    def controls(self, clear=None, clear_retro=None) -> None:
-        pygame.mouse.set_visible(True)
-        if self.active_gamepad_layout is not None:
-            self.controls_menu.set_mouse_pos(self.win)
-            self.controls_menu.buttons[1][1].set_alpha(255)
-            self.controls_menu.buttons[1][2].set_alpha(255)
-        else:
-            self.controls_menu.buttons[1][1].set_alpha(128)
-            self.controls_menu.buttons[1][2].set_alpha(128)
-        self.controls_menu.fade_in(self.win, retro=self.force_retro)
-        joystick_movement = 0
-        self.controls_menu.clear = clear
+        self.controls_menu.fade_in()
+        self.controls_menu.clear_normal = clear_normal
         self.controls_menu.clear_retro = clear_retro
+
         while True:
-            time.sleep(0.01)
-            if self.active_gamepad_layout is not None:
-                self.controls_menu.buttons[1][1].set_alpha(255)
-                self.controls_menu.buttons[1][2].set_alpha(255)
-            else:
-                self.controls_menu.buttons[1][1].set_alpha(128)
-                self.controls_menu.buttons[1][2].set_alpha(128)
-
-            match self.controls_menu.display(self.win, retro=self.force_retro):
-                case 0:
-                    self.controls_menu.fade_out(self.win, retro=self.force_retro)
-                    self.keyboard_layout_picker.set_index(self.keyboard_layout_picker.values.index(self.active_keyboard_layout))
-                    if self.pick_from_selector(self.keyboard_layout_picker, clear=self.controls_menu.clear, clear_retro=self.controls_menu.clear_retro):
-                        self.set_keyboard_layout(self.keyboard_layout_picker.values[self.keyboard_layout_picker.image_index])
-                    self.controls_menu.fade_in(self.win, retro=self.force_retro)
-                    if self.active_gamepad_layout is not None:
-                        self.controls_menu.set_mouse_pos(self.win)
-                case 1:
-                    if self.active_gamepad_layout is not None:
-                        self.controls_menu.fade_out(self.win, retro=self.force_retro)
-                        self.gamepad_layout_picker.set_index(self.gamepad_layout_picker.values.index(self.active_gamepad_layout))
-                        self.pick_from_selector(self.gamepad_layout_picker, clear=self.controls_menu.clear, clear_retro=self.controls_menu.clear_retro)
-                        self.controls_menu.fade_in(self.win, retro=self.force_retro)
-                        if self.active_gamepad_layout is not None:
-                            self.controls_menu.set_mouse_pos(self.win)
-                    else:
-                        display_text("No controller connected.", self, retro=self.force_retro)
-                case 2:
-                    self.controls_menu.fade_out(self.win, retro=self.force_retro)
-                    return
-                case _:
-                    pass
-
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.save()
@@ -370,124 +293,113 @@ class Controller:
                     pygame.mouse.set_visible(False)
                     return
 
-            self.get_gamepad()
             if self.active_gamepad_layout is not None:
-                should_process_event = True
-                if abs(self.gamepad.get_axis(1)) > Menu.JOYSTICK_TOLERANCE:
-                    joystick_movement = self.gamepad.get_axis(1)
-                    should_process_event = False
-                elif self.gamepad.get_numhats() > 0 and abs(self.gamepad.get_hat(0)[1]) == 1:
-                    joystick_movement = -self.gamepad.get_hat(0)[1]
-                    should_process_event = False
-                elif self.button_menu_up is not None and self.gamepad.get_button(self.button_menu_up):
-                    joystick_movement = -1
-                    should_process_event = False
-                elif self.button_menu_down is not None and self.gamepad.get_button(self.button_menu_down):
-                    joystick_movement = 1
-                    should_process_event = False
+                self.controls_menu.buttons[1].set_alpha(255)
+            else:
+                self.controls_menu.buttons[1].set_alpha(128)
 
-                if should_process_event and abs(joystick_movement) > Menu.JOYSTICK_TOLERANCE:
-                    self.controls_menu.move_mouse_pos(self.win, 1 if joystick_movement >= 0 else -1)
-                    joystick_movement = 0
+            self.controls_menu.draw()
+            pygame.display.update()
+            val = self.controls_menu.loop()
 
-    def settings(self, clear=None, clear_retro=None) -> None:
-        pygame.mouse.set_visible(True)
-        self.settings_menu.notch_val[0] = (self.difficulty - DifficultyScale.EASIEST) / (DifficultyScale.HARDEST - DifficultyScale.EASIEST)
-        if self.active_gamepad_layout is not None:
-            self.settings_menu.set_mouse_pos(self.win)
-        self.settings_menu.fade_in(self.win, retro=self.force_retro)
-        joystick_movement = 0
-        self.settings_menu.clear = clear
+            match val:
+                case 0:
+                    self.controls_menu.fade_out()
+                    self.keyboard_layout_picker.set_index(self.keyboard_layout_picker.values.index(self.active_keyboard_layout))
+                    if self.pick_from_selector(self.keyboard_layout_picker, clear_normal=self.controls_menu.clear_normal, clear_retro=self.controls_menu.clear_retro):
+                        self.set_keyboard_layout(self.keyboard_layout_picker.values[self.keyboard_layout_picker.image_index])
+                    self.controls_menu.fade_in()
+                case 1:
+                    if self.controls_menu.buttons[1].is_enabled:
+                        self.controls_menu.fade_out()
+                        self.gamepad_layout_picker.set_index(self.gamepad_layout_picker.values.index(self.active_gamepad_layout))
+                        self.pick_from_selector(self.gamepad_layout_picker, clear_normal=self.controls_menu.clear_normal, clear_retro=self.controls_menu.clear_retro)
+                        self.controls_menu.fade_in()
+                case 2:
+                    self.controls_menu.fade_out()
+                    return
+                case _:
+                    pass
+
+    def settings(self, clear_normal=None, clear_retro=None) -> None:
+        self.settings_menu.buttons[0].value = self.difficulty
+
+        self.settings_menu.fade_in()
+        self.settings_menu.clear_normal = clear_normal
         self.settings_menu.clear_retro = clear_retro
         while True:
-            time.sleep(0.01)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.save()
+                    self.quit()
+                elif event.type == pygame.KEYDOWN and event.key in self.keys_pause_unpause:
+                    pygame.mouse.set_visible(False)
+                    return
 
-            match self.settings_menu.display(self.win, retro=self.force_retro):
+            self.settings_menu.draw()
+            pygame.display.update()
+            val = self.settings_menu.loop()
+
+            match val:
                 case 0:
                     pass #set difficulty
                 case 1:
-                    self.controls(clear=self.settings_menu.clear, clear_retro=self.settings_menu.clear_retro)
+                    self.controls(clear_normal=self.settings_menu.clear_normal, clear_retro=self.settings_menu.clear_retro)
                 case 2:
                     time.sleep(0.01)
-                    self.volume(clear=self.settings_menu.clear, clear_retro=self.settings_menu.clear_retro)
+                    self.volume(clear_normal=self.settings_menu.clear_normal, clear_retro=self.settings_menu.clear_retro)
                 case 3:
                     pygame.display.toggle_fullscreen()
                 case 4:
-                    self.settings_menu.fade_out(self.win, retro=self.force_retro)
-                    self.difficulty = DifficultyScale((self.settings_menu.notch_val[0] * (self.settings_menu.buttons[0][4][-1] - self.settings_menu.buttons[0][4][0])) + self.settings_menu.buttons[0][4][0])
+                    self.settings_menu.fade_out()
+                    self.difficulty = DifficultyScale(self.settings_menu.buttons[0].value)
                     self.set_difficulty()
                     return
                 case _:
                     pass
 
+    def pause(self) -> int:
+        self.pause_menu.clear_normal = self.pause_menu.clear_retro = None
+        start = time.perf_counter_ns()
+        pygame.mixer.pause()
+        self.pause_menu.fade_in()
+
+        paused = True
+        while paused:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.save()
                     self.quit()
                 elif event.type == pygame.KEYDOWN and event.key in self.keys_pause_unpause:
-                    pygame.mouse.set_visible(False)
-                    return
+                    paused = False
+                    break
 
-            self.get_gamepad()
-            if self.active_gamepad_layout is not None:
-                should_process_event = True
-                if abs(self.gamepad.get_axis(1)) > Menu.JOYSTICK_TOLERANCE:
-                    joystick_movement = self.gamepad.get_axis(1)
-                    should_process_event = False
-                elif self.gamepad.get_numhats() > 0 and abs(self.gamepad.get_hat(0)[1]) == 1:
-                    joystick_movement = -self.gamepad.get_hat(0)[1]
-                    should_process_event = False
-                elif self.button_menu_up is not None and self.gamepad.get_button(self.button_menu_up):
-                    joystick_movement = -1
-                    should_process_event = False
-                elif self.button_menu_down is not None and self.gamepad.get_button(self.button_menu_down):
-                    joystick_movement = 1
-                    should_process_event = False
+            self.pause_menu.draw()
+            pygame.display.update()
+            val = self.pause_menu.loop()
 
-                if should_process_event and abs(joystick_movement) > Menu.JOYSTICK_TOLERANCE:
-                    self.settings_menu.move_mouse_pos(self.win, 1 if joystick_movement >= 0 else -1)
-                    joystick_movement = 0
-
-    def pause(self) -> int:
-        pygame.mouse.set_visible(True)
-        start = time.perf_counter_ns()
-        pygame.mixer.pause()
-        if self.active_gamepad_layout is not None:
-            self.pause_menu.set_mouse_pos(self.win)
-        self.pause_menu.fade_in(self.win, retro=self.force_retro)
-        joystick_movement = 0
-        paused = True
-        while paused:
-            time.sleep(0.01)
-
-            match self.pause_menu.display(self.win, retro=self.force_retro):
+            match val:
                 case 0:
                     paused = False
                 case 1:
                     self.goto_load = True
                     pygame.mixer.unpause()
                     pygame.mouse.set_visible(False)
-                    self.pause_menu.clear = None
-                    self.pause_menu.clear_retro = None
                     return 0
                 case 2:
                     self.goto_restart = True
                     pygame.mixer.unpause()
                     pygame.mouse.set_visible(False)
-                    self.pause_menu.clear = None
-                    self.pause_menu.clear_retro = None
                     return 0
                 case 3:
                     time.sleep(0.01)
-                    self.settings(clear=self.pause_menu.clear, clear_retro=self.pause_menu.clear_retro)
+                    self.settings(clear_normal=self.pause_menu.clear_normal, clear_retro=self.pause_menu.clear_retro)
                 case 4:
                     self.save()
                     self.save_player_profile()
                     self.goto_main = True
                     pygame.mixer.unpause()
                     pygame.mouse.set_visible(False)
-                    self.pause_menu.clear = None
-                    self.pause_menu.clear_retro = None
                     return 0
                 case 5:
                     self.save()
@@ -495,94 +407,77 @@ class Controller:
                 case _:
                     pass
 
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.save()
-                    self.quit()
-                elif event.type == pygame.KEYDOWN and event.key in self.keys_pause_unpause:
-                    paused = False
-                    pygame.mouse.set_visible(False)
-                    break
-
-            self.get_gamepad()
-            if self.active_gamepad_layout is not None:
-                should_process_event = True
-                if abs(self.gamepad.get_axis(1)) > Menu.JOYSTICK_TOLERANCE:
-                    joystick_movement = self.gamepad.get_axis(1)
-                    should_process_event = False
-                elif self.gamepad.get_numhats() > 0 and abs(self.gamepad.get_hat(0)[1]) == 1:
-                    joystick_movement = -self.gamepad.get_hat(0)[1]
-                    should_process_event = False
-                elif self.button_menu_up is not None and self.gamepad.get_button(self.button_menu_up):
-                    joystick_movement = -1
-                    should_process_event = False
-                elif self.button_menu_down is not None and self.gamepad.get_button(self.button_menu_down):
-                    joystick_movement = 1
-                    should_process_event = False
-
-                if should_process_event and abs(joystick_movement) > Menu.JOYSTICK_TOLERANCE:
-                    self.pause_menu.move_mouse_pos(self.win, 1 if joystick_movement >= 0 else -1)
-                    joystick_movement = 0
-
-        self.pause_menu.fade_out(self.win, retro=self.force_retro)
-        self.pause_menu.clear = None
-        self.pause_menu.clear_retro = None
+        self.pause_menu.fade_out()
         pygame.mixer.unpause()
-        pygame.mouse.set_visible(False)
         return (time.perf_counter_ns() - start) // 1000000
 
     def main(self) -> bool:
+        self.main_menu.fade_in()
         self.main_menu.fade_music()
-        pygame.mouse.set_visible(True)
-        if self.active_gamepad_layout is not None:
-            self.main_menu.set_mouse_pos(self.win)
-        self.main_menu.fade_in(self.win, retro=self.force_retro)
-        joystick_movement = 0
         self.level_selected = None
-        while True:
-            time.sleep(0.01)
 
-            match self.main_menu.display(self.win, retro=self.force_retro):
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.quit()
+                elif event.type == pygame.USEREVENT and self.main_menu.music is not None:
+                    if "LOOP" in self.main_menu.music[self.main_menu.music_index].upper():
+                        pygame.mixer.music.play(-1)
+                        pygame.mixer.music.set_endevent()
+                    else:
+                        pygame.mixer.music.play()
+                        self.main_menu.cycle_music()
+                        pygame.mixer.music.queue(self.main_menu.music[self.main_menu.music_index])
+
+            self.main_menu.draw()
+            pygame.display.update()
+            val = self.main_menu.loop()
+
+            match val:
                 case 0:
-                    self.main_menu.fade_out(self.win, retro=self.force_retro)
+                    self.main_menu.fade_out()
                     while True:
-                        if self.pick_from_selector(self.sprite_picker, clear=self.main_menu.clear, clear_retro=self.main_menu.clear_retro):
+                        if self.pick_from_selector(self.sprite_picker, clear_normal=self.main_menu.clear_normal, clear_retro=self.main_menu.clear_retro):
                             self.player_sprite_selected = [self.sprite_picker.values[self.sprite_picker.image_index][0], self.sprite_picker.values[self.sprite_picker.image_index][1]]
-                            if self.pick_from_selector(self.difficulty_picker, clear=self.main_menu.clear, clear_retro=self.main_menu.clear_retro):
+                            if self.pick_from_selector(self.difficulty_picker, clear_normal=self.main_menu.clear_normal, clear_retro=self.main_menu.clear_retro):
                                 self.difficulty = self.difficulty_picker.values[self.difficulty_picker.image_index]
                                 pygame.mouse.set_visible(False)
                                 self.main_menu.fade_music()
                                 return True
                             if self.active_gamepad_layout is not None:
-                                self.main_menu.set_mouse_pos(self.win)
+                                self.main_menu.set_mouse_pos(0)
                         else:
                             if self.active_gamepad_layout is not None:
-                                self.main_menu.set_mouse_pos(self.win)
+                                self.main_menu.set_mouse_pos(0)
                             break
-                    self.main_menu.fade_in(self.win, retro=self.force_retro)
+                    self.main_menu.fade_in()
                 case 1:
-                    self.main_menu.fade_out(self.win, retro=self.force_retro)
+                    self.main_menu.fade_out()
                     self.goto_load = True
-                    pygame.mouse.set_visible(False)
                     self.main_menu.fade_music()
                     return False
                 case 2:
-                    self.main_menu.fade_out(self.win, retro=self.force_retro)
-                    if self.pick_from_selector(self.level_picker, clear=self.main_menu.clear, clear_retro=self.main_menu.clear_retro):
+                    self.main_menu.fade_out()
+                    if self.pick_from_selector(self.level_picker, clear_normal=self.main_menu.clear_normal, clear_retro=self.main_menu.clear_retro):
                         self.level_selected = self.level_picker.values[self.level_picker.image_index]
                         pygame.mouse.set_visible(False)
                         self.main_menu.fade_music()
                         return bool(self.level_picker.image_index == 0)
                     else:
                         if self.active_gamepad_layout is not None:
-                            self.main_menu.set_mouse_pos(self.win)
-                        self.main_menu.fade_in(self.win, retro=self.force_retro)
+                            self.main_menu.set_mouse_pos(0)
+                        self.main_menu.fade_in()
                 case 3:
                     time.sleep(0.01)
-                    self.settings(clear=self.main_menu.clear, clear_retro=self.main_menu.clear_retro)
+                    self.settings(clear_normal=self.main_menu.clear_normal, clear_retro=self.main_menu.clear_retro)
                 case 4:
                     if self.has_dlc.get("gumshoe") is not None and self.has_dlc["gumshoe"]:
                         self.force_retro = not self.force_retro
+                        self.sprite_picker.cycle_images(0)
+                        self.difficulty_picker.cycle_images(0)
+                        self.level_picker.cycle_images(0)
+                        self.keyboard_layout_picker.cycle_images(0)
+                        self.gamepad_layout_picker.cycle_images(0)
                     else:
                         self.quit()
                 case 5:
@@ -592,38 +487,6 @@ class Controller:
                         pass
                 case _:
                     pass
-
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.quit()
-                elif event.type == pygame.USEREVENT:
-                    if "LOOP" in self.main_menu.music[self.main_menu.music_index].upper():
-                        pygame.mixer.music.play(-1)
-                        pygame.mixer.music.set_endevent()
-                    else:
-                        pygame.mixer.music.play()
-                        self.main_menu.cycle_music()
-                        pygame.mixer.music.queue(self.main_menu.music[self.main_menu.music_index])
-
-            self.get_gamepad()
-            if self.active_gamepad_layout is not None:
-                should_process_event = True
-                if abs(self.gamepad.get_axis(1)) > Menu.JOYSTICK_TOLERANCE:
-                    joystick_movement = self.gamepad.get_axis(1)
-                    should_process_event = False
-                elif self.gamepad.get_numhats() > 0 and abs(self.gamepad.get_hat(0)[1]) == 1:
-                    joystick_movement = -self.gamepad.get_hat(0)[1]
-                    should_process_event = False
-                elif self.button_menu_up is not None and self.gamepad.get_button(self.button_menu_up):
-                    joystick_movement = -1
-                    should_process_event = False
-                elif self.button_menu_down is not None and self.gamepad.get_button(self.button_menu_down):
-                    joystick_movement = 1
-                    should_process_event = False
-
-                if should_process_event and abs(joystick_movement) > Menu.JOYSTICK_TOLERANCE:
-                    self.main_menu.move_mouse_pos(self.win, 1 if joystick_movement >= 0 else -1)
-                    joystick_movement = 0
 
     def cycle_keyboard_layout(self, win) -> int:
         if self.active_keyboard_layout == "ARROW_MOVE":
@@ -643,7 +506,7 @@ class Controller:
 
         text_output = pygame.font.SysFont("courier", 18).render(text, True, (0, 0, 0))
         text_box = pygame.Surface((text_output.get_width() + 10, text_output.get_height() + 10), pygame.SRCALPHA)
-        box_colour = RETRO_WHITE if self.force_retro or self.level.retro else NORMAL_WHITE
+        box_colour = RETRO_WHITE if self.retro else NORMAL_WHITE
         text_box.fill((box_colour[0], box_colour[1], box_colour[2], 128))
         win.blit(text_box, ((win.get_width() - text_box.get_width()) // 2, 3 * (win.get_height() - text_box.get_height()) // 4))
         win.blit(text_output, (((win.get_width() - text_box.get_width()) // 2) + 5, (3 * (win.get_height() - text_box.get_height()) // 4) + 5))

@@ -1,7 +1,7 @@
 import time
 import pygame
 from enum import Enum
-from Helpers import load_images, glitch, DifficultyScale, validate_file_list, handle_exception, retroify_image
+from Helpers import load_images, glitch, DifficultyScale, validate_file_list, handle_exception, retroify_image, NORMAL_BLACK, NORMAL_WHITE, RETRO_BLACK, RETRO_WHITE
 
 
 class ButtonType(Enum):
@@ -9,28 +9,128 @@ class ButtonType(Enum):
     BAR = 2
 
 
+class Button:
+    def __init__(self, controller, x, y, width, height, value, img_normal=None, img_mouseover=None, label_normal=None, label_mouseover=None) -> None:
+        self.rect = pygame.Rect(x, y, width, height)
+        self.controller = controller
+        self.value = value
+        self._normal = {'normal': self.__make__(img_normal, label_normal), 'mouseover': self.__make__(img_mouseover, label_mouseover)}
+        self._retro = {key: retroify_image(value) for key, value in self._normal.items()}
+        self.is_mouseover = False
+        self.is_enabled = True
+
+    def __make__(self, image: pygame.Surface | None, label: pygame.Surface | None) -> pygame.Surface:
+        if image is None:
+            image = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
+            image.fill(NORMAL_BLACK)
+        else:
+            image = image.copy()
+
+        if label is None:
+            return image
+        else:
+            image.blit(label, ((image.get_width() - label.get_width()) // 2, (image.get_height() - label.get_height()) // 2))
+            return image
+
+    def __get_image__(self, name) -> pygame.Surface:
+        if self.controller.retro:
+            return self._retro[name]
+        else:
+            return self._normal[name]
+
+    def set_alpha(self, alpha: int) -> None:
+        for key in self._normal.keys():
+            self._normal[key].set_alpha(alpha // (2 - int(self.is_enabled)))
+        for key in self._retro.keys():
+            self._retro[key].set_alpha(alpha // (2 - int(self.is_enabled)))
+
+    @property
+    def normal(self) -> pygame.Surface:
+        return self.__get_image__('normal')
+
+    @property
+    def mouseover(self) -> pygame.Surface:
+        return self.__get_image__('mouseover')
+
+    def draw(self) -> None:
+        self.controller.win.blit(self.mouseover if self.is_mouseover and self.is_enabled else self.normal, (self.rect.x, self.rect.y))
+
+
+class Bar(Button):
+    def __init__(self, controller, x, y, width, height, value, range, snap=True, img_normal=None, img_mouseover=None, label_normal=None, label_mouseover=None) -> None:
+        super().__init__(controller, x, y, width, height, value, img_normal=img_normal, img_mouseover=img_mouseover, label_normal=label_normal, label_mouseover=label_mouseover)
+        self.range = range
+        self.snap = snap
+        self.bar_rect = pygame.Rect(self.rect.x, self.rect.y, self.rect.width, self.rect.height / 10)
+
+    @property
+    def pct_val(self) -> int:
+        return (self.value - self.range[0]) / (self.range[-1] - self.range[0])
+
+    def __get_notch__(self, base: pygame.Surface) -> pygame.Surface:
+        bar = pygame.Surface((base.get_width() - 50, base.get_height() / 10), pygame.SRCALPHA)
+        bar.fill(RETRO_WHITE if self.controller.retro else NORMAL_WHITE)
+        base.blit(bar, ((base.get_width() - bar.get_width()) / 2, (base.get_height() - bar.get_height()) * 0.75))
+        notch = pygame.Surface((base.get_height() / 10, base.get_height() / 5), pygame.SRCALPHA)
+        notch.fill((137, 0, 0, 255) if self.controller.retro else (140, 0, 0, 255))
+        base.blit(notch, (((base.get_width() - bar.get_width()) / 2) + (self.pct_val * bar.get_width()), (base.get_height() - bar.get_height() - (notch.get_height() / 2)) * 0.75))
+        return base
+
+    @property
+    def normal(self) -> pygame.Surface:
+        return self.__get_notch__(super().normal.copy())
+
+    @property
+    def mouseover(self) -> pygame.Surface:
+        return self.__get_notch__(super().mouseover.copy())
+
+
 class Menu:
     JOYSTICK_TOLERANCE = 0.25
 
-    def __init__(self, win, header, button_labels, music=None, should_glitch=True):
-        self.clear = None
+    def __init__(self, controller, header, buttons: list[dict], music=None, should_glitch=True):
+        self.controller = controller
+        self.clear_normal = None
         self.clear_retro = None
-        button_assets = load_images("Menu", "Buttons")
-        self.notch_val = []
-        self.buttons = self.__make_buttons__(button_labels, pygame.transform.smoothscale_by(button_assets["BUTTON_NORMAL"], 0.5), pygame.transform.smoothscale_by(button_assets["BUTTON_MOUSEOVER"], 0.5))
+        button_assets = {key: pygame.transform.smoothscale_by(value, 0.5) for key, value in load_images("Menu", "Buttons").items()}
+        button_width = button_assets["BUTTON_NORMAL"].get_width()
+        button_height = button_assets["BUTTON_NORMAL"].get_height()
         if header is not None:
-            self.header = pygame.font.SysFont("courier", 32).render(header, True, (255, 255, 255))
-            self.screen = pygame.Surface((min(2 * win.get_width() // 3, max(self.buttons[0][0].width, self.header.get_width())), (self.buttons[0][0].height * len(self.buttons)) + self.header.get_height() + 10), pygame.SRCALPHA)
-            self.screen.fill((0, 0, 0, 128))
-            self.screen.blit(self.header, ((self.screen.get_width() - self.header.get_width()) // 2, 5))
+            text = pygame.font.SysFont("courier", 32).render(header, True, NORMAL_WHITE)
+            screen = pygame.Surface((min(2 * self.controller.win.get_width() // 3, max(button_width, text.get_width())), (button_height * len(buttons)) + text.get_height() + 10), pygame.SRCALPHA)
+            screen.fill(NORMAL_BLACK)
+            screen.blit(text, ((screen.get_width() - text.get_width()) // 2, 5))
         else:
-            self.screen = pygame.Surface((min(2 * win.get_width() // 3, self.buttons[0][0].width), self.buttons[0][0].height * len(self.buttons)), pygame.SRCALPHA)
-            self.screen.fill((0, 0, 0, 128))
+            screen = pygame.Surface((min(2 * self.controller.win.get_width() // 3, button_width), button_height * len(buttons)), pygame.SRCALPHA)
+            screen.fill(NORMAL_BLACK)
+        self.screen_normal = screen
+        self.screen_retro = retroify_image(screen)
+        self.rect = pygame.Rect((self.controller.win.get_width() - screen.get_width()) // 2, (self.controller.win.get_height() - screen.get_height()) // 2, screen.get_width(), screen.get_height())
+
+        self.buttons = []
+        for i in range(len(buttons)):
+            x = (self.controller.win.get_width() - button_width) // 2
+            y = self.controller.win.get_height() - self.rect.y - ((len(buttons) - i) * button_height)
+            label = pygame.font.SysFont("courier", 32).render(buttons[i]["label"], True, NORMAL_WHITE)
+            if buttons[i]["type"] == ButtonType.CLICK:
+                button = Button(self.controller, x, y, button_width, button_height, i, img_normal=button_assets["BUTTON_NORMAL"], img_mouseover=button_assets["BUTTON_MOUSEOVER"], label_normal=label, label_mouseover=label)
+            elif buttons[i]["type"] == ButtonType.BAR:
+                button = Bar(self.controller, x, y, button_width, button_height, buttons[i]["value"], buttons[i]["range"], snap=buttons[i]["snap"], img_normal=button_assets["BUTTON_NORMAL"], img_mouseover=button_assets["BUTTON_MOUSEOVER"], label_normal=label, label_mouseover=label)
+            else:
+                button = None
+            self.buttons.append(button)
+
         self.music = (None if music is None else validate_file_list("Music", music, "mp3"))
         self.music_index = 0
         self.should_glitch = should_glitch
         self.glitch_timer = 0
         self.glitches = None
+
+    def set_alpha(self, alpha: int) -> None:
+        for button in self.buttons:
+            button.set_alpha(alpha)
+        self.screen_normal.set_alpha(alpha)
+        self.screen_retro.set_alpha(alpha)
 
     def cycle_music(self) -> None:
         if self.music is not None:
@@ -38,42 +138,28 @@ class Menu:
             if self.music_index >= len(self.music):
                 self.music_index = 0
 
-    def __make_buttons__(self, labels, button_normal, button_mouseover) -> list:
-        buttons = []
-        for label in labels:
-            text = pygame.font.SysFont("courier", 32).render(label["label"], True, (255, 255, 255))
-            normal = button_normal.copy()
-            mouseover = button_mouseover.copy()
-            notch_val = None
-            if label["type"] == ButtonType.CLICK:
-                normal.blit(text, ((normal.get_width() - text.get_width()) // 2, (normal.get_height() - text.get_height()) // 2))
-                mouseover.blit(text, ((mouseover.get_width() - text.get_width()) // 2, (mouseover.get_height() - text.get_height()) // 2))
-                buttons.append([pygame.Rect(0, 0, max(normal.get_width(), mouseover.get_width()), max(normal.get_height(), mouseover.get_height())), normal, mouseover, label["type"]])
-            elif label["type"] == ButtonType.BAR:
-                normal.blit(text, ((normal.get_width() - text.get_width()) // 10, (normal.get_height() - text.get_height()) // 4))
-                mouseover.blit(text, ((mouseover.get_width() - text.get_width()) // 10, (mouseover.get_height() - text.get_height()) // 4))
-                notch_val = (label["value"] - label["range"][0]) / (label["range"][-1] - label["range"][0])
-                buttons.append([pygame.Rect(0, 0, max(normal.get_width(), mouseover.get_width()), max(normal.get_height(), mouseover.get_height())), normal, mouseover, label["type"]])
-                if label["snap"]:
-                    buttons[-1].append(label["range"])
-            self.notch_val.append(notch_val)
-        return buttons
+    def fade_in(self) -> None:
+        if self.clear_normal is None:
+            self.clear_normal = pygame.display.get_surface().copy()
+        if self.clear_retro is None:
+            self.clear_retro = retroify_image(self.clear_normal)
 
-    def fade_in(self, win: pygame.Surface, retro: bool = False) -> None:
-        if self.clear is None:
-            self.clear = pygame.display.get_surface().copy()
+        if self.controller.active_gamepad_layout is not None:
+            self.set_mouse_pos(0)
+        pygame.mouse.set_visible(True)
+
         for i in range(32):
-            self.screen.set_alpha(8 * i)
-            self.display(win, retro=retro)
+            self.set_alpha(8 * i)
+            self.draw()
             pygame.display.update()
 
             for event in pygame.event.get():
                 if event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
-                    self.screen.set_alpha(248)
-                    self.display(win, retro=retro)
+                    self.set_alpha(248)
+                    self.draw()
                     pygame.display.update()
                     return
-            time.sleep(0.01)
+            time.sleep(0.005)
 
     def fade_music(self) -> None:
         if self.music is not None:
@@ -87,160 +173,134 @@ class Menu:
                 self.cycle_music()
                 pygame.mixer.music.queue(self.music[self.music_index])
 
-    def fade_out(self, win: pygame.Surface, retro: bool = False) -> None:
-        if self.clear is None:
+    def fade_out(self) -> None:
+        pygame.mouse.set_visible(False)
+        if (self.controller.retro and self.clear_retro is None) or (not self.controller.retro and self.clear_normal is None):
             return
         else:
             for i in range(32, 0, -1):
-                self.screen.set_alpha(8 * i)
-                self.display(win, retro=retro)
+                self.set_alpha(8 * i)
+                self.draw()
                 pygame.display.update()
 
                 for event in pygame.event.get():
                     if event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
-                        self.screen.set_alpha(0)
-                        self.display(win, retro=retro)
+                        self.set_alpha(0)
+                        self.draw()
                         pygame.display.update()
                         return
                 time.sleep(0.005)
 
-    def set_mouse_pos(self, win) -> None:
-        x = (win.get_width() // 2) + (self.buttons[0][0].width // 2.5)
+    def draw(self) -> None:
+        if self.clear_normal is None:
+            self.clear_normal = pygame.display.get_surface().copy()
+        if self.clear_retro is None:
+            self.clear_retro = retroify_image(self.clear_normal)
 
-        y = (win.get_height() + self.screen.get_height() - (2 * (len(self.buttons) - 0.5) * self.buttons[0][0].height)) // 2
+        self.controller.win.blit(self.clear_retro if self.controller.retro else self.clear_normal, (0, 0))
+        screen = self.screen_retro if self.controller.retro else self.screen_normal
+        self.controller.win.blit(screen, (self.rect.x, self.rect.y))
+        for button in self.buttons:
+            button.draw()
 
-        pygame.mouse.set_pos((x, y))
+    def loop(self) -> int | None:
+        self.controller.get_gamepad()
+        if self.controller.active_gamepad_layout is not None:
+            pygame.mouse.set_visible(False)
+            should_process_event = True
+            joystick_movement = 0
+            if abs(self.controller.gamepad.get_axis(1)) > Menu.JOYSTICK_TOLERANCE:
+                joystick_movement = (0, self.controller.gamepad.get_axis(1))
+                should_process_event = False
+            elif abs(self.controller.gamepad.get_axis(0)) > Menu.JOYSTICK_TOLERANCE:
+                joystick_movement = (self.controller.gamepad.get_axis(0), 0)
+                should_process_event = False
+            elif self.controller.gamepad.get_numhats() > 0 and abs(self.controller.gamepad.get_hat(0)[1]) == 1:
+                joystick_movement = (0, -self.controller.gamepad.get_hat(0)[1])
+                should_process_event = False
+            elif self.controller.gamepad.get_numhats() > 0 and abs(self.controller.gamepad.get_hat(0)[0]) == 1:
+                joystick_movement = (-self.controller.gamepad.get_hat(0)[0], 0)
+                should_process_event = False
+            elif self.controller.button_menu_up is not None and self.controller.gamepad.get_button(self.controller.button_menu_up):
+                joystick_movement = (0, -1)
+                should_process_event = False
+            elif self.controller.button_menu_down is not None and self.controller.gamepad.get_button(self.controller.button_menu_down):
+                joystick_movement = (0, 1)
+                should_process_event = False
+            if should_process_event and abs(joystick_movement) > Menu.JOYSTICK_TOLERANCE:
+                if joystick_movement[0] != 0:
+                    self.move_mouse_pos_horiz(1 if joystick_movement[0] >= 0 else -1)
+                elif joystick_movement[1] != 0:
+                    self.move_mouse_pos_vert(1 if joystick_movement[1] >= 0 else -1)
+        else:
+            pygame.mouse.set_visible(True)
 
-    def move_mouse_pos(self, win, direction) -> None:
-        x = (win.get_width() // 2) + (self.buttons[0][0].width // 2.5)
+        pos = pygame.mouse.get_pos()
+        for i, button in enumerate(self.buttons):
+            button.is_mouseover = (button.is_enabled and button.rect.collidepoint(pos))
 
-        target = pygame.mouse.get_pos()[1] + (direction * self.buttons[0][0].height)
-        top = (win.get_height() + self.screen.get_height() - (2 * (len(self.buttons) - 0.5) * self.buttons[0][0].height)) // 2
-        bottom = (win.get_height() + self.screen.get_height() - self.buttons[0][0].height) // 2
-        y = max(top, min(bottom, target))
-
-        pygame.mouse.set_pos((x, y))
-
-    def display(self, win: pygame.Surface, retro: bool = False) -> int | None:
-        if self.clear is not None:
-            if retro:
-                if self.clear_retro is None:
-                    self.clear_retro = retroify_image(self.clear)
-                win.blit(self.clear_retro, (0, 0))
-            else:
-                win.blit(self.clear, (0, 0))
-
-        screen = self.screen.copy()
-        for i in range(len(self.buttons)):
-            dest_x = (screen.get_width() - self.buttons[i][0].width) // 2
-            dest_y = screen.get_height() - ((len(self.buttons) - i) * self.buttons[i][0].height)
-            self.buttons[i][0].x = dest_x + ((win.get_width() - screen.get_width()) // 2)
-            self.buttons[i][0].y = dest_y + ((win.get_height() - screen.get_height()) // 2)
-
-            if self.buttons[i][3] == ButtonType.BAR:
-                bar = pygame.Surface((self.buttons[i][0].width - 50, self.buttons[i][0].height // 10), pygame.SRCALPHA)
-                bar_rect = bar.get_rect()
-                notch = pygame.Surface((self.buttons[i][0].height // 10, self.buttons[i][0].height // 5), pygame.SRCALPHA)
-                notch_rect = notch.get_rect()
-                bar_rect.x = dest_x + ((self.buttons[i][0].width - bar.get_width()) // 2)
-                bar_rect.y = dest_y + (3 * (self.buttons[i][0].height - bar.get_height()) // 4)
-                notch_rect.x = bar_rect.x - (notch.get_width() // 2) + (self.notch_val[i] * bar.get_width())
-                notch_rect.y = bar_rect.y - (bar.get_height() // 2)
-            else:
-                bar = None
-                bar_rect = None
-                notch = None
-                notch_rect = None
-
-            if self.buttons[i][0].collidepoint(pygame.mouse.get_pos()):
-                button_type = 2
-                for event in pygame.event.get():
-                    if self.buttons[i][2].get_alpha() == 255 and self.buttons[i][3] == ButtonType.CLICK and ((event.type == pygame.MOUSEBUTTONDOWN and event.button == 1) or (event.type == pygame.JOYBUTTONDOWN and event.button == 0)):
-                        return i
-                    elif self.buttons[i][3] == ButtonType.BAR and self.notch_val[i] is not None:
-                        if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1) or (event.type == pygame.MOUSEMOTION and pygame.mouse.get_pressed()[0]):
-                            adj_x = pygame.mouse.get_pos()[0] - self.buttons[i][0].x - ((self.buttons[i][0].width - bar_rect.width) / 2)
-                            adj_y = pygame.mouse.get_pos()[1] - self.buttons[i][0].y
-                            if -10 <= adj_x <= bar_rect.width + 10 and self.buttons[i][0].height // 2 <= adj_y <= self.buttons[i][0].height:
-                                self.notch_val[i] = min(1, max(0, adj_x / bar.get_width()))
-                            if len(self.buttons[i]) > 4:
-                                index = 0
-                                for j in range(len(self.buttons[i][4])):
-                                    interval = (self.buttons[i][4][j] - self.buttons[i][4][0]) / (self.buttons[i][4][-1] - self.buttons[i][4][0])
-                                    if self.notch_val[i] > interval:
-                                        index += 1
-                                    elif self.notch_val[i] < interval:
-                                        break
-                                index = min(len(self.buttons[i][4]) - 1, max(0, index))
-                                adj_notch_val = (self.buttons[i][4][index] - self.buttons[i][4][0]) / (self.buttons[i][4][-1] - self.buttons[i][4][0])
-                                if index == 0:
-                                    self.notch_val[i] = adj_notch_val
-                                else:
-                                    adj_notch_val_down = (self.buttons[i][4][index - 1] - self.buttons[i][4][0]) / (self.buttons[i][4][-1] - self.buttons[i][4][0])
-                                    if self.notch_val[i] - adj_notch_val_down > adj_notch_val - self.notch_val[i]:
-                                        self.notch_val[i] = adj_notch_val
-                                    else:
-                                        self.notch_val[i] = adj_notch_val_down
-                        elif event.type == pygame.JOYAXISMOTION and event.axis == 0 and abs(event.value) > Menu.JOYSTICK_TOLERANCE:
-                            if len(self.buttons[i]) > 4:
-                                self.notch_val[i] = (self.buttons[i][4][min(len(self.buttons[i][4]) - 1, max(0, (self.buttons[i][4].index((self.notch_val[i] * (self.buttons[i][4][-1] - self.buttons[i][4][0])) + self.buttons[i][4][0]) + int(1 if event.value >= 0 else -1))))] - self.buttons[i][4][0]) / (self.buttons[i][4][-1] - self.buttons[i][4][0])
-                                time.sleep(0.25)
+            if button.is_mouseover:
+                if pygame.mouse.get_pressed()[0]:
+                    if isinstance(button, Bar):
+                        pct = (pos[0] - button.bar_rect.x) / button.bar_rect.width
+                        if button.snap:
+                            dec = pct * button.range[-1]
+                            if dec < button.range[0]:
+                                button.value = button.range[0]
+                            elif dec > button.range[-1]:
+                                button.value = button.range[-1]
                             else:
-                                self.notch_val[i] = min(1, max(0, self.notch_val[i] + (0.01 if event.value >= 0 else -0.01)))
-            else:
-                button_type = 1
-
-            screen.blit(self.buttons[i][button_type], (dest_x, dest_y))
-
-            if self.buttons[i][3] == ButtonType.BAR:
-                if len(self.buttons[i]) > 4:
-                    label = f'{str(DifficultyScale((self.notch_val[i] * (self.buttons[i][4][-1] - self.buttons[i][4][0])) + self.buttons[i][4][0]))}'
-                else:
-                    label = f'{int(self.notch_val[i] * 100)}%'
-                text = pygame.font.SysFont("courier", 32).render(label, True, (255, 255, 255))
-                screen.blit(text, ((self.buttons[i][button_type].get_width() - text.get_width()) - (self.buttons[i][button_type].get_width() - text.get_width()) // 10, ((i + 1) * self.buttons[i][button_type].get_height()) - text.get_height()))
-                if button_type == 1:
-                    bar.fill((255, 255, 255))
-                    notch.fill((140, 140, 140))
-                elif button_type == 2:
-                    bar.fill((255, 255, 255))
-                    notch.fill((140, 0, 0))
-                screen.blit(bar, (bar_rect.x, bar_rect.y))
-                screen.blit(notch, (notch_rect.x, notch_rect.y))
-
-        if retro:
-            screen = retroify_image(screen)
-
-        if self.should_glitch:
-            if self.glitch_timer > 0:
-                self.glitch_timer -= 0.01
-            else:
-                self.glitches = glitch(0.1, screen)
-                self.glitch_timer = 0.1
-            if self.glitches is not None:
-                for spot in self.glitches:
-                    screen.blit(spot[0], spot[1])
-
-        win.blit(screen, ((win.get_width() - screen.get_width()) // 2, (win.get_height() - screen.get_height()) // 2))
-        pygame.display.update()
+                                for val in button.range:
+                                    if val >= dec:
+                                        button.value = val
+                                        break
+                        else:
+                            button.value = min(button.range[-1], max(button.range[0], pct * button.range[-1]))
+                for event in pygame.event.get():
+                    if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1) or (event.type == pygame.JOYBUTTONDOWN and event.button == 0):
+                        return i
         return None
 
+    def set_mouse_pos(self, i) -> None:
+        rect = self.buttons[i].rect
+        pygame.mouse.set_pos(rect.x + (rect.width * 0.75), rect.y + (rect.height / 2))
+
+    def move_mouse_pos_vert(self, direction) -> None:
+        for i, button in enumerate(self.buttons):
+            if button.rect.collidepoint(pygame.mouse.get_pos()):
+                if (direction > 0 and i < len(self.buttons) - 1) or (direction < 0 and i > 0):
+                    cur = pygame.mouse.get_pos()
+                    pygame.mouse.set_pos(cur[0], cur[1] + direction * button.rect.height)
+
+    def move_mouse_pos_horiz(self, direction) -> None:
+        if len(self.buttons) == 1:
+            return
+        else:
+            for i, button in enumerate(self.buttons):
+                if button.rect.collidepoint(pygame.mouse.get_pos()):
+                    if isinstance(button, Bar):
+                        if len(button.range) == 2 and button.range[0] == 0 and button.range[1] == 100:
+                            for j, val in enumerate(button.range):
+                                if button.value == val and ((j < len(button.range) - 1 and direction > 0) or (j > 0 and direction < 0)):
+                                    button.value = max(button.range[0], min(button.range[-1], button.pct_val * (button.range[-1] - button.range[0]) + button.range[0]))
+                                    break
+                    elif (direction > 0 and i % 2 == 0) or (direction < 0 and i % 2 == 1):
+                        cur = pygame.mouse.get_pos()
+                        pygame.mouse.set_pos(cur[0] + direction * button.rect.width, cur[1])
+                    break
 
 class Selector(Menu):
-    def __init__(self, win, header, note, images, values, index=0, music=None, should_glitch=True, accept_only=False, retro=False):
-        self.clear = None
+    def __init__(self, controller, header, note, images, values, index=0, music=None, should_glitch=True, accept_only=False):
+        self.controller = controller
+        self.clear_normal = None
         self.clear_retro = None
-        self.notch_val = [None, None, None]
-        self.arrow_asset = pygame.transform.smoothscale_by(load_images("Menu", "Arrows")["ARROW_WHITE"], 0.5)
-        button_assets = load_images("Menu", "Buttons")
-        self.buttons = self.__make_buttons__(pygame.transform.smoothscale_by(button_assets["HALF_BUTTON_NORMAL"], 0.5), pygame.transform.smoothscale_by(button_assets["HALF_BUTTON_MOUSEOVER"], 0.5), pygame.transform.smoothscale_by(button_assets["BUTTON_NORMAL"], 0.5), pygame.transform.smoothscale_by(button_assets["BUTTON_MOUSEOVER"], 0.5), accept_only=accept_only)
-        self.header = pygame.font.SysFont("courier", 32).render(header, True, (255, 255, 255))
-        self.note = []
-        if note is not None:
-            for line in note:
-                self.note.append(pygame.font.SysFont("courier", 16).render(line, True, (255, 255, 255)))
-        image_width = 0
-        image_height = 0
+        button_assets = {key: pygame.transform.smoothscale_by(value, 0.5) for key, value in load_images("Menu", "Buttons").items()}
+        button_width = button_assets["HALF_BUTTON_NORMAL"].get_width()
+        button_height = button_assets["HALF_BUTTON_NORMAL"].get_height()
+        arrow_asset = pygame.transform.smoothscale_by(load_images("Menu", "Arrows")["ARROW_WHITE"], 0.5)
+
+        max_image_width = 0
+        max_image_height = 0
         self.image_index = index
         if isinstance(images, dict):
             if list(images.keys()) != ["normal", "retro"]:
@@ -250,168 +310,91 @@ class Selector(Menu):
                 for key in images.keys():
                     self.images[key] = []
                     for image in images[key]:
-                        image_width = max(image_width, image.get_width())
-                        image_height = max(image_height, image.get_height())
-                        self.images[key].append([pygame.Rect(0, 0, image_width, image_height), image])
-                self.image_selected = self.images["retro" if retro else "normal"][self.image_index]
+                        scale_val = min(image.get_width() / self.controller.win.get_width(), image.get_height() / self.controller.win.get_height())
+                        if scale_val > 1:
+                            image = pygame.transform.scale_by(image, 1 / scale_val)
+                        max_image_width = max(max_image_width, image.get_width())
+                        max_image_height = max(max_image_height, image.get_height())
+                        self.images[key].append(image)
         else:
-            self.images = []
+            self.images = {"normal": [], "retro": []}
             for image in images:
-                image_width = max(image_width, image.get_width())
-                image_height = max(image_height, image.get_height())
-                self.images.append([pygame.Rect(0, 0, image_width, image_height), image])
-            self.image_selected = self.images[self.image_index]
+                scale_val = min(image.get_width() / self.controller.win.get_width(), image.get_height() / self.controller.win.get_height())
+                if scale_val > 1:
+                    image = pygame.transform.scale_by(image, 1 / scale_val)
+                max_image_width = max(max_image_width, image.get_width())
+                max_image_height = max(max_image_height, image.get_height())
+                self.images["normal"].append(image)
+                self.images["retro"].append(retroify_image(image))
+
+        self.note = []
+        if note is not None:
+            for line in note:
+                self.note.append(pygame.font.SysFont("courier", 16).render(line, True, NORMAL_WHITE))
+        if header is not None:
+            text = pygame.font.SysFont("courier", 32).render(header, True, NORMAL_WHITE)
+            screen = pygame.Surface((min(2 * self.controller.win.get_width() // 3, max(max_image_width, button_width * 2, text.get_width())), max_image_height + (button_height * 2) + text.get_height() + (self.note[0].get_height() * len(self.note) if len(self.note) > 0 else 0) + 10), pygame.SRCALPHA)
+            screen.fill(NORMAL_BLACK)
+            screen.blit(text, ((screen.get_width() - text.get_width()) / 2, 5))
+        else:
+            screen = pygame.Surface((min(2 * self.controller.win.get_width() // 3, button_width * 2), max_image_height + (button_height * 2)), pygame.SRCALPHA)
+            screen.fill(NORMAL_BLACK)
+        self.screen_normal = screen
+        self.screen_retro = retroify_image(screen)
+        self.rect = pygame.Rect((self.controller.win.get_width() - screen.get_width()) // 2, (self.controller.win.get_height() - screen.get_height()) // 2, screen.get_width(), screen.get_height())
+
         self.values = values
-        self.screen = pygame.Surface((min(2 * win.get_width() // 3, max(image_width, self.buttons[0][0].width * 2, self.header.get_width())), self.header.get_height() + image_height + (self.note[0].get_height() * len(self.note) if len(self.note) > 0 else 0) + (self.buttons[0][0].height * 2) + 20), pygame.SRCALPHA)
-        self.screen.fill((0, 0, 0, 128))
-        self.screen.blit(self.header, ((self.screen.get_width() - self.header.get_width()) // 2, 5))
-        for i in range(len(self.note)):
-            self.screen.blit(self.note[i], ((self.screen.get_width() - self.note[i].get_width()) // 2, self.header.get_height() + image_height + (i * self.note[i].get_height()) + 10))
+
+        self.buttons = []
+        loop_range = range(1 if accept_only else 4)
+        for i in loop_range:
+            normal = button_assets["HALF_BUTTON_NORMAL"].copy()
+            mouseover = button_assets["HALF_BUTTON_MOUSEOVER"].copy()
+
+            if accept_only:
+                label = pygame.font.SysFont("courier", 32).render("Accept", True, NORMAL_WHITE)
+            else:
+                if i == 0:
+                    label = pygame.transform.flip(arrow_asset, True, False)
+                elif i == 1:
+                    label = arrow_asset
+                elif i == 2:
+                    label = pygame.font.SysFont("courier", 32).render("Back", True, NORMAL_WHITE)
+                else:
+                    label = pygame.font.SysFont("courier", 32).render("Accept", True, NORMAL_WHITE)
+
+            x = self.controller.win.get_width() // 2 - (button_width * (1 - i % 2))
+            y = self.rect.y + self.rect.height - (button_height * ((len(loop_range) - i + 1) // 2))
+            self.buttons.append(Button(self.controller, x, y, button_width, button_height, i, img_normal=normal, img_mouseover=mouseover, label_normal=label, label_mouseover=label))
+
         self.music = (None if music is None else validate_file_list("Music", music, "mp3"))
         self.music_index = 0
         self.should_glitch = should_glitch
         self.glitch_timer = 0
         self.glitches = None
+        self.cycle_images(0)
 
-    def set_mouse_pos(self, win) -> None:
-        x = self.buttons[0 if len(self.buttons) <= 1 else 1][0].x + (self.buttons[0 if len(self.buttons) <= 1 else 1][0].width * 0.75)
-
-        y = (win.get_height() + self.screen.get_height() - self.buttons[0][0].height) // 2
-
-        pygame.mouse.set_pos((x, y))
-
-    def move_mouse_sideways(self, direction) -> None:
-        if direction > 0:
-            x = self.buttons[1][0].x + (self.buttons[1][0].width * 0.75)
-        else:
-            x = self.buttons[0][0].x + (self.buttons[0][0].width * 0.75)
-
-        y = pygame.mouse.get_pos()[1]
-
-        pygame.mouse.set_pos((x, y))
-
-    def move_mouse_pos(self, win, direction) -> None:
-        x = pygame.mouse.get_pos()[0]
-
-        target = pygame.mouse.get_pos()[1] + (direction * self.buttons[0][0].height)
-        top = (win.get_height() + self.screen.get_height() - (2 * (len(self.buttons) - 0.5) * self.buttons[0][0].height)) // 2
-        bottom = (win.get_height() + self.screen.get_height() - self.buttons[0][0].height) // 2
-        y = max(top, min(bottom, target))
-
-        pygame.mouse.set_pos((x, y))
-
-    def set_index(self, index: int, retro: bool = False) -> None:
+    def set_index(self, index: int) -> None:
         self.image_index = index
-        if isinstance(self.images, dict):
-            self.image_selected = self.images["retro" if retro else "normal"][index]
-        else:
-            self.image_selected = self.images[index]
+        self.image_selected = self.images["retro" if self.controller.retro else "normal"][index]
 
-    def cycle_images(self, direction: int, retro: bool = False) -> None:
+    def cycle_images(self, direction: int) -> None:
         if direction > 0:
             self.image_index += 1
         else:
             self.image_index -= 1
-        if isinstance(self.images, dict):
-            if self.image_index >= len(self.images["retro" if retro else "normal"]):
-                self.image_index = 0
-            elif self.image_index < 0:
-                self.image_index = len(self.images["retro" if retro else "normal"]) - 1
-            self.image_selected = self.images["retro" if retro else "normal"][self.image_index]
-        else:
-            if self.image_index >= len(self.images):
-                self.image_index = 0
-            elif self.image_index < 0:
-                self.image_index = len(self.images) - 1
-            self.image_selected = self.images[self.image_index]
+        if self.image_index >= len(self.images["retro" if self.controller.retro else "normal"]):
+            self.image_index = 0
+        elif self.image_index < 0:
+            self.image_index = len(self.images["retro" if self.controller.retro else "normal"]) - 1
+        self.image_selected = self.images["retro" if self.controller.retro else "normal"][self.image_index].copy()
+        self.img_rect = pygame.Rect(self.rect.x + (self.rect.width - self.image_selected.get_width()) // 2, self.rect.y + self.rect.height - (self.buttons[0].normal.get_height() * len(self.buttons) // 2) - self.image_selected.get_height(), self.image_selected.get_width(), self.image_selected.get_height())
 
-    def __make_buttons__(self, half_button_normal, half_button_mouseover, button_normal, button_mouseover, accept_only=False) -> list:
-        buttons = []
-        loop_range = range(1 if accept_only else 4)
-        for i in loop_range:
-            if accept_only:
-                label = pygame.font.SysFont("courier", 32).render("Accept", True, (255, 255, 255))
-                normal = button_normal.copy()
-                mouseover = button_mouseover.copy()
-            else:
-                if i == 0:
-                    label = pygame.transform.flip(self.arrow_asset, True, False)
-                elif i == 1:
-                    label = self.arrow_asset
-                elif i == 2:
-                    label = pygame.font.SysFont("courier", 32).render("Back", True, (255, 255, 255))
-                else:
-                    label = pygame.font.SysFont("courier", 32).render("Accept", True, (255, 255, 255))
-                normal = half_button_normal.copy()
-                mouseover = half_button_mouseover.copy()
-            normal.blit(label, ((normal.get_width() - label.get_width()) // 2, (normal.get_height() - label.get_height()) // 2))
-            mouseover.blit(label, ((mouseover.get_width() - label.get_width()) // 2, (mouseover.get_height() - label.get_height()) // 2))
-            buttons.append([pygame.Rect(0, 0, max(normal.get_width(), mouseover.get_width()), max(normal.get_height(), mouseover.get_height())), normal, mouseover, ButtonType.CLICK])
-        return buttons
 
-    def display(self, win: pygame.Surface, retro: bool = False) -> int | None:
-        if self.clear is not None:
-            if retro:
-                if self.clear_retro is None:
-                    self.clear_retro = retroify_image(self.clear)
-                win.blit(self.clear_retro, (0, 0))
-            else:
-                win.blit(self.clear, (0, 0))
+    def set_alpha(self, alpha: int) -> None:
+        self.image_selected.set_alpha(alpha)
+        super().set_alpha(alpha)
 
-        screen = self.screen.copy()
-        if self.image_selected[1].get_width() > screen.get_width():
-            self.image_selected[1] = pygame.transform.scale_by(self.image_selected[1], screen.get_width() / self.image_selected[1].get_width())
-            self.image_selected[0].width = self.image_selected[1].get_width()
-            self.image_selected[0].height = self.image_selected[1].get_height()
-        dest_x = (screen.get_width() - self.image_selected[0].width) // 2
-        dest_y = self.header.get_height() + 10
-        self.image_selected[0].x = dest_x + ((win.get_width() - screen.get_width()) // 2)
-        self.image_selected[0].y = dest_y + ((win.get_height() - screen.get_height()) // 2)
-        screen.blit(self.image_selected[1], (dest_x, dest_y))
-
-        for i in range(len(self.buttons)):
-            if len(self.buttons) > 1:
-                if i == 0:
-                    dest_x = (screen.get_width() - (self.buttons[i][0].width * 2)) // 2
-                    dest_y = screen.get_height() - ((len(self.buttons) - 2) * self.buttons[i][0].height)
-                elif i == 1:
-                    dest_x = ((screen.get_width() - (self.buttons[i][0].width * 2)) // 2) + self.buttons[i][0].width
-                    dest_y = screen.get_height() - ((len(self.buttons) - 2) * self.buttons[i][0].height)
-                elif i == 2:
-                    dest_x = (screen.get_width() - (self.buttons[i][0].width * 2)) // 2
-                    dest_y = screen.get_height() - ((len(self.buttons) - 3) * self.buttons[i][0].height)
-                else:
-                    dest_x = ((screen.get_width() - (self.buttons[i][0].width * 2)) // 2) + self.buttons[i][0].width
-                    dest_y = screen.get_height() - ((len(self.buttons) - 3) * self.buttons[i][0].height)
-            else:
-                dest_x = (screen.get_width() - self.buttons[i][0].width) // 2
-                dest_y = screen.get_height() - ((len(self.buttons) - i) * self.buttons[i][0].height)
-            self.buttons[i][0].x = dest_x + ((win.get_width() - screen.get_width()) // 2)
-            self.buttons[i][0].y = dest_y + ((win.get_height() - screen.get_height()) // 2)
-
-            if self.buttons[i][0].collidepoint(pygame.mouse.get_pos()):
-                button_type = 2
-                for event in pygame.event.get():
-                    if self.buttons[i][3] == ButtonType.CLICK and ((event.type == pygame.MOUSEBUTTONDOWN and event.button == 1) or (event.type == pygame.JOYBUTTONDOWN and event.button == 0)):
-                        return i
-            else:
-                button_type = 1
-
-            screen.blit(self.buttons[i][button_type], (dest_x, dest_y))
-
-        if retro:
-            screen = retroify_image(screen)
-
-        if self.should_glitch:
-            if self.glitch_timer > 0:
-                self.glitch_timer -= 0.01
-            else:
-                self.glitches = glitch(0.1, screen)
-                self.glitch_timer = 0.1
-            if self.glitches is not None:
-                for spot in self.glitches:
-                    screen.blit(spot[0], spot[1])
-
-        win.blit(screen, ((win.get_width() - screen.get_width()) // 2, (win.get_height() - screen.get_height()) // 2))
-        pygame.display.update()
-        return None
+    def draw(self) -> None:
+        super().draw()
+        self.controller.win.blit(self.image_selected, (self.img_rect.x, self.img_rect.y))
