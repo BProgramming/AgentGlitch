@@ -354,15 +354,15 @@ class Hazard(Block):
             self.sprites = [self.sprite]
         self.animation_count = 0
         self.sprite = None
-        self.update_sprite(1)
+        self.update_sprite()
         self.update_geo()
 
     def set_difficulty(self, scale) -> None:
         self.difficulty = scale
         self.attack_damage *= scale
 
-    def update_sprite(self, fps) -> int:
-        active_index = math.floor((self.animation_count // (1000 // (fps * Hazard.ANIMATION_DELAY))) % len(self.sprites))
+    def update_sprite(self) -> int:
+        active_index = math.floor((self.animation_count // 60) % len(self.sprites))
         if active_index >= len(self.sprites):
             active_index = 0
             self.animation_count = 0
@@ -377,11 +377,11 @@ class Hazard(Block):
         self.animation_count += dtime
         super().loop(dtime)
 
-    def draw(self, win, offset_x, offset_y, master_volume, fps) -> None:
+    def draw(self, win, offset_x, offset_y, master_volume) -> None:
         adj_x = self.rect.x - offset_x
         adj_y = self.rect.y - offset_y
         if -self.rect.width < adj_x <= win.get_width() and -self.rect.height < adj_y <= win.get_height():
-            self.update_sprite(fps)
+            self.update_sprite()
             self.update_geo()
             win.blit(self.sprite, (adj_x, adj_y))
 
@@ -400,7 +400,7 @@ class MovingHazard(MovingBlock, Hazard):
             self.sprites = {"ANIMATE": self.sprite}
         self.animation_count = 0
         self.sprite = None
-        self.update_sprite(1)
+        self.update_sprite()
 
     def loop(self, dtime) -> None:
         MovingBlock.loop(self, dtime)
@@ -423,14 +423,14 @@ class FallingHazard(Hazard):
         self.y_vel = 0.0
         self.cooldowns = {"reset_time": 0.0, "landing_effect": 0.0}
 
-    def update_sprite(self, fps) -> int:
+    def update_sprite(self) -> int:
         if hasattr(self, "has_fired") and self.has_fired:
             if self.y_vel != 0:
                 active_index = -2
             else:
                 active_index = -1
         else:
-            active_index = math.floor((self.animation_count // (1000 // (fps * FallingHazard.ANIMATION_DELAY))) % (len(self.sprites) - 2))
+            active_index = math.floor((self.animation_count // 60) % (len(self.sprites) - 2))
             if active_index >= len(self.sprites) - 2:
                 active_index = 0
                 self.animation_count = 0

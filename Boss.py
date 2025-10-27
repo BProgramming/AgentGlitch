@@ -74,8 +74,8 @@ class Boss(NonPlayer):
         await self.__queue_music__()
         pygame.event.Event(pygame.USEREVENT)
 
-    def update_sprite(self, fps) -> int:
-        active_index = super().update_sprite(fps)
+    def update_sprite(self) -> int:
+        active_index = super().update_sprite()
         if self.audios is not None and (self.state in [MovementState.WIND_UP, MovementState.ATTACK_ANIM, MovementState.WIND_DOWN]) and self.audio_trigger_frames.get(str(self.state)) is not None:
             audio_folder = f'{self.name.upper().split(" ",1)[0]}_{str(self.state)}'
             if self.audios.get(audio_folder) is not None and active_index in self.audio_trigger_frames[str(self.state)]:

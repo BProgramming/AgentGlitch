@@ -96,7 +96,7 @@ class ParticleEffect:
         if self.should_move:
             self.move(dtime)
 
-    def draw(self, win, offset_x, offset_y, master_volume, fps) -> None:
+    def draw(self, win, offset_x, offset_y, master_volume) -> None:
         if self.should_move:
             image = self.image[self.image_index] if isinstance(self.image, list) else self.image
             coord_x = [self.rect.x - offset_x]

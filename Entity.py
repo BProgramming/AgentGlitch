@@ -3,7 +3,6 @@ import pygame
 
 class Entity(pygame.sprite.Sprite):
     GRAVITY = 0.02
-    ANIMATION_DELAY = 0.3
 
     def __init__(self, level, controller, x: float, y: float, width: float, height: float, is_blocking: bool=True, name: str="Entity"):
         super().__init__()
@@ -45,7 +44,7 @@ class Entity(pygame.sprite.Sprite):
         if self.hp <= 0:
             self.level.queue_purge(self)
 
-    def draw(self, win: pygame.Surface, offset_x: float, offset_y: float, master_volume: dict, fps: int) -> None:
+    def draw(self, win: pygame.Surface, offset_x: float, offset_y: float, master_volume: dict) -> None:
         adj_x = self.rect.x - offset_x
         adj_y = self.rect.y - offset_y
         if -self.rect.width < adj_x <= win.get_width() and -self.rect.height < adj_y <= win.get_height():

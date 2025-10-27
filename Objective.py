@@ -31,7 +31,7 @@ class Objective(Entity):
         self.animation_count = 0
         self.sprite = None
         if self.sprites is not None:
-            self.update_sprite(1)
+            self.update_sprite()
             self.update_geo()
         self.audios = audios
         self.sound = None if sound == "none" else sound
@@ -73,8 +73,8 @@ class Objective(Entity):
                 active_audio_channel.play(self.audios[name.upper()][random.randrange(len(self.audios[name.upper()]))])
                 set_sound_source(self.rect, self.level.player.rect, self.controller.master_volume["non-player"], active_audio_channel)
 
-    def update_sprite(self, fps) -> int:
-        active_index = math.floor((self.animation_count // (1000 // (fps * Objective.ANIMATION_DELAY))) % len(self.sprites))
+    def update_sprite(self) -> int:
+        active_index = math.floor((self.animation_count // 60) % len(self.sprites))
         if active_index >= len(self.sprites):
             active_index = 0
             self.animation_count = 0
@@ -89,11 +89,11 @@ class Objective(Entity):
         self.animation_count += dtime
         super().loop(dtime)
 
-    def draw(self, win, offset_x, offset_y, master_volume, fps) -> None:
+    def draw(self, win, offset_x, offset_y, master_volume) -> None:
         adj_x = self.rect.x - offset_x
         adj_y = self.rect.y - offset_y
         if self.sprite is not None and -self.rect.width < adj_x <= win.get_width() and -self.rect.height < adj_y <= win.get_height():
-            self.update_sprite(fps)
+            self.update_sprite()
             self.update_geo()
             win.blit(self.sprite, (adj_x, adj_y))
 

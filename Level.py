@@ -234,7 +234,7 @@ class Level:
     def __get_static_block_slice__(self, win, offset_x, offset_y) -> list:
         return [row[int(offset_x // self.block_size):int((offset_x + (1.5 * win.get_width())) // self.block_size)] for row in self.static_blocks[int(offset_y // self.block_size):int((offset_y + (1.5 * win.get_height())) // self.block_size)]]
 
-    def draw(self, win, offset_x, offset_y, master_volume, fps) -> None:
+    def draw(self, win, offset_x, offset_y, master_volume) -> None:
         self.visual_effects_manager.draw(win, (offset_x, offset_y))
 
         above_player = []
@@ -244,22 +244,22 @@ class Level:
                 for ent_lower in ent:
                     if ent_lower is not None:
                         if ent_lower.is_blocking:
-                            ent_lower.draw(win, offset_x, offset_y, master_volume, fps)
+                            ent_lower.draw(win, offset_x, offset_y, master_volume)
                         else:
                             above_player.append(ent_lower)
             else:
                 if ent.is_blocking:
-                    ent.draw(win, offset_x, offset_y, master_volume, fps)
+                    ent.draw(win, offset_x, offset_y, master_volume)
                 else:
                     above_player.append(ent)
 
-        self.player.draw(win, offset_x, offset_y, master_volume, fps)
+        self.player.draw(win, offset_x, offset_y, master_volume)
 
         for ent in above_player:
-            ent.draw(win, offset_x, offset_y, master_volume, fps)
+            ent.draw(win, offset_x, offset_y, master_volume)
 
         for effect in self.particle_effects:
-            effect.draw(win, offset_x, offset_y, master_volume, fps)
+            effect.draw(win, offset_x, offset_y, master_volume)
 
     @staticmethod
     def build_level(level, layout, sprite_master, image_master, objects_dict, player_audios, enemy_audios, block_audios, message_audios, win, controller, player_sprite, block_size, loading_screen) -> tuple:

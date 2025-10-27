@@ -112,7 +112,7 @@ class Camera:
                 if self.level.retro:
                     self.fg_image = retroify_image(self.fg_image)
 
-    def draw(self, master_volume: dict[str, float], fps: int, glitches: list=None) -> None:
+    def draw(self, master_volume: dict[str, float], glitches: list=None) -> None:
         visible_screen = pygame.Rect(self.offset_x, self.offset_y, self.width, self.height)
 
         if len(self.bg_tileset) == 1:
@@ -121,7 +121,7 @@ class Camera:
             for tile in self.bg_tileset:
                 self.win.blit(self.bg_image, (tile[0] - self.offset_x, tile[1] - self.offset_y))
 
-        self.level.draw(self.win, self.offset_x, self.offset_y, master_volume, fps)
+        self.level.draw(self.win, self.offset_x, self.offset_y, master_volume)
 
         if self.fg_image is not None:
             self.win.blit(self.fg_image.subsurface(visible_screen), (0, 0))
@@ -139,7 +139,7 @@ class Camera:
         black = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
         black.fill((0, 0, 0))
         for i in range(64):
-            self.draw(controller.master_volume, 1)
+            self.draw(controller.master_volume)
             if direction == "in":
                 black.set_alpha(255 - (4 * i))
                 volume = (i + 1) / 64

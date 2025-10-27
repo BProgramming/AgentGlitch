@@ -279,7 +279,7 @@ def main(win):
                     glitches = glitch((1 - max(level.player.hp / level.player.max_hp, 0)) / 2, win)
                     glitch_timer = 0.5
 
-                camera.draw(controller.master_volume, FPS_TARGET, glitches=glitches)
+                camera.draw(controller.master_volume, glitches=glitches)
                 pygame.display.update()
 
                 if controller.should_scroll_to_point is not None:

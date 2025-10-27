@@ -28,7 +28,7 @@ class Player(Actor):
         self.is_retro = False
         if self.level.retro:
             self.toggle_retro()
-            self.update_sprite(1)
+            self.update_sprite()
         self.cooldowns.update({"teleport": 0.0, "teleport_delay": 0.0, "teleport_effect_trail": 0.0, "block": 0.0, "block_attempt": 0.0, "blocking_effect": 0.0, "bullet_time": 0.0, "bullet_time_active": 0.0})
         self.cached_cooldowns = self.cooldowns.copy()
         self.target_vel = Player.VELOCITY_TARGET

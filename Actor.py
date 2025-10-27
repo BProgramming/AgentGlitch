@@ -39,7 +39,8 @@ class MovementState(Enum):
 class Actor(Entity):
     SIZE = 64
     VELOCITY_TARGET = 0.4
-    VELOCITY_JUMP = 10
+    VELOCITY_JUMP = 0.75
+    JUMP_TIME = 120
     GET_HIT_COOLDOWN = 1
     MAX_SHOOT_DISTANCE = 500
     ATTACK_DAMAGE = 10
@@ -69,6 +70,7 @@ class Actor(Entity):
         self.can_move_blocks = False
         self.can_wall_jump = False
         self.is_wall_jumping = False
+        self.jump_time = -1
         self.jump_count = 0
         self.max_jumps = 1
         self.can_shoot = False
@@ -84,7 +86,7 @@ class Actor(Entity):
         self.sprites = load_sprite_sheets("Sprites", ("UnarmedAgent" if sprite is None else sprite), sprite_master, direction=True, retro=self.level.retro)
         self.sprite = None
         self.audios = audios
-        self.update_sprite(1)
+        self.update_sprite()
         self.update_geo()
         self.rect.x += (block_size - self.rect.width) // 2
         self.rect.y += (block_size - self.rect.height)
@@ -124,7 +126,7 @@ class Actor(Entity):
         for proj in data["projectiles"]:
             self.active_projectiles.append(Projectile(self.level, self.controller, self.rect.centerx + (self.rect.width * self.facing // 3), self.rect.centery, None, 0, self.attack_damage, self.difficulty, sprite=self.proj_sprite, name=f'{self.name}\'s projectile #{len(self.active_projectiles) + 1}'))
             self.active_projectiles[-1].load(list(proj.values())[0])
-        self.update_sprite(1)
+        self.update_sprite()
         self.update_geo()
 
     def set_difficulty(self, scale: float) -> None:
@@ -181,12 +183,8 @@ class Actor(Entity):
 
     def jump(self) -> None:
         if self.jump_count < self.max_jumps:
-            self.y_vel = -Actor.VELOCITY_JUMP
-            if self.jump_count > 0:
-                rotation = (self.x_vel / self.y_vel) * 30
-                self.level.visual_effects_manager.spawn(VisualEffect(self, self.level.visual_effects_manager.image_master, image_name="JUMPLINES", direction=[ImageDirection.BOTTOM, (ImageDirection.RIGHT if self.facing == MovementDirection.RIGHT else ImageDirection.LEFT)], rotation=rotation, alpha=64, offset=(self.rect.width // 2, 0), scale=(self.rect.width // 2, self.rect.height)), time=Actor.DOUBLEJUMP_EFFECT_TRAIL)
+            self.jump_time = Actor.JUMP_TIME
             self.jump_count += 1
-            self.should_move_vert = True
             if self.is_wall_jumping:
                 self.is_wall_jumping = False
                 self.direction = self.direction.swap()
@@ -199,6 +197,7 @@ class Actor(Entity):
             self.hp -= 2 * self.y_vel
         self.y_vel = 0.0
         self.jump_count = 0
+        self.jump_time = 0
         self.should_move_vert = False
         self.is_wall_jumping = False
 
@@ -400,9 +399,9 @@ class Actor(Entity):
                 self.state = old
         self.state_changed = bool(old != self.state)
 
-    def update_sprite(self, fps) -> int:
+    def update_sprite(self) -> int:
         active_sprites = self.sprites[f'{str(self.state)}_{str(self.facing)}']
-        active_index = math.floor((self.animation_count // (1000 // (fps * Actor.ANIMATION_DELAY))) % len(active_sprites))
+        active_index = math.floor((self.animation_count // 60) % len(active_sprites))
         if active_index == len(active_sprites) - 1:
             self.is_final_anim_frame = True
         else:
@@ -428,6 +427,19 @@ class Actor(Entity):
 
     def loop(self, dtime) -> bool:
         self.animation_count += dtime
+        if self.jump_time > 0:
+            if dtime > self.jump_time:
+                self.y_vel = -Actor.VELOCITY_JUMP * self.jump_time
+                self.jump_time = 0
+            else:
+                self.y_vel = -Actor.VELOCITY_JUMP * dtime
+                self.jump_time -= dtime
+
+            if self.jump_count > 1 and self.jump_time + dtime == Actor.JUMP_TIME:
+                rotation = (self.x_vel / self.y_vel) * 30
+                self.level.visual_effects_manager.spawn(VisualEffect(self, self.level.visual_effects_manager.image_master, image_name="JUMPLINES", direction=[ImageDirection.BOTTOM, (ImageDirection.RIGHT if self.facing == MovementDirection.RIGHT else ImageDirection.LEFT)], rotation=rotation, alpha=64, offset=(self.rect.width // 2, 0), scale=(self.rect.width // 2, self.rect.height)), time=Actor.DOUBLEJUMP_EFFECT_TRAIL)
+
+            self.should_move_vert = True
 
         if self.hp <= 0:
             self.die()
@@ -499,7 +511,7 @@ class Actor(Entity):
         self.update_state()
         return collided
 
-    def draw(self, win, offset_x, offset_y, master_volume, fps) -> None:
+    def draw(self, win, offset_x, offset_y, master_volume) -> None:
         adj_x_image = self.rect.x - offset_x
         adj_y_image = self.rect.y - offset_y
         #adj_x_audio = self.level.player.rect.x - self.rect.x
@@ -508,9 +520,9 @@ class Actor(Entity):
         window_height = win.get_height()
         if len(self.active_projectiles) > 0:
             for proj in self.active_projectiles:
-                proj.draw(win, offset_x, offset_y, master_volume, fps)
+                proj.draw(win, offset_x, offset_y, master_volume)
         if -self.rect.width < adj_x_image <= window_width and -self.rect.height < adj_y_image <= window_height:
-            self.update_sprite(fps)
+            self.update_sprite()
             self.update_geo()
             win.blit(self.sprite, (adj_x_image, adj_y_image))
 
