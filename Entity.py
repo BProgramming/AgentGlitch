@@ -44,6 +44,10 @@ class Entity(pygame.sprite.Sprite):
         if self.hp <= 0:
             self.level.queue_purge(self)
 
+    @staticmethod
+    def apply_gravity(dtime, y_vel, scale_factor=1) -> int:
+        return y_vel + (Entity.GRAVITY * scale_factor * dtime)
+
     def draw(self, win: pygame.Surface, offset_x: float, offset_y: float, master_volume: dict) -> None:
         adj_x = self.rect.x - offset_x
         adj_y = self.rect.y - offset_y

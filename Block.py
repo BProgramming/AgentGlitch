@@ -327,7 +327,7 @@ class MovableBlock(Block):
             self.x_vel = 0.0
 
         if self.should_move_vert:
-            self.y_vel += dtime * MovableBlock.GRAVITY
+            self.y_vel = self.apply_gravity(dtime, self.y_vel)
         else:
             self.y_vel = 0.0
 
@@ -466,7 +466,7 @@ class FallingHazard(Hazard):
 
         collided = False
         if self.has_fired and self.cooldowns["reset_time"] <= 0:
-            self.y_vel += dtime * FallingHazard.GRAVITY
+            self.y_vel = self.apply_gravity(dtime, self.y_vel)
 
             ents = self.level.get_entities_in_range((self.rect.x, self.rect.y + self.y_vel), blocks_only=True)
             # this part lets falling hazards hit each other and cause those to fall too

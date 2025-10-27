@@ -183,8 +183,14 @@ class Actor(Entity):
 
     def jump(self) -> None:
         if self.jump_count < self.max_jumps:
-            self.jump_time = Actor.JUMP_TIME
+            self.should_move_vert = True
+            self.y_vel = -Actor.VELOCITY_JUMP
             self.jump_count += 1
+
+            if self.jump_count > 1:
+                rotation = (self.x_vel / self.y_vel) * 30
+                self.level.visual_effects_manager.spawn(VisualEffect(self, self.level.visual_effects_manager.image_master, image_name="JUMPLINES", direction=[ImageDirection.BOTTOM, (ImageDirection.RIGHT if self.facing == MovementDirection.RIGHT else ImageDirection.LEFT)], rotation=rotation, alpha=64, offset=(self.rect.width // 2, 0), scale=(self.rect.width // 2, self.rect.height)), time=Actor.DOUBLEJUMP_EFFECT_TRAIL)
+
             if self.is_wall_jumping:
                 self.is_wall_jumping = False
                 self.direction = self.direction.swap()
@@ -193,12 +199,11 @@ class Actor(Entity):
         self.is_crouching = False
 
     def land(self) -> None:
-        if self.y_vel > 20:
+        self.should_move_vert = False
+        if self.y_vel > 2 * Actor.VELOCITY_JUMP:
             self.hp -= 2 * self.y_vel
         self.y_vel = 0.0
         self.jump_count = 0
-        self.jump_time = 0
-        self.should_move_vert = False
         self.is_wall_jumping = False
 
     def hit_head(self) -> None:
@@ -427,19 +432,6 @@ class Actor(Entity):
 
     def loop(self, dtime) -> bool:
         self.animation_count += dtime
-        if self.jump_time > 0:
-            if dtime > self.jump_time:
-                self.y_vel = -Actor.VELOCITY_JUMP * self.jump_time
-                self.jump_time = 0
-            else:
-                self.y_vel = -Actor.VELOCITY_JUMP * dtime
-                self.jump_time -= dtime
-
-            if self.jump_count > 1 and self.jump_time + dtime == Actor.JUMP_TIME:
-                rotation = (self.x_vel / self.y_vel) * 30
-                self.level.visual_effects_manager.spawn(VisualEffect(self, self.level.visual_effects_manager.image_master, image_name="JUMPLINES", direction=[ImageDirection.BOTTOM, (ImageDirection.RIGHT if self.facing == MovementDirection.RIGHT else ImageDirection.LEFT)], rotation=rotation, alpha=64, offset=(self.rect.width // 2, 0), scale=(self.rect.width // 2, self.rect.height)), time=Actor.DOUBLEJUMP_EFFECT_TRAIL)
-
-            self.should_move_vert = True
 
         if self.hp <= 0:
             self.die()
@@ -490,8 +482,8 @@ class Actor(Entity):
                 else:
                     self.x_vel = 0.0
 
-                if self.should_move_vert and self.jump_time <= 0:
-                    self.y_vel += dtime * Actor.GRAVITY * self.size / (1 + (3 if self.is_wall_jumping and self.y_vel > 0 else 0))
+                if self.should_move_vert:
+                    self.y_vel = self.apply_gravity(dtime, self.y_vel, scale_factor=(self.size / (1 + (3 if self.is_wall_jumping and self.y_vel > 0 else 0))))
 
                 if (self.x_vel + self.push_x != 0 or self.y_vel + self.push_y != 0) and self.hp > 0:
                     if self.level.player.is_slow_time and self != self.level.player:
@@ -501,7 +493,7 @@ class Actor(Entity):
                     if self.state == MovementState.CROUCH:
                         self.x_vel /= 2
 
-                    self.move(self.x_vel + self.push_x, self.y_vel + (self.push_y * dtime))
+                    self.move(self.x_vel + self.push_x, (self.y_vel + self.push_y) * dtime)
             else:
                 self.move(self.push_x, (self.push_y * dtime))
         else:
