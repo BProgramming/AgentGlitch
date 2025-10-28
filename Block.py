@@ -16,6 +16,10 @@ class Block(Entity):
         self.is_stacked = is_stacked
         self.audios = audios
 
+    @property
+    def gravity(self) -> float:
+        return super().gravity * 0.1
+
     def save(self) -> dict | None:
         if self.hp != 0:
             return super().save()
