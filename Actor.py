@@ -203,7 +203,7 @@ class Actor(Entity):
     def land(self) -> None:
         self.should_move_vert = False
         if self.y_vel > 2 * Actor.VELOCITY_JUMP:
-            self.hp -= 2 * self.y_vel
+            self.hp -= self.y_vel * self.y_vel / (18000 * self.size)
         self.y_vel = 0.0
         self.jump_count = 0
         self.is_wall_jumping = False
