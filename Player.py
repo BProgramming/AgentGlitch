@@ -10,15 +10,15 @@ from SimpleVFX.SimpleVFX import VisualEffect, ImageDirection
 
 
 class Player(Actor):
-    ATTACK_PUSHBACK = 0.2
-    VELOCITY_TARGET = 0.5
-    VELOCITY_DRAG = 0.93
-    MULTIPLIER_TELEPORT = 432
+    ATTACK_PUSHBACK = 200
+    VELOCITY_TARGET = 500
+    VELOCITY_DRAG_PCT = 0.93
+    MULTIPLIER_TELEPORT = 0.432
     TELEPORT_COOLDOWN = 3
     TELEPORT_DELAY = 0.35
-    TELEPORT_EFFECT_TRAIL = 50
+    TELEPORT_EFFECT_TRAIL = 0.05
     BLOCK_COOLDOWN = 3
-    BLOCK_EFFECT_TIME = 2000
+    BLOCK_EFFECT_TIME = 2
     BULLET_TIME_COOLDOWN = 3
     BULLET_TIME_ACTIVE = 2
 
@@ -32,7 +32,7 @@ class Player(Actor):
         self.cooldowns.update({"teleport": 0.0, "teleport_delay": 0.0, "teleport_effect_trail": 0.0, "block": 0.0, "block_attempt": 0.0, "blocking_effect": 0.0, "bullet_time": 0.0, "bullet_time_active": 0.0})
         self.cached_cooldowns = self.cooldowns.copy()
         self.target_vel = Player.VELOCITY_TARGET
-        self.drag_vel = Player.VELOCITY_DRAG
+        self.drag_vel = Player.VELOCITY_DRAG_PCT
         self.can_open_doors = True
         self.can_move_blocks = True
         self.can_block = True
@@ -203,5 +203,4 @@ class Player(Actor):
             if self.is_slow_time and self.cooldowns["bullet_time_active"] <= 0:
                 self.is_slow_time = False
             super().loop(dtime)
-
         return self.get_triggers()

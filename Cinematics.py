@@ -57,7 +57,7 @@ class CinematicsManager:
         for cinematic in self.queued:
             dtime += cinematic.play(win)
         self.queued = []
-        return dtime
+        return dtime / 1000
 
 class Cinematic:
     def __init__(self, ent: pygame.Surface | cv2.VideoCapture, cinematic_type: CinematicType, controller, pause_key: int | list[int] | tuple[int] | None=None, text: str | None=None, should_glitch: bool=False, should_fade_in: bool=True, should_fade_out: bool=True):
@@ -111,9 +111,9 @@ class Cinematic:
         win.blit(black, (0, 0))
 
         pause_dtime = 0
-        while pause_dtime < 1000:
+        while pause_dtime < 1:
             win.blit(slide, (slide_x, slide_y))
-            if should_glitch and pause_dtime > 750:
+            if should_glitch and pause_dtime > 0.75:
                 for spot in glitch(0.5, win):
                     win.blit(spot[0], spot[1])
             pygame.display.update()
@@ -123,7 +123,7 @@ class Cinematic:
                 elif event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or event.type == pygame.JOYBUTTONDOWN:
                     return
             time.sleep(0.01)
-            pause_dtime += 10
+            pause_dtime += .01
 
         if pause_key is not None:
             valid_keys = []

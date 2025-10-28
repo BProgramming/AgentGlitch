@@ -11,7 +11,7 @@ class ParticleType(Enum):
 
 
 class ParticleEffect:
-    VARIABLE_IMAGE_DISPLAY_TIME = 100
+    VARIABLE_IMAGE_DISPLAY_TIME = 0.1
 
     def __init__(self, level, win, width: int, height: int, amount: int, color: tuple[int, int, int, int], x_vel: float=0.0, y_vel: float=0.0, effect_type: ParticleType=ParticleType.STATIC, should_move: bool=True):
         self.effect_type = effect_type

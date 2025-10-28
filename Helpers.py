@@ -331,7 +331,7 @@ def load_text_from_file(file) -> list | None:
         return None
 
 
-def display_text(output: list | str, controller, should_type_text=False, min_pause_time=80, should_sleep=True, audio=None, retro=False) -> None:
+def display_text(output: list | str, controller, should_type_text=False, min_pause_time=0.08, should_sleep=True, audio=None, retro=False) -> None:
     if output is None or output == "":
         return
     else:
@@ -370,7 +370,7 @@ def display_text(output: list | str, controller, should_type_text=False, min_pau
                             if controller.goto_load or controller.goto_main:
                                 return
                             time.sleep(0.01)
-                            pause_dtime += 10
+                            pause_dtime += 0.01
             else:
                 text = line
                 text_line = pygame.font.SysFont("courier", 32).render("".join(text), True, text_colour)
@@ -383,12 +383,12 @@ def display_text(output: list | str, controller, should_type_text=False, min_pau
 
             if should_sleep:
                 if audio is not None and isinstance(audio, list) and len(output) == len(audio) and audio[j] is not None:
-                    sleep_time = audio[j].get_length() * 1000
+                    sleep_time = audio[j].get_length()
                     channel = pygame.mixer.find_channel(force=True)
                     channel.set_volume(controller.master_volume["cinematics"])
                     channel.play(audio[j])
                 else:
-                    sleep_time = max((len(text) // 20), 1) * 1000
+                    sleep_time = max((len(text) // 20), 1)
                 pause_dtime = 0
                 while pause_dtime < sleep_time:
                     for event in pygame.event.get():
@@ -399,7 +399,7 @@ def display_text(output: list | str, controller, should_type_text=False, min_pau
                     if controller.goto_load or controller.goto_main:
                         return
                     time.sleep(0.01)
-                    pause_dtime += 10
+                    pause_dtime += 0.01
 
 
 def glitch(odds, screen) -> list:

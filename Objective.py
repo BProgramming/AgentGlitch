@@ -74,7 +74,7 @@ class Objective(Entity):
                 set_sound_source(self.rect, self.level.player.rect, self.controller.master_volume["non-player"], active_audio_channel)
 
     def update_sprite(self) -> int:
-        active_index = math.floor((self.animation_count // 60) % len(self.sprites))
+        active_index = math.floor((self.animation_count // 0.06) % len(self.sprites))
         if active_index >= len(self.sprites):
             active_index = 0
             self.animation_count = 0

@@ -8,7 +8,7 @@ from os.path import isfile, join
 
 
 class NonPlayer(Actor):
-    VELOCITY_TARGET = 0.25
+    VELOCITY_TARGET = 250
     PLAYER_SPOT_RANGE = 3
     PLAYER_SPOT_COOLDOWN = 2
 

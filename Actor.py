@@ -38,9 +38,8 @@ class MovementState(Enum):
 
 class Actor(Entity):
     SIZE = 64
-    VELOCITY_TARGET = 0.4
-    VELOCITY_JUMP = 0.625
-    JUMP_TIME = 16
+    VELOCITY_TARGET = 400
+    VELOCITY_JUMP = 500
     GET_HIT_COOLDOWN = 1
     MAX_SHOOT_DISTANCE = 500
     ATTACK_DAMAGE = 10
@@ -48,10 +47,10 @@ class Actor(Entity):
     RESIZE_COOLDOWN = 3
     RESIZE_DELAY = 0.5
     RESIZE_SCALE_LIMIT = 1.5
-    RESIZE_EFFECT = 50
+    RESIZE_EFFECT = 0.05
     HEAL_DELAY = 5
-    DOUBLEJUMP_EFFECT_TRAIL = 80
-    HORIZ_PUSH_DECAY_RATE = 0.03
+    DOUBLEJUMP_EFFECT_TRAIL = 0.08
+    HORIZ_PUSH_DECAY_RATE = 30
 
     def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, can_shoot=False, can_resize=False, width=SIZE, height=SIZE, attack_damage=ATTACK_DAMAGE, sprite=None, proj_sprite=None, name=None):
         super().__init__(level, controller, x, y, width, height, name=name)
@@ -70,7 +69,6 @@ class Actor(Entity):
         self.can_move_blocks = False
         self.can_wall_jump = False
         self.is_wall_jumping = False
-        self.jump_time = -1
         self.jump_count = 0
         self.max_jumps = 1
         self.can_shoot = False
@@ -105,6 +103,10 @@ class Actor(Entity):
         self.cached_x, self.cached_y = self.rect.x, self.rect.y
         self.cooldowns = {"get_hit": 0.0, "launch_projectile": 0.0, "resize": 0.0, "resize_delay": 0.0, "resize_effect": 0.0, "heal": 0.0, "attack": 0.0, "doublejump_effect_trail": 0.0}
         self.cached_cooldowns = self.cooldowns.copy()
+
+    @property
+    def gravity(self) -> float:
+        return super().gravity * (self.size / (1 + (3 if self.is_wall_jumping and self.y_vel > 0 else 0)))
 
     def save(self) -> dict:
         projectiles = []
@@ -297,8 +299,14 @@ class Actor(Entity):
                         if self.rect.bottom != ent.rect.top:
                             self.rect.bottom = ent.rect.top
 
-        if self.x_vel != 0 and not collided and self.is_wall_jumping:
-            self.is_wall_jumping = False
+        if self.y_vel != 0 and not collided and self.is_wall_jumping:
+            if self.direction == MovementDirection.RIGHT:
+                dist_x = (0, 1)
+            else:
+                dist_x = (1, 0)
+            check_blocks = len(self.level.get_entities_in_range((self.rect.x, self.rect.y), dist_x=dist_x, blocks_only=True, include_doors=False))
+            if check_blocks == 0:
+                self.is_wall_jumping = False
         return collided
 
     def die(self) -> None:
@@ -344,7 +352,7 @@ class Actor(Entity):
                         self.state = MovementState.WALL_JUMP
                         self.animation_count = 0
                 else:
-                    if self.y_vel > 1:
+                    if self.y_vel > 0.01:
                         if self.is_attacking and self.state != MovementState.FALL_ATTACK:
                             if self.state != MovementState.FALL:
                                 self.animation_count = 0
@@ -406,7 +414,7 @@ class Actor(Entity):
 
     def update_sprite(self) -> int:
         active_sprites = self.sprites[f'{str(self.state)}_{str(self.facing)}']
-        active_index = math.floor((self.animation_count // 60) % len(active_sprites))
+        active_index = math.floor((self.animation_count // 0.06) % len(active_sprites))
         if active_index == len(active_sprites) - 1:
             self.is_final_anim_frame = True
         else:
@@ -438,7 +446,7 @@ class Actor(Entity):
         super().loop(dtime)
 
         if self.can_heal and self.hp < self.max_hp and self.cooldowns["heal"] <= 0:
-            self.hp = min(self.max_hp, self.hp + ((self.max_hp * dtime) / (50000 * self.difficulty)))
+            self.hp = min(self.max_hp, self.hp + ((self.max_hp * dtime) / (50 * self.difficulty)))
 
         if len(self.active_projectiles) > 0:
             for proj in self.active_projectiles:
@@ -476,14 +484,12 @@ class Actor(Entity):
                     self.level.visual_effects_manager.spawn(VisualEffect(self, self.level.visual_effects_manager.image_master, image_name="RESIZEBURST", alpha=128, scale=(self.rect.width * scale_factor, self.rect.height * scale_factor), linked_to_source=True), time=Actor.RESIZE_EFFECT)
 
                 if self.should_move_horiz:
-                    scaled_target = dtime * self.target_vel
-                    if abs(self.x_vel) < scaled_target:
-                        self.x_vel = self.direction * min(scaled_target, (abs(self.x_vel) * self.drag_vel) + (scaled_target * (1 - self.drag_vel)))
+                    self.x_vel = self.direction * min(self.target_vel, (abs(self.x_vel) * self.drag_vel) + (self.target_vel * (1 - self.drag_vel)))
                 else:
                     self.x_vel = 0.0
 
                 if self.should_move_vert:
-                    self.y_vel = self.apply_gravity(dtime, self.y_vel, scale_factor=(self.size / (1 + (3 if self.is_wall_jumping and self.y_vel > 0 else 0))))
+                    self.y_vel += self.gravity * dtime
 
                 if (self.x_vel + self.push_x != 0 or self.y_vel + self.push_y != 0) and self.hp > 0:
                     if self.level.player.is_slow_time and self != self.level.player:
@@ -493,9 +499,9 @@ class Actor(Entity):
                     if self.state == MovementState.CROUCH:
                         self.x_vel /= 2
 
-                    self.move(self.x_vel + self.push_x, (self.y_vel + self.push_y) * dtime)
+                    self.move((self.x_vel + self.push_x) * dtime, (self.y_vel + self.push_y) * dtime)
             else:
-                self.move(self.push_x, (self.push_y * dtime))
+                self.move(self.push_x * dtime, self.push_y * dtime)
         else:
             collided = False
 

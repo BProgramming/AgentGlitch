@@ -140,18 +140,20 @@ class Level:
     def get_entities(self) -> list:
         return self.triggers + self.blocks + self.hazards + self.enemies + self.objectives
 
-    def get_entities_in_range(self, point, dist=1, blocks_only=False) -> list:
+    def get_entities_in_range(self, point, dist_x=(1, 1), dist_y=(1, 1), blocks_only=False, include_doors=True) -> list:
         x = int(point[0] / self.block_size)
         y = int(point[1] / self.block_size)
         # this sum thing below is a hack to turn a 2D list into a 1D list since it applies the + operator to the second (optional) [] argument (e.g. an empty list), thereby concatenating all the elements
-        in_range = [block for block in sum([row[max(x - (dist - 1), 0):min(x + dist + 1, len(row))] for row in self.static_blocks[max(y - (dist - 1), 0):min(y + dist + 1, len(self.static_blocks))]], []) if block is not None]
-        for i in range(dist - 1, dist + 1):
-            if self.doors.get(x + i) is not None:
-                in_range += self.doors[x + i]
+        in_range = [block for block in sum([row[max(x - (dist_x[0] - 1), 0):min(x + dist_x[1] + 1, len(row))] for row in self.static_blocks[max(y - (dist_y[0] - 1), 0):min(y + dist_y[1] + 1, len(self.static_blocks))]], []) if block is not None]
+
+        if include_doors:
+            for i in range(dist_x[0] - 1, dist_x[1] + 1):
+                if self.doors.get(x + i) is not None:
+                    in_range += self.doors[x + i]
 
         if not blocks_only:
             for ent in self.triggers + self.dynamic_blocks + self.hazards + self.enemies + self.objectives:
-                if ent.rect.x - (self.block_size * dist) <= point[0] <= ent.rect.x + (self.block_size * dist) and ent.rect.y - (self.block_size * dist) <= point[1] <= ent.rect.y + (self.block_size * dist):
+                if ent.rect.x - (self.block_size * dist_x[0]) <= point[0] <= ent.rect.x + (self.block_size * dist_x[1]) and ent.rect.y - (self.block_size * dist_y[0]) <= point[1] <= ent.rect.y + (self.block_size * dist_y[1]):
                     in_range.append(ent)
 
         return in_range

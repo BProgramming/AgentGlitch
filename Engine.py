@@ -15,7 +15,7 @@ discord.set_status(details="In the menu:", state="Gathering intel")
 
 pygame.init()
 WIDTH, HEIGHT = 1920, 1080
-FPS_TARGET = 100
+FPS_TARGET = 1000
 
 icon = join(ASSETS_FOLDER, "Icons", "icon_small.png")
 if isfile(icon):
@@ -211,14 +211,14 @@ def main(win):
 
             # MAIN GAME LOOP: #
             while True:
-                dtime = clock.tick_busy_loop(FPS_TARGET) - dtime_offset #clock.tick(FPS_TARGET) - dtime_offset
+                dtime = (clock.tick_busy_loop(FPS_TARGET) - dtime_offset) / 1000 #clock.tick(FPS_TARGET) - dtime_offset
                 dtime_offset = 0
                 level.time += dtime
 
                 if hud.save_icon_timer > 0:
-                    hud.save_icon_timer -= dtime / 250
+                    hud.save_icon_timer -= dtime / 0.25
                 if glitch_timer > 0:
-                    glitch_timer -= dtime / 250
+                    glitch_timer -= dtime / 0.25
                     if glitch_timer <= 0:
                         glitch_timer = 0
                         glitches = None

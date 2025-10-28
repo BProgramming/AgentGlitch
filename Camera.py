@@ -11,7 +11,7 @@ from HUD import HUD
 class Camera:
     SCROLL_AREA_WIDTH_PCT_FIXED: float = 0.375
     SCROLL_AREA_HEIGHT_PCT_FIXED: float = 0.25
-    SCROLL_SPEED: float = 1
+    SCROLL_SPEED: float = 1000
 
     def __init__(self, win: pygame.Surface, focus_player: bool=True) -> None:
         self.level: Level | None = None

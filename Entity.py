@@ -2,7 +2,7 @@ import pygame
 
 
 class Entity(pygame.sprite.Sprite):
-    GRAVITY = 0.02
+    GRAVITY = 1100
 
     def __init__(self, level, controller, x: float, y: float, width: float, height: float, is_blocking: bool=True, name: str="Entity"):
         super().__init__()
@@ -21,6 +21,10 @@ class Entity(pygame.sprite.Sprite):
         self.is_stacked: bool = False # this property is only used by blocks, but needed here for generic checks
         self.cooldowns: dict | None = None
 
+    @property
+    def gravity(self) -> float:
+        return self.GRAVITY
+
     def save(self) -> dict:
         return {self.name: {"hp": self.hp}}
 
@@ -34,7 +38,7 @@ class Entity(pygame.sprite.Sprite):
     def update_cooldowns(self, dtime: float) -> None:
         for key in self.cooldowns:
             if self.cooldowns[key] > 0:
-                self.cooldowns[key] -= (dtime / 1000)
+                self.cooldowns[key] -= dtime
             elif self.cooldowns[key] < 0:
                 self.cooldowns[key] = 0.0
 
@@ -43,10 +47,6 @@ class Entity(pygame.sprite.Sprite):
             self.update_cooldowns(dtime)
         if self.hp <= 0:
             self.level.queue_purge(self)
-
-    @staticmethod
-    def apply_gravity(dtime, y_vel, scale_factor=1) -> int:
-        return y_vel + (Entity.GRAVITY * scale_factor * dtime)
 
     def draw(self, win: pygame.Surface, offset_x: float, offset_y: float, master_volume: dict) -> None:
         adj_x = self.rect.x - offset_x

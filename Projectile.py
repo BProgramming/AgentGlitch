@@ -4,7 +4,7 @@ from Entity import Entity
 
 
 class Projectile(Entity):
-    MAX_SPEED = 1.7
+    MAX_SPEED = 1700
     STOCK_PROJECTILE_SIZE = 16
 
     def __init__(self, level, controller, x, y, target, max_dist, attack_damage, difficulty, speed=MAX_SPEED, stock_size=STOCK_PROJECTILE_SIZE, sprite=None, name=None):

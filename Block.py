@@ -49,7 +49,7 @@ class Block(Entity):
 
 class BreakableBlock(Block):
     GET_HIT_COOLDOWN = 1
-    BREAK_EFFECT = 50
+    BREAK_EFFECT = 0.05
 
     def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=0, coord_y=0, coord_x2=0, coord_y2=0, name="BreakableBlock"):
         super().__init__(level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=coord_x, coord_y=coord_y, name=name)
@@ -70,7 +70,7 @@ class BreakableBlock(Block):
 
 
 class MovingBlock(Block):
-    VELOCITY_TARGET = 0.5
+    VELOCITY_TARGET = 500
     PATH_STOP_TIME = 0.5
 
     def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, hold_for_collision=False, speed=VELOCITY_TARGET, path=None, coord_x=0, coord_y=0, is_blocking=True, name="MovingBlock"):
@@ -106,12 +106,12 @@ class MovingBlock(Block):
             target_x = self.patrol_path[self.patrol_path_index][0] - self.rect.x
             if target_x != 0:
                 self.direction = (MovementDirection.RIGHT if target_x >= 0 else MovementDirection.LEFT)
-                self.x_vel = min(abs(target_x / dtime), abs(self.speed)) * self.direction
+                self.x_vel = min(abs(target_x), abs(self.speed) * dtime) * self.direction
                 self.should_move_horiz = True
 
             target_y = self.patrol_path[self.patrol_path_index][1] - self.rect.y
             if target_y != 0:
-                self.y_vel = min(abs(target_y / dtime), abs(self.speed)) * (1 if target_y >= 0 else -1)
+                self.y_vel = min(abs(target_y), abs(self.speed) * dtime) * (1 if target_y >= 0 else -1)
                 self.should_move_vert = True
 
             if not self.should_move_horiz and not self.should_move_vert:
@@ -157,9 +157,7 @@ class MovingBlock(Block):
         super().loop(dtime)
 
         if not self.hold:
-            if self.should_move_horiz:
-                self.x_vel *= dtime
-            else:
+            if not self.should_move_horiz:
                 self.x_vel = 0.0
 
             if not self.should_move_vert:
@@ -170,11 +168,11 @@ class MovingBlock(Block):
                     self.x_vel /= 2
                     self.y_vel /= 2
 
-                self.move(self.x_vel, self.y_vel * dtime)
+                self.move(self.x_vel, self.y_vel)
 
 
 class Door(MovingBlock):
-    VELOCITY_TARGET = 0.5
+    VELOCITY_TARGET = 500
 
     def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, speed=VELOCITY_TARGET, direction=-1, is_locked=False, coord_x=0, coord_y=0, locked_coord_x=None, locked_coord_y=None, unlocked_coord_x=None, unlocked_coord_y=None, name="Door"):
         super().__init__(level, controller, x, y, width, height, image_master, audios, is_stacked, speed=speed, coord_x=coord_x, coord_y=coord_y, name=name)
@@ -327,12 +325,12 @@ class MovableBlock(Block):
             self.x_vel = 0.0
 
         if self.should_move_vert:
-            self.y_vel = self.apply_gravity(dtime, self.y_vel)
+            self.y_vel += self.gravity * dtime
         else:
             self.y_vel = 0.0
 
         if self.x_vel + self.push_x != 0 or self.y_vel + self.push_y != 0:
-            self.move(self.x_vel + self.push_x, self.y_vel + (self.push_y * dtime))
+            self.move((self.x_vel + self.push_x) * dtime, (self.y_vel + self.push_y) * dtime)
 
 
 class Hazard(Block):
@@ -362,7 +360,7 @@ class Hazard(Block):
         self.attack_damage *= scale
 
     def update_sprite(self) -> int:
-        active_index = math.floor((self.animation_count // 60) % len(self.sprites))
+        active_index = math.floor((self.animation_count // 0.06) % len(self.sprites))
         if active_index >= len(self.sprites):
             active_index = 0
             self.animation_count = 0
@@ -386,7 +384,7 @@ class Hazard(Block):
             win.blit(self.sprite, (adj_x, adj_y))
 
 class MovingHazard(MovingBlock, Hazard):
-    VELOCITY_TARGET = 0.5
+    VELOCITY_TARGET = 500
     ATTACK_DAMAGE = 99
 
     def __init__(self, level, controller, x, y, width, height, image_master, sprite_master, audios, difficulty, is_stacked, speed=VELOCITY_TARGET, path=None, hit_sides="UDLR", sprite=None, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="MovingHazard"):
@@ -409,7 +407,7 @@ class MovingHazard(MovingBlock, Hazard):
 class FallingHazard(Hazard):
     ATTACK_DAMAGE = 99
     RESET_DELAY = 1
-    LANDING_EFFECT = 50
+    LANDING_EFFECT = 0.05
 
     def __init__(self, level, controller, x, y, width, height, image_master, sprite_master, audios, difficulty, hit_sides="D", drop_x=0, drop_y=0, fire_once=True, sprite=None, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="FallingHazard"):
         super().__init__(level, controller, x, y, width, height, image_master, sprite_master, audios, difficulty, hit_sides=hit_sides, sprite=sprite, coord_x=coord_x, coord_y=coord_y, attack_damage=attack_damage, name=name)
@@ -430,7 +428,7 @@ class FallingHazard(Hazard):
             else:
                 active_index = -1
         else:
-            active_index = math.floor((self.animation_count // 60) % (len(self.sprites) - 2))
+            active_index = math.floor((self.animation_count // 0.06) % (len(self.sprites) - 2))
             if active_index >= len(self.sprites) - 2:
                 active_index = 0
                 self.animation_count = 0
@@ -466,7 +464,7 @@ class FallingHazard(Hazard):
 
         collided = False
         if self.has_fired and self.cooldowns["reset_time"] <= 0:
-            self.y_vel = self.apply_gravity(dtime, self.y_vel)
+            self.y_vel += self.gravity * dtime
 
             ents = self.level.get_entities_in_range((self.rect.x, self.rect.y + self.y_vel), blocks_only=True)
             # this part lets falling hazards hit each other and cause those to fall too
