@@ -497,7 +497,7 @@ class Actor(Entity):
                         self.y_vel /= 2
 
                     if self.state == MovementState.CROUCH:
-                        self.x_vel /= 2
+                        self.x_vel *= 0.75
 
                     self.move((self.x_vel + self.push_x) * dtime, (self.y_vel + self.push_y) * dtime)
             else:
