@@ -3,6 +3,7 @@ import pygame
 
 class Entity(pygame.sprite.Sprite):
     GRAVITY = 1100
+    ANIMATION_DELAY = 0.05
 
     def __init__(self, level, controller, x: float, y: float, width: float, height: float, is_blocking: bool=True, name: str="Entity"):
         super().__init__()

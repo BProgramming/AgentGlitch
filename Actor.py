@@ -40,6 +40,7 @@ class Actor(Entity):
     SIZE = 64
     VELOCITY_TARGET = 400
     VELOCITY_JUMP = 500
+    MIN_FALL_VEL = 100
     GET_HIT_COOLDOWN = 1
     MAX_SHOOT_DISTANCE = 500
     ATTACK_DAMAGE = 10
@@ -346,13 +347,13 @@ class Actor(Entity):
                 if self.state != MovementState.TELEPORT:
                     self.state = MovementState.TELEPORT
                     self.animation_count = 0
-            elif self.should_move_vert:
+            elif self.should_move_vert and (self.is_wall_jumping or self.y_vel > Actor.MIN_FALL_VEL or self.y_vel < 0):
                 if self.can_wall_jump and self.is_wall_jumping:
                     if self.state != MovementState.WALL_JUMP:
                         self.state = MovementState.WALL_JUMP
                         self.animation_count = 0
                 else:
-                    if self.y_vel > 0.01:
+                    if self.y_vel > Actor.MIN_FALL_VEL:
                         if self.is_attacking and self.state != MovementState.FALL_ATTACK:
                             if self.state != MovementState.FALL:
                                 self.animation_count = 0
@@ -414,7 +415,7 @@ class Actor(Entity):
 
     def update_sprite(self) -> int:
         active_sprites = self.sprites[f'{str(self.state)}_{str(self.facing)}']
-        active_index = math.floor((self.animation_count // 0.06) % len(active_sprites))
+        active_index = math.floor((self.animation_count / Actor.ANIMATION_DELAY) % len(active_sprites))
         if active_index == len(active_sprites) - 1:
             self.is_final_anim_frame = True
         else:

@@ -364,7 +364,7 @@ class Hazard(Block):
         self.attack_damage *= scale
 
     def update_sprite(self) -> int:
-        active_index = math.floor((self.animation_count // 0.06) % len(self.sprites))
+        active_index = math.floor((self.animation_count / Hazard.ANIMATION_DELAY) % len(self.sprites))
         if active_index >= len(self.sprites):
             active_index = 0
             self.animation_count = 0
@@ -432,7 +432,7 @@ class FallingHazard(Hazard):
             else:
                 active_index = -1
         else:
-            active_index = math.floor((self.animation_count // 0.06) % (len(self.sprites) - 2))
+            active_index = math.floor((self.animation_count / FallingHazard.ANIMATION_DELAY) % (len(self.sprites) - 2))
             if active_index >= len(self.sprites) - 2:
                 active_index = 0
                 self.animation_count = 0
