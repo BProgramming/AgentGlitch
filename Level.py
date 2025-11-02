@@ -282,8 +282,9 @@ class Level:
         bar_colour = RETRO_WHITE if level.retro else NORMAL_WHITE
 
         def __convert_coords__(coord: int) -> int:
-            if coord < block_size:
-                return coord * block_size
+            actual_size = block_size // 2
+            if coord < actual_size:
+                return coord * actual_size
             else:
                 return coord
 
