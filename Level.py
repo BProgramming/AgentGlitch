@@ -280,6 +280,13 @@ class Level:
         falling_hazards = {}
         objectives = []
         bar_colour = RETRO_WHITE if level.retro else NORMAL_WHITE
+
+        def __convert_coords__(coord: int) -> int:
+            if coord < block_size:
+                return coord * block_size
+            else:
+                return coord
+
         for i in range(len(layout)):
             win.fill((0, 0, 0))
             bar = pygame.Surface((int(win.get_width() * ((i + 1) / len(layout))), 10), pygame.SRCALPHA)
@@ -305,7 +312,7 @@ class Level:
                                     is_stacked = True
                                 else:
                                     is_stacked = False
-                                block = Block(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, coord_x=data["coord_x"], coord_y=data["coord_y"], is_blocking=bool(data.get("is_blocking") is None or data["is_blocking"].upper() == "TRUE"), name=(element if data.get("name") is None else data["name"]))
+                                block = Block(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, coord_x=__convert_coords__(data["coord_x"]), coord_y=__convert_coords__(data["coord_y"]), is_blocking=bool(data.get("is_blocking") is None or data["is_blocking"].upper() == "TRUE"), name=(element if data.get("name") is None else data["name"]))
                                 blocks.append(block)
                                 static_blocks[-1][-1] = block
                             case "BREAKABLEBLOCK":
@@ -313,7 +320,7 @@ class Level:
                                     is_stacked = True
                                 else:
                                     is_stacked = False
-                                block = BreakableBlock(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, coord_x=data["coord_x"], coord_y=data["coord_y"], coord_x2=data["coord_x2"], coord_y2=data["coord_y2"], name=(element if data.get("name") is None else data["name"]))
+                                block = BreakableBlock(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, coord_x=__convert_coords__(data["coord_x"]), coord_y=__convert_coords__(data["coord_y"]), coord_x2=__convert_coords__(data["coord_x2"]), coord_y2=__convert_coords__(data["coord_y2"]), name=(element if data.get("name") is None else data["name"]))
                                 blocks.append(block)
                                 static_blocks[-1][-1] = block
                             case "MOVINGBLOCK":
@@ -322,12 +329,12 @@ class Level:
                                 else:
                                     path = load_path([int(i) for i in data["path"].split(' ')], i, j, block_size)
                                 is_stacked = False
-                                block = MovingBlock(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, hold_for_collision=(False if data.get("hold_for_collision") is None or data["hold_for_collision"].upper() != "TRUE" else True), speed=data["speed"], path=path, coord_x=data["coord_x"], coord_y=data["coord_y"], is_blocking=bool(data.get("is_blocking") is None or data["is_blocking"].upper() == "TRUE"), name=(element if data.get("name") is None else data["name"]))
+                                block = MovingBlock(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, hold_for_collision=(False if data.get("hold_for_collision") is None or data["hold_for_collision"].upper() != "TRUE" else True), speed=data["speed"], path=path, coord_x=__convert_coords__(data["coord_x"]), coord_y=__convert_coords__(data["coord_y"]), is_blocking=bool(data.get("is_blocking") is None or data["is_blocking"].upper() == "TRUE"), name=(element if data.get("name") is None else data["name"]))
                                 blocks.append(block)
                                 dynamic_blocks.append(block)
                             case "DOOR":
                                 is_stacked = True
-                                block = Door(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, speed=data["speed"], direction=data["direction"], is_locked=bool(data.get("is_locked") is not None and data["is_locked"].upper() == "TRUE"), coord_x=(0 if data.get("coord_x") is None else data["coord_x"]), coord_y=(0 if data.get("coord_y") is None else data["coord_y"]), locked_coord_x=(None if data.get("locked_coord_x") is None else data["locked_coord_x"]), locked_coord_y=(None if data.get("locked_coord_y") is None else data["locked_coord_y"]), unlocked_coord_x=(None if data.get("unlocked_coord_x") is None else data["unlocked_coord_x"]), unlocked_coord_y=(None if data.get("unlocked_coord_y") is None else data["unlocked_coord_y"]), name=(element if data.get("name") is None else data["name"]))
+                                block = Door(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, speed=data["speed"], direction=data["direction"], is_locked=bool(data.get("is_locked") is not None and data["is_locked"].upper() == "TRUE"), coord_x=(0 if data.get("coord_x") is None else __convert_coords__(data["coord_x"])), coord_y=(0 if data.get("coord_y") is None else __convert_coords__(data["coord_y"])), locked_coord_x=(None if data.get("locked_coord_x") is None else __convert_coords__(data["locked_coord_x"])), locked_coord_y=(None if data.get("locked_coord_y") is None else __convert_coords__(data["locked_coord_y"])), unlocked_coord_x=(None if data.get("unlocked_coord_x") is None else __convert_coords__(data["unlocked_coord_x"])), unlocked_coord_y=(None if data.get("unlocked_coord_y") is None else __convert_coords__(data["unlocked_coord_y"])), name=(element if data.get("name") is None else data["name"]))
                                 blocks.append(block)
                                 if doors.get(j) is None:
                                     doors[j] = [block]
@@ -335,20 +342,20 @@ class Level:
                                     doors[j].append(block)
                             case "MOVABLEBLOCK":
                                 is_stacked = False
-                                block = MovableBlock(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, coord_x=data["coord_x"], coord_y=data["coord_y"], name=(element if data.get("name") is None else data["name"]))
+                                block = MovableBlock(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, coord_x=__convert_coords__(data["coord_x"]), coord_y=__convert_coords__(data["coord_y"]), name=(element if data.get("name") is None else data["name"]))
                                 blocks.append(block)
                                 dynamic_blocks.append(block)
                             case "HAZARD":
-                                hazards.append(Hazard(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, block_audios, controller.difficulty, hit_sides=("UDLR" if data.get("hit_sides") is None else data["hit_sides"].upper()), sprite=data["sprite"], coord_x=data["coord_x"], coord_y=data["coord_y"], name=(element if data.get("name") is None else data["name"])))
+                                hazards.append(Hazard(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, block_audios, controller.difficulty, hit_sides=("UDLR" if data.get("hit_sides") is None else data["hit_sides"].upper()), sprite=data["sprite"], coord_x=__convert_coords__(data["coord_x"]), coord_y=__convert_coords__(data["coord_y"]), name=(element if data.get("name") is None else data["name"])))
                             case "MOVINGHAZARD":
                                 if data["path"].upper() == "NONE":
                                     path = None
                                 else:
                                     path = load_path([int(i) for i in data["path"].split(' ')], i, j, block_size)
                                 is_stacked = False
-                                hazards.append(MovingHazard(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, block_audios, controller.difficulty, is_stacked, speed=data["speed"], path=path, hit_sides=("UDLR" if data.get("hit_sides") is None else data["hit_sides"].upper()), sprite=data["sprite"], coord_x=data["coord_x"], coord_y=data["coord_y"], name=(element if data.get("name") is None else data["name"])))
+                                hazards.append(MovingHazard(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, block_audios, controller.difficulty, is_stacked, speed=data["speed"], path=path, hit_sides=("UDLR" if data.get("hit_sides") is None else data["hit_sides"].upper()), sprite=data["sprite"], coord_x=__convert_coords__(data["coord_x"]), coord_y=__convert_coords__(data["coord_y"]), name=(element if data.get("name") is None else data["name"])))
                             case "FALLINGHAZARD":
-                                falling_hazard = FallingHazard(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, block_audios, controller.difficulty, drop_x=data["drop_x"] * block_size, drop_y=data["drop_y"] * block_size, fire_once=bool(data.get("fire_once") is not None and data["fire_once"].upper() == "TRUE"), hit_sides=("UDLR" if data.get("hit_sides") is None else data["hit_sides"].upper()), sprite=data["sprite"], coord_x=data["coord_x"], coord_y=data["coord_y"], name=(element if data.get("name") is None else data["name"]))
+                                falling_hazard = FallingHazard(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, block_audios, controller.difficulty, drop_x=data["drop_x"] * block_size, drop_y=data["drop_y"] * block_size, fire_once=bool(data.get("fire_once") is not None and data["fire_once"].upper() == "TRUE"), hit_sides=("UDLR" if data.get("hit_sides") is None else data["hit_sides"].upper()), sprite=data["sprite"], coord_x=__convert_coords__(data["coord_x"]), coord_y=__convert_coords__(data["coord_y"]), name=(element if data.get("name") is None else data["name"]))
                                 hazards.append(falling_hazard)
                                 if falling_hazards.get(j) is None:
                                     falling_hazards[j] = [falling_hazard]
