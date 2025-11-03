@@ -73,7 +73,7 @@ class Level:
 
     def award_achievements(self, steamworks):
         unlocked_achievements = []
-        if self.target_time is not None and self.target_time > 0 and self.get_formatted_time() <= self.target_time and self.achievements.get("target_time") is not None and self.achievements["target_time"].upper() != "NONE":
+        if self.target_time is not None and self.target_time > 0 and self.formatted_time <= self.target_time and self.achievements.get("target_time") is not None and self.achievements["target_time"].upper() != "NONE":
             unlocked_achievements.append(self.achievements["target_time"])
         if 0 < self.objectives_available == len(self.objectives_collected) and self.achievements.get("all_objectives") is not None and self.achievements["all_objectives"].upper() != "NONE":
             unlocked_achievements.append(self.achievements["all_objectives"])
@@ -96,14 +96,15 @@ class Level:
         else:
             return False
 
-    def get_formatted_time(self) -> str:
-        minutes = self.time // 60000
-        seconds = (self.time - (minutes * 60000)) // 1000
-        milliseconds = self.time - ((minutes * 60000) + (seconds * 1000))
+    @property
+    def formatted_time(self) -> str:
+        minutes = int(self.time // 60)
+        seconds = int((self.time - (minutes * 60)))
+        milliseconds = int((self.time - ((minutes * 60) + seconds)) * 1000)
         return f'{"0" if minutes < 10 else ""}{minutes}:{"0" if seconds < 10 else ""}{seconds}.{"0" if milliseconds < 100 else ""}{"0" if milliseconds < 10 else ""}{milliseconds}'
 
     def get_recap_text(self) -> list:
-        text = [f'Mission time: {self.get_formatted_time()}.',
+        text = [f'Mission time: {self.formatted_time}.',
                 f'Packets collected: {len(self.objectives_collected)} of {self.objectives_available} ({100 * len(self.objectives_collected) // self.objectives_available}%).']
         if self.player.kills_this_level == 0:
             text.append('Nonlethal: You didn\'t dispatch any enemies.')
@@ -137,10 +138,11 @@ class Level:
         if abilities.get("can_heal") is not None:
             self.player.can_heal = bool(abilities["can_heal"].upper() == "TRUE")
 
-    def get_entities(self) -> list:
+    @property
+    def entities(self) -> list:
         return self.triggers + self.blocks + self.hazards + self.enemies + self.objectives
 
-    def get_entities_in_range(self, point, dist_x=(1, 1), dist_y=(1, 1), blocks_only=False, include_doors=True) -> list:
+    def get_entities_in_range(self, point, dist_x=(1, 1), dist_y=(1, 1), blocks_only=False, include_doors=True, include_hazards=False) -> list:
         x = int(point[0] / self.block_size)
         y = int(point[1] / self.block_size)
         # this sum thing below is a hack to turn a 2D list into a 1D list since it applies the + operator to the second (optional) [] argument (e.g. an empty list), thereby concatenating all the elements
@@ -150,6 +152,11 @@ class Level:
             for i in range(dist_x[0] - 1, dist_x[1] + 1):
                 if self.doors.get(x + i) is not None:
                     in_range += self.doors[x + i]
+
+        if include_hazards:
+            for ent in self.hazards:
+                if ent.rect.x - (self.block_size * dist_x[0]) <= point[0] <= ent.rect.x + (self.block_size * dist_x[1]) and ent.rect.y - (self.block_size * dist_y[0]) <= point[1] <= ent.rect.y + (self.block_size * dist_y[1]):
+                    in_range.append(ent)
 
         if not blocks_only:
             for ent in self.triggers + self.dynamic_blocks + self.hazards + self.enemies + self.objectives:
@@ -215,7 +222,7 @@ class Level:
 
     def gen_image(self) -> None:
         img = pygame.Surface((self.level_bounds[1][0], self.level_bounds[1][1]), pygame.SRCALPHA)
-        for ent in self.get_entities() + [self.player]:
+        for ent in self.entities + [self.player]:
             img.blit(ent.sprite, (ent.rect.x, ent.rect.y))
         pygame.image.save(img, join(ASSETS_FOLDER, "Misc", self.name + ".png"))
 
@@ -307,7 +314,7 @@ class Level:
                             case "PLAYER":
                                 player_start = ((j * block_size), (i * block_size))
                             case "OBJECTIVE":
-                                objectives.append(Objective(level, controller, j * block_size, i * block_size, block_size, block_size, sprite_master, block_audios, is_active=bool(data.get("is_active") is not None and data["is_active"].upper() == "TRUE"), sprite=(None if data.get("sprite") is None else data["sprite"]), sound=("objective" if data.get("sound") is None else data["sound"].lower()), is_blocking=bool(data.get("is_blocking") is not None and data["is_blocking"].upper() == "TRUE"), achievement=(None if data.get("achievement") is None else data["achievement"]),  name=(element if data.get("name") is None else data["name"])))
+                                objectives.append(Objective(level, controller, j * block_size, i * block_size, block_size, block_size, sprite_master, block_audios, is_active=bool(data.get("is_active") is not None and data["is_active"].upper() == "TRUE"), sprite=(None if data.get("sprite") is None else data["sprite"]), sound=("objective" if data.get("sound") is None else data["sound"].lower()), text=(None if data.get("text") is None else data["text"]), trigger=(None if data.get("trigger") is None else data["trigger"]), is_blocking=bool(data.get("is_blocking") is not None and data["is_blocking"].upper() == "TRUE"), achievement=(None if data.get("achievement") is None else data["achievement"]),  name=(element if data.get("name") is None else data["name"])))
                             case "BLOCK":
                                 if i > 0 and len(str(layout[i - 1][j])) > 0 and objects_dict.get(str(layout[i - 1][j])) is not None and objects_dict[str(layout[i - 1][j])]["type"] in ["Block"]:
                                     is_stacked = True
@@ -330,7 +337,7 @@ class Level:
                                 else:
                                     path = load_path([int(i) for i in data["path"].split(' ')], i, j, block_size)
                                 is_stacked = False
-                                block = MovingBlock(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, hold_for_collision=(False if data.get("hold_for_collision") is None or data["hold_for_collision"].upper() != "TRUE" else True), speed=data["speed"], path=path, coord_x=__convert_coords__(data["coord_x"]), coord_y=__convert_coords__(data["coord_y"]), is_blocking=bool(data.get("is_blocking") is None or data["is_blocking"].upper() == "TRUE"), name=(element if data.get("name") is None else data["name"]))
+                                block = MovingBlock(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, is_enabled=(True if data.get("is_enabled") is None or data["is_enabled"].upper() != "FALSE" else False), hold_for_collision=(False if data.get("hold_for_collision") is None or data["hold_for_collision"].upper() != "TRUE" else True), speed=data["speed"], path=path, coord_x=__convert_coords__(data["coord_x"]), coord_y=__convert_coords__(data["coord_y"]), is_blocking=bool(data.get("is_blocking") is None or data["is_blocking"].upper() == "TRUE"), name=(element if data.get("name") is None else data["name"]))
                                 blocks.append(block)
                                 dynamic_blocks.append(block)
                             case "DOOR":

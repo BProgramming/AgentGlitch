@@ -112,7 +112,7 @@ class Controller:
 
     def set_difficulty(self) -> None:
         if self.level is not None:
-            for ent in [self.level.player] + self.level.get_entities():
+            for ent in [self.level.player] + self.level.entities:
                 ent.set_difficulty(self.difficulty)
 
     def get_gamepad(self, notify=True) -> int:

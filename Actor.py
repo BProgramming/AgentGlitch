@@ -51,7 +51,7 @@ class Actor(Entity):
     RESIZE_EFFECT = 0.05
     HEAL_DELAY = 5
     DOUBLEJUMP_EFFECT_TRAIL = 0.08
-    HORIZ_PUSH_DECAY_RATE = 30
+    HORIZ_PUSH_DECAY_RATE = 200
 
     def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, can_shoot=False, can_resize=False, width=SIZE, height=SIZE, attack_damage=ATTACK_DAMAGE, sprite=None, proj_sprite=None, name=None):
         super().__init__(level, controller, x, y, width, height, name=name)

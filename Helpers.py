@@ -342,6 +342,16 @@ def display_text(output: list | str, controller, should_type_text=False, min_pau
         if not isinstance(output, list):
             output = [output]
         clear = pygame.display.get_surface().copy()
+        if retro and not should_type_text:
+            clear.fill(RETRO_BLACK)
+            line = pygame.Surface((win.get_width() * 0.75, 2), pygame.SRCALPHA)
+            line2 = pygame.Surface((win.get_width() * 0.5, 2), pygame.SRCALPHA)
+            line.fill(RETRO_WHITE)
+            line2.fill(RETRO_WHITE)
+            clear.blit(line, ((win.get_width() - line.get_width()) // 2, win.get_height() * 0.06))
+            clear.blit(line, ((win.get_width() - line.get_width()) // 2, win.get_height() * 0.94))
+            clear.blit(line2, ((win.get_width() - line2.get_width()) // 2, win.get_height() * 0.05))
+            clear.blit(line2, ((win.get_width() - line2.get_width()) // 2, win.get_height() * 0.95))
         for j in range(len(output)):
             line = output[j]
             if should_type_text:
@@ -378,7 +388,10 @@ def display_text(output: list | str, controller, should_type_text=False, min_pau
                 text_box.fill(box_colour)
                 text_box.blit(text_line, (5, 5))
                 win.blit(clear, (0, 0))
-                win.blit(text_box, ((win.get_width() - text_box.get_width()) // 2, win.get_height() - (text_box.get_height() + 100)))
+                if retro:
+                    win.blit(text_box, ((win.get_width() - text_box.get_width()) // 2, ((win.get_height() - text_box.get_height()) // 2)))
+                else:
+                    win.blit(text_box, ((win.get_width() - text_box.get_width()) // 2, win.get_height() - (text_box.get_height() + 100)))
                 pygame.display.update()
 
             if should_sleep:
@@ -433,6 +446,12 @@ def load_path(path_in, i, j, block_size) -> list:
 def set_property(triggering_entity, prop_to_set) -> None:
     if prop_to_set is not None:
         target, property, value = prop_to_set["target"], prop_to_set["property"], prop_to_set["value"]
+        if isinstance(target, str):
+            target = [target]
+        if isinstance(property, str):
+            property = [property]
+        if isinstance(value, str):
+            value = [value]
         if len(target) == len(property) == len(value):
             for i in range(len(target)):
                 if isinstance(value[i], str):
@@ -442,8 +461,8 @@ def set_property(triggering_entity, prop_to_set) -> None:
                         value[i] = float(value[i])
                         if value[i] == int(value[i]):
                             value[i] = int(value[i])
-                for ent in [triggering_entity.level.player] + triggering_entity.level.get_entities():
-                    if (ent.name.split()[0] == target[i] or ent.name == target[i]) and hasattr(ent, property[i]):
+                for ent in [triggering_entity.level.player] + triggering_entity.level.entities:
+                    if ent.name.casefold().startswith(target[i].casefold()) and hasattr(ent, property[i]):
                         setattr(ent, property[i], value[i])
                         if triggering_entity.controller.player_abilities.get(property[i]) is not None:
                             triggering_entity.controller.player_abilities[property[i]] = value[i]

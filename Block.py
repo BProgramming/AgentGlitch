@@ -18,7 +18,7 @@ class Block(Entity):
 
     @property
     def gravity(self) -> float:
-        return super().gravity * 0.1
+        return super().gravity * 0.01
 
     def save(self) -> dict | None:
         if self.hp != 0:
@@ -77,9 +77,10 @@ class MovingBlock(Block):
     VELOCITY_TARGET = 500
     PATH_STOP_TIME = 0.5
 
-    def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, hold_for_collision=False, speed=VELOCITY_TARGET, path=None, coord_x=0, coord_y=0, is_blocking=True, name="MovingBlock"):
-        super().__init__(level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=coord_x, coord_y=coord_y, is_blocking=is_blocking, name=name)
+    def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, is_enabled=True, hold_for_collision=False, speed=VELOCITY_TARGET, path=None, coord_x=0, coord_y=0, is_blocking=True, name="MovingBlock"):
+        Block.__init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=coord_x, coord_y=coord_y, is_blocking=is_blocking, name=name)
         self.speed = speed
+        self.is_enabled = is_enabled
         self.hold = hold_for_collision
         self.patrol_path = path
         self.patrol_path_index = 0
@@ -110,12 +111,12 @@ class MovingBlock(Block):
             target_x = self.patrol_path[self.patrol_path_index][0] - self.rect.x
             if target_x != 0:
                 self.direction = (MovementDirection.RIGHT if target_x >= 0 else MovementDirection.LEFT)
-                self.x_vel = min(abs(target_x), abs(self.speed) * dtime) * self.direction
+                self.x_vel = min(abs(target_x) / dtime, abs(self.speed)) * self.direction
                 self.should_move_horiz = True
 
             target_y = self.patrol_path[self.patrol_path_index][1] - self.rect.y
             if target_y != 0:
-                self.y_vel = min(abs(target_y), abs(self.speed) * dtime) * (1 if target_y >= 0 else -1)
+                self.y_vel = min(abs(target_y) / dtime, abs(self.speed)) * (1 if target_y >= 0 else -1)
                 self.should_move_vert = True
 
             if not self.should_move_horiz and not self.should_move_vert:
@@ -160,7 +161,7 @@ class MovingBlock(Block):
     def loop(self, dtime) -> None:
         super().loop(dtime)
 
-        if not self.hold:
+        if self.is_enabled and not self.hold:
             if not self.should_move_horiz:
                 self.x_vel = 0.0
 
@@ -172,7 +173,7 @@ class MovingBlock(Block):
                     self.x_vel /= 2
                     self.y_vel /= 2
 
-                self.move(self.x_vel, self.y_vel)
+                self.move(self.x_vel * dtime, self.y_vel * dtime)
 
 
 class Door(MovingBlock):
@@ -260,7 +261,7 @@ class Door(MovingBlock):
 class MovableBlock(Block):
     def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=0, coord_y=0, name="MovableBlock"):
         super().__init__(level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=coord_x, coord_y=coord_y, name=name)
-        self.start_x, self.start_y = x, y
+        self.start_x, self.start_y = int(x), int(y)
         self.x_vel = self.y_vel = self.push_x = self.push_y = 0.0
         self.should_move_horiz = self.should_move_vert = True
 
@@ -273,22 +274,20 @@ class MovableBlock(Block):
 
     def get_collisions(self) -> None:
         self.should_move_horiz = self.should_move_vert = True
-        for ent in self.level.get_entities_in_range((self.rect.x, self.rect.y), blocks_only=True):
+        for ent in self.level.get_entities_in_range((self.rect.x, self.rect.y), blocks_only=True, include_hazards=True):
             if ent != self and pygame.sprite.collide_rect(self, ent):
                 if pygame.sprite.collide_mask(self, ent) and ent.collide(self):
                     self.collide(ent)
                     overlap = self.rect.clip(ent.rect)
                     if overlap.width < overlap.height:
-                        if self.x_vel <= 0 and self.rect.centerx > ent.rect.centerx:
-                            self.rect.left = ent.rect.right + self.rect.width
+                        if self.x_vel <= 0 and self.rect.left == overlap.left:
+                            self.rect.left = ent.rect.right
                             self.should_move_horiz = False
-                        elif self.x_vel >= 0 and self.rect.centerx < ent.rect.centerx:
-                            self.rect.right = ent.rect.left - self.rect.width
+                        elif self.x_vel >= 0 and self.rect.right == overlap.right:
+                            self.rect.right = ent.rect.left
                             self.should_move_horiz = False
-                    if overlap.width >= overlap.height:
-                        if self.y_vel >= 0 and self.rect.bottom == overlap.bottom:
-                            if self.y_vel > 1:
-                                self.rect.bottom = ent.rect.top
+                    if overlap.width > overlap.height:
+                        if self.y_vel > 0 and self.rect.bottom == overlap.bottom:
                             self.should_move_vert = False
                         elif self.y_vel < 0 and self.rect.top == overlap.top:
                             self.rect.top = ent.rect.bottom
@@ -320,20 +319,18 @@ class MovableBlock(Block):
     def loop(self, dtime) -> None:
         super().loop(dtime)
 
-        self.push_x *= 0.9
-        if abs(self.push_x) < 0.01:
-            self.push_x = 0
-        self.push_y = 0
+        self.push_x *= max(0.0, 1 - (2 * dtime))
+        self.push_y = 0.0
         self.get_collisions()
         if not self.should_move_horiz:
             self.x_vel = 0.0
 
         if self.should_move_vert:
-            self.y_vel += self.gravity * dtime
+            self.y_vel += self.gravity
         else:
             self.y_vel = 0.0
 
-        if self.x_vel + self.push_x != 0 or self.y_vel + self.push_y != 0:
+        if self.x_vel + self.push_x != 0.0 or self.y_vel + self.push_y != 0.0:
             self.move((self.x_vel + self.push_x) * dtime, (self.y_vel + self.push_y) * dtime)
 
 
@@ -397,9 +394,13 @@ class MovingHazard(MovingBlock, Hazard):
         self.is_attacking = True
         self.hit_sides = hit_sides.upper()
         if sprite is not None:
-            self.sprites = load_sprite_sheets("Sprites", sprite, sprite_master, direction=False, retro=self.level.retro)
+            avail_sprites = load_sprite_sheets("Sprites", sprite, sprite_master, direction=False, retro=self.level.retro)
+            if self.level.retro and avail_sprites.get("ANIMATE_RETRO") is not None:
+                self.sprites = avail_sprites["ANIMATE_RETRO"]
+            else:
+                self.sprites = avail_sprites["ANIMATE"]
         else:
-            self.sprites = {"ANIMATE": self.sprite}
+            self.sprites = [self.sprite]
         self.animation_count = 0
         self.sprite = None
         self.update_sprite()

@@ -86,9 +86,9 @@ class NonPlayer(Actor):
     def play_queued_message(self) -> int:
         start = time.perf_counter_ns()
         if type(self.queued_message) == dict and self.queued_message.get("text") is not None and self.queued_message.get("audio") is not None:
-            display_text(self.queued_message["text"], self.controller, audio=self.queued_message["audio"], should_type_text=True, retro=self.level.retro)
+            display_text(self.queued_message["text"], self.controller, audio=self.queued_message["audio"], should_type_text=False, retro=self.level.retro)
         else:
-            display_text(self.queued_message, self.controller, should_type_text=True, retro=self.level.retro)
+            display_text(self.queued_message, self.controller, should_type_text=False, retro=self.level.retro)
         self.queued_message = None
         return (time.perf_counter_ns() - start) // 1000000
 
@@ -147,7 +147,7 @@ class NonPlayer(Actor):
                         self.should_move_horiz = self.__find_floor__(self.x_vel * dtime)
 
                     target_y = self.patrol_path[self.patrol_path_index][1] - self.rect.y
-                    if self.should_move_horiz and self.jump_count < self.max_jumps and target_y < -5:
+                    if self.should_move_horiz and self.jump_count < self.max_jumps and target_y < -100:
                         self.jump()
                         self.should_move_vert = True
 

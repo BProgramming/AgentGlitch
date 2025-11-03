@@ -3,7 +3,8 @@ import random
 import pygame
 from os.path import join, isfile, abspath
 from Entity import Entity
-from Helpers import handle_exception, set_sound_source, load_sprite_sheets, ASSETS_FOLDER, retroify_image
+from Helpers import handle_exception, set_sound_source, load_sprite_sheets, ASSETS_FOLDER, retroify_image, \
+    load_text_from_file
 
 
 class Objective(Entity):
@@ -18,7 +19,7 @@ class Objective(Entity):
         POINTER_SPRITE_HEIGHT: int = POINTER_SPRITE.get_height()
         POINTER_SPRITE_WIDTH: int = POINTER_SPRITE.get_width()
 
-    def __init__(self, level, controller, x, y, width, height, sprite_master, audios, is_active=False, sprite=None, sound="objective", is_blocking=False, achievement=None, name="Objective"):
+    def __init__(self, level, controller, x, y, width, height, sprite_master, audios, is_active=False, sprite=None, sound="objective", text=None, trigger=None, is_blocking=False, achievement=None, name="Objective"):
         super().__init__(level, controller, x, y, width, height, is_blocking=is_blocking, name=name)
         if sprite is not None:
             avail_sprites = load_sprite_sheets("Sprites", sprite, sprite_master, direction=False, retro=self.level.retro)
@@ -35,6 +36,8 @@ class Objective(Entity):
             self.update_geo()
         self.audios = audios
         self.sound = None if sound == "none" else sound
+        self.text = None if text == "none" or text is None else load_text_from_file(text)
+        self.trigger = None if trigger is None else trigger.casefold().split(" ")
         self.achievement = achievement
         self.name = name
         self.is_active = is_active
@@ -48,9 +51,23 @@ class Objective(Entity):
         self.hp = 0
         self.play_sound(self.sound)
         self.__collect__()
+
         if self.achievement is not None and self.controller.steamworks is not None and not self.controller.steamworks.UserStats.GetAchievement(self.achievement):
             self.controller.steamworks.UserStats.SetAchievement(self.achievement)
             self.controller.should_store_steam_stats = True
+
+        if self.trigger is not None:
+            alive = []
+            for objective in self.level.objectives:
+                if objective.hp > 0 and objective.name.split(" ")[0] == self.name.split(" ")[0]:
+                    alive.append(objective)
+            if len(alive) == 0:
+                for to_fire in self.trigger:
+                    for trigger in self.level.triggers:
+                        if trigger.name.casefold().startswith(to_fire):
+                            trigger.collide(self.level.player)
+                            break
+            return
 
     def save(self) -> dict:
         return super().save()

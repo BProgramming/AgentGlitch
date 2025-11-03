@@ -127,7 +127,7 @@ class Camera:
             self.win.blit(self.fg_image.subsurface(visible_screen), (0, 0))
 
         self.hud.boss_hp_pct = self.level.boss_hp_pct
-        self.hud.draw(self.level.get_formatted_time())
+        self.hud.draw(self.level.formatted_time)
         if self.level.boss_hp_pct == 0:
             self.level.boss_hp_pct = None
 

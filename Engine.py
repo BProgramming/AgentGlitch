@@ -262,7 +262,7 @@ def main(win):
                         dtime_offset += level.player.revert()
 
                 vfx_manager.manage(dtime)
-                for ent in level.get_entities():
+                for ent in level.entities:
                     if (not isinstance(ent, Actor) and type(ent).__name__.upper() != "BLOCK") or (isinstance(ent, Actor) and math.dist(ent.rect.center, (camera.focus_x, camera.focus_y)) < win.get_width() * 1.5):
                         if hasattr(ent, "patrol") and callable(ent.patrol):
                             ent.patrol(dtime)
