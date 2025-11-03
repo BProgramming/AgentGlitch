@@ -12,7 +12,7 @@ class HUD:
         self.retro: bool = retro
         self.border = self.__make_border__(win, retro)
         self.save_icon_timer: float = 0.0
-        self.hp_outline: pygame.Surface | None = pygame.Surface((324 * self.scale_factor[0], 16 * self.scale_factor[1]), pygame.SRCALPHA)
+        self.hp_outline: pygame.Surface | None = pygame.Surface((389 * self.scale_factor[0], 16 * self.scale_factor[1]), pygame.SRCALPHA)
         self.hp_outline.fill((0, 0, 0))
         self.hp_pct: float = 0.0
         self.hp_bar: pygame.Surface | None = None
@@ -35,7 +35,7 @@ class HUD:
         self.old_time: str = "00:00.000"
         self.time_display: list[pygame.Surface | None] = [self.time_characters["0"], self.time_characters["0"], self.time_characters["COLON"], self.time_characters["0"], self.time_characters["0"], self.time_characters["DECIMAL"], self.time_characters["0"], self.time_characters["0"], self.time_characters["0"]]
 
-        self.icon_bar: pygame.Surface | None = pygame.Surface((324 * self.scale_factor[0], 64 * self.scale_factor[1]), pygame.SRCALPHA)
+        self.icon_bar: pygame.Surface | None = pygame.Surface((self.hp_outline.get_width(), 64 * self.scale_factor[1]), pygame.SRCALPHA)
         file = join(ASSETS_FOLDER, "Icons", "jump.png")
         if not isfile(file):
             handle_exception(f'File {FileNotFoundError(abspath(file))} not found.')
@@ -64,6 +64,13 @@ class HUD:
             self.icon_teleport: pygame.Surface | None = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
             if retro:
                 self.icon_teleport = retroify_image(self.icon_teleport)
+        file = join(ASSETS_FOLDER, "Icons", "wall_jump.png")
+        if not isfile(file):
+            handle_exception(f'File {FileNotFoundError(abspath(file))} not found.')
+        else:
+            self.icon_wall_jump: pygame.Surface | None = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
+            if retro:
+                self.icon_wall_jump = retroify_image(self.icon_wall_jump)
         file = join(ASSETS_FOLDER, "Icons", "resize.png")
         if not isfile(file):
             handle_exception(f'File {FileNotFoundError(abspath(file))} not found.')
@@ -162,26 +169,26 @@ class HUD:
             self.boss_hp_bar = None
 
     def __draw_icons__(self) -> None:
-        if self.player.max_jumps > 0:
-            if self.player.jump_count == 0 and self.player.max_jumps > 1:
-                self.win.blit(self.icon_double_jump, (10, 28))
-            else:
-                self.icon_jump.set_alpha(128 if self.player.jump_count >= self.player.max_jumps else 255)
-                self.win.blit(self.icon_jump, (10, 28))
-            self.icon_double_jump.set_alpha(0 if self.player.jump_count > 0 else 255)
-            self.win.blit(self.icon_double_jump, (10, 28))
-        if self.player.abilities["can_block"]:
-            self.icon_block.set_alpha(128 if self.player.cooldowns["block"] > 0 else 255)
-            self.win.blit(self.icon_block, (75, 28))
+        if self.player.abilities["can_double_jump"] and self.player.jump_count == 0 and self.player.max_jumps > 1:
+            self.win.blit(self.icon_double_jump, (10 * self.scale_factor[0], 28 * self.scale_factor[1]))
+        else:
+            self.icon_jump.set_alpha(128 if self.player.jump_count >= self.player.max_jumps else 255)
+            self.win.blit(self.icon_jump, (10 * self.scale_factor[0], 28))
         if self.player.abilities["can_teleport"]:
             self.icon_teleport.set_alpha(128 if self.player.cooldowns["teleport"] > 0 else 255)
-            self.win.blit(self.icon_teleport, (140, 28))
+            self.win.blit(self.icon_teleport, (75 * self.scale_factor[0], 28 * self.scale_factor[1]))
+        if self.player.abilities["can_wall_jump"]:
+            self.icon_wall_jump.set_alpha(255 if self.player.is_wall_jumping else 128)
+            self.win.blit(self.icon_wall_jump, (140 * self.scale_factor[0], 28 * self.scale_factor[1]))
         if self.player.abilities["can_resize"]:
             self.icon_resize.set_alpha(128 if self.player.cooldowns["resize"] > 0 else 255)
-            self.win.blit(self.icon_resize, (205, 28))
+            self.win.blit(self.icon_resize, (205 * self.scale_factor[0], 28 * self.scale_factor[1]))
+        if self.player.abilities["can_block"]:
+            self.icon_block.set_alpha(128 if self.player.cooldowns["block"] > 0 else 255)
+            self.win.blit(self.icon_block, (270 * self.scale_factor[0], 28 * self.scale_factor[1]))
         if self.player.abilities["can_bullet_time"]:
             self.icon_bullet_time.set_alpha(128 if self.player.cooldowns["bullet_time"] > 0 else 255)
-            self.win.blit(self.icon_bullet_time, (270, 28))
+            self.win.blit(self.icon_bullet_time, (335 * self.scale_factor[0], 28 * self.scale_factor[1]))
 
     def __draw_save__(self) -> None:
         self.win.blit(self.save_icon, (self.win.get_width() * 0.94, self.win.get_height() - (self.win.get_width() * 0.06)))
