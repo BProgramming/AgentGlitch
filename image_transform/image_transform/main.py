@@ -99,12 +99,26 @@ def convert(im, base, target, lips=True):
     new.putdata(data)
     return new
 
-def run_conversion():
-    sub = "RetroPlayer7"
-    path = "C:\\Users\\brent\\PycharmProjects\\AgentGlitch\\Assets\\Sprites\\" + sub
+def run_conversion(path, base, target):
     for file in listdir(path):
         filepath = join(path, file)
         print(filepath)
-        convert(Image.open(filepath), "white", "brown", lips=True).save(filepath)
+        convert(Image.open(filepath), base, target, lips=True).save(filepath)
 
-run_conversion()
+def convert_all(base):
+    dir = "C:\\Users\\brent\\PycharmProjects\\AgentGlitch\\Assets\\Sprites\\"
+    for i in range(8):
+        if i in (0, 1):
+            target = 'white'
+        elif i in (2, 3):
+            target = 'black'
+        elif i in (4, 5):
+            target = 'asian'
+        elif i in (6, 7):
+            target = 'brown'
+        else:
+            target = 'white'
+        run_conversion(f'{dir}Player{i}', base, target)
+        run_conversion(f'{dir}RetroPlayer{i}', base, target)
+
+convert_all('white')

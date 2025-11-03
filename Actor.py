@@ -31,6 +31,8 @@ class MovementState(Enum):
     WIND_UP = 17
     ATTACK_ANIM = 18
     WIND_DOWN = 19
+    IDLE_CROUCH = 20
+    IDLE_CROUCH_ATTACK = 21
 
     def __str__(self) -> str:
         return self.name
@@ -384,7 +386,7 @@ class Actor(Entity):
                         if self.state != MovementState.CROUCH_ATTACK:
                             self.animation_count = 0
                         self.state = MovementState.CROUCH
-                elif not self.is_crouching:
+                else:
                     if self.is_attacking and self.state != MovementState.RUN_ATTACK:
                         if self.state != MovementState.RUN:
                             self.animation_count = 0
@@ -394,14 +396,24 @@ class Actor(Entity):
                             self.animation_count = 0
                         self.state = MovementState.RUN
             else:
-                if self.is_attacking and self.state != MovementState.IDLE_ATTACK:
-                    if self.state != MovementState.IDLE:
-                        self.animation_count = 0
-                    self.state = MovementState.IDLE_ATTACK
-                elif not self.is_attacking and self.state != MovementState.IDLE:
-                    if self.state != MovementState.IDLE_ATTACK:
-                        self.animation_count = 0
-                    self.state = MovementState.IDLE
+                if self.is_crouching:
+                    if self.is_attacking and self.state != MovementState.IDLE_CROUCH_ATTACK:
+                        if self.state not in (MovementState.IDLE, MovementState.IDLE_ATTACK, MovementState.IDLE_CROUCH, MovementState.IDLE_CROUCH_ATTACK):
+                            self.animation_count = 0
+                        self.state = MovementState.IDLE_CROUCH_ATTACK
+                    elif not self.is_attacking and self.state != MovementState.IDLE_CROUCH:
+                        if self.state not in (MovementState.IDLE, MovementState.IDLE_ATTACK, MovementState.IDLE_CROUCH, MovementState.IDLE_CROUCH_ATTACK):
+                            self.animation_count = 0
+                        self.state = MovementState.IDLE_CROUCH
+                else:
+                    if self.is_attacking and self.state != MovementState.IDLE_ATTACK:
+                        if self.state not in (MovementState.IDLE, MovementState.IDLE_ATTACK, MovementState.IDLE_CROUCH, MovementState.IDLE_CROUCH_ATTACK):
+                            self.animation_count = 0
+                        self.state = MovementState.IDLE_ATTACK
+                    elif not self.is_attacking and self.state != MovementState.IDLE:
+                        if self.state not in (MovementState.IDLE, MovementState.IDLE_ATTACK, MovementState.IDLE_CROUCH, MovementState.IDLE_CROUCH_ATTACK):
+                            self.animation_count = 0
+                        self.state = MovementState.IDLE
             if f'{str(self.state)}_{str(self.facing)}' not in self.sprites:
                 self.state = old
         self.state_changed = bool(old != self.state)
