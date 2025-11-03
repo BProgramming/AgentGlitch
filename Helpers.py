@@ -454,15 +454,19 @@ def set_property(triggering_entity, prop_to_set) -> None:
             value = [value]
         if len(target) == len(property) == len(value):
             for i in range(len(target)):
-                if isinstance(value[i], str):
-                    if value[i].upper() in ("TRUE", "FALSE"):
-                        value[i] = bool(value[i].upper() == "TRUE")
-                    elif value[i].isnumeric():
-                        value[i] = float(value[i])
-                        if value[i] == int(value[i]):
-                            value[i] = int(value[i])
+                targ = target[i]
+                prop = property[i]
+                val = value[i]
+                if isinstance(val, str):
+                    if val.upper() in ("TRUE", "FALSE"):
+                        val = bool(val.upper() == "TRUE")
+                    elif val.isnumeric():
+                        val = float(val)
+                        if val == int(val):
+                            val = int(val)
                 for ent in [triggering_entity.level.player] + triggering_entity.level.entities:
-                    if ent.name.casefold().startswith(target[i].casefold()) and hasattr(ent, property[i]):
-                        setattr(ent, property[i], value[i])
-                        if triggering_entity.controller.player_abilities.get(property[i]) is not None:
-                            triggering_entity.controller.player_abilities[property[i]] = value[i]
+                    if ent.name.casefold().startswith(targ.casefold()):
+                        if hasattr(ent, prop):
+                            setattr(ent, prop, val)
+                        elif prop.casefold().startswith('can_') and hasattr(ent, 'abilities') and isinstance(ent.abilities, dict):
+                            ent.abilities[prop.casefold()] = val

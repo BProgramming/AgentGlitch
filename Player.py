@@ -29,21 +29,13 @@ class Player(Actor):
         if self.level.retro:
             self.toggle_retro()
             self.update_sprite()
+        self.abilities["can_open_doors"] = self.abilities["can_move_blocks"] = self.abilities["can_heal"] = True
         self.cooldowns.update({"teleport": 0.0, "teleport_delay": 0.0, "teleport_effect_trail": 0.0, "block": 0.0, "block_attempt": 0.0, "blocking_effect": 0.0, "bullet_time": 0.0, "bullet_time_active": 0.0})
         self.cached_cooldowns = self.cooldowns.copy()
         self.target_vel = Player.VELOCITY_TARGET
         self.drag_vel = Player.VELOCITY_DRAG_PCT
-        self.can_open_doors = True
-        self.can_move_blocks = True
-        self.can_block = True
         self.is_blocking = False
-        self.can_wall_jump = True
-        self.can_teleport = False
-        self.can_bullet_time = False
         self.is_slow_time = False
-        self.can_resize = False
-        self.can_heal = True
-        self.max_jumps = 2
         self.attack_damage *= 2
         self.max_hp = self.hp = self.cached_hp = 100 / self.difficulty
         self.been_hit_this_level = False
@@ -61,17 +53,13 @@ class Player(Actor):
 
     def save(self) -> dict:
         data = super().save()
-        data[self.name].update({"can_teleport": self.can_teleport,
-                                "can_bullet_time": self.can_bullet_time,
-                                "been_hit_this_level": self.been_hit_this_level,
+        data[self.name].update({"been_hit_this_level": self.been_hit_this_level,
                                 "been_seen_this_level": self.been_seen_this_level,
                                 "deaths_this_level": self.deaths_this_level,
                                 "kills_this_level": self.kills_this_level})
         return data
 
     def load(self, ent) -> None:
-        self.load_attribute(ent, "can_teleport")
-        self.load_attribute(ent, "can_bullet_time")
         self.load_attribute(ent, "been_hit_this_level")
         self.load_attribute(ent, "been_seen_this_level")
         self.load_attribute(ent, "deaths_this_level")
@@ -91,7 +79,7 @@ class Player(Actor):
         self.should_move_horiz = False
 
     def block(self) -> None:
-        if self.can_block and self.cooldowns["block"] <= 0:
+        if self.abilities["can_block"] and self.cooldowns["block"] <= 0:
             self.cooldowns["blocking_effect"] = Player.BLOCK_EFFECT_TIME
             self.cooldowns["block"] = Player.BLOCK_COOLDOWN
             scale = max(self.rect.width, self.rect.height)
@@ -135,14 +123,17 @@ class Player(Actor):
         return (time.perf_counter_ns() - start) // 1000000
 
     def teleport(self) -> None:
-        if self.can_teleport and self.cooldowns["teleport"] <= 0:
+        if self.abilities["can_teleport"] and self.cooldowns["teleport"] <= 0:
             for i in range(int(Player.VELOCITY_TARGET * Player.MULTIPLIER_TELEPORT) + 1, 0, -1):
                 cast = Entity(self.level, self.controller, self.rect.x + (self.direction * i), self.rect.y, self.rect.width, self.rect.height - 1)
-                collision = False
-                for ent in self.level.get_entities_in_range((cast.rect.x, cast.rect.y)):
-                    if pygame.sprite.collide_rect(cast, ent):
-                        collision = True
-                        break
+                if cast.rect.right <= self.level.level_bounds[0][0] or cast.rect.left >= self.level.level_bounds[1][0]:
+                    collision = True
+                else:
+                    collision = False
+                    for ent in self.level.get_entities_in_range((cast.rect.x, cast.rect.y)):
+                        if pygame.sprite.collide_rect(cast, ent):
+                            collision = True
+                            break
                 if not collision:
                     self.teleport_distance = self.direction * i
                     self.cooldowns["teleport_delay"] = Player.TELEPORT_DELAY
@@ -163,7 +154,7 @@ class Player(Actor):
                     self.play_attack_audio("ATTACK_MELEE")
 
     def bullet_time(self) -> None:
-        if self.can_bullet_time:
+        if self.abilities["can_bullet_time"]:
             if self.is_slow_time:
                 self.is_slow_time = False
                 self.cooldowns["bullet_time_active"] = 0

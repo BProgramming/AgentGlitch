@@ -51,7 +51,8 @@ class Level:
         if self._retro:
             self.particle_effects.append(self.gen_particle_effect("FILM", win))
         if meta_dict[name].get("abilities") is not None:
-            self.set_player_abilities(meta_dict[name]["abilities"])
+            for key in meta_dict[name]["abilities"]:
+                self.player.abilities[key.casefold()] = bool(meta_dict[name]["abilities"][key].casefold() == 'true')
         self._player.been_hit_this_level = False
         self._player.been_seen_this_level = False
         self._player.deaths_this_level = 0
@@ -119,24 +120,6 @@ class Level:
         if not self.player.been_seen_this_level:
             text.append('Shadow: You were never even seen!')
         return text
-
-    def set_player_abilities(self, abilities) -> None:
-        if abilities.get("can_open_doors") is not None:
-            self.player.can_open_doors = bool(abilities["can_open_doors"].upper() == "TRUE")
-        if abilities.get("can_move_blocks") is not None:
-            self.player.can_move_blocks = bool(abilities["can_move_blocks"].upper() == "TRUE")
-        if abilities.get("can_block") is not None:
-            self.player.can_block = bool(abilities["can_block"].upper() == "TRUE")
-        if abilities.get("can_wall_jump") is not None:
-            self.player.can_wall_jump = bool(abilities["can_wall_jump"].upper() == "TRUE")
-        if abilities.get("can_teleport") is not None:
-            self.player.can_teleport = bool(abilities["can_teleport"].upper() == "TRUE")
-        if abilities.get("can_bullet_time") is not None:
-            self.player.can_bullet_time = bool(abilities["can_bullet_time"].upper() == "TRUE")
-        if abilities.get("can_resize") is not None:
-            self.player.can_resize = bool(abilities["can_resize"].upper() == "TRUE")
-        if abilities.get("can_heal") is not None:
-            self.player.can_heal = bool(abilities["can_heal"].upper() == "TRUE")
 
     @property
     def entities(self) -> list:

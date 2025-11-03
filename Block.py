@@ -246,7 +246,7 @@ class Door(MovingBlock):
             self.lock()
 
     def collide(self, ent) -> bool:
-        if hasattr(ent, "can_open_doors") and ent.can_open_doors and ent.rect.bottom > self.rect.top:
+        if hasattr(ent, "abilities") and ent.abilities.get("can_open_doors") is not None and ent.abilities["can_open_doors"] and ent.rect.bottom > self.rect.top:
             self.open()
         return True
 

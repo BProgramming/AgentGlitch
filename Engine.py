@@ -160,11 +160,6 @@ def main(win):
             win.fill((0, 0, 0))
             win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
             display_text("Loading agent...", controller, min_pause_time=0, should_sleep=False, retro=level.retro)
-            if controller.player_abilities is not None:
-                for key in controller.player_abilities:
-                    setattr(level.player, key, controller.player_abilities[key])
-            else:
-                controller.player_abilities = {"can_wall_jump": level.player.can_wall_jump, "can_teleport": level.player.can_teleport, "can_bullet_time": level.player.can_bullet_time, "can_resize": level.player.can_resize, "can_heal": level.player.can_heal, "max_jumps": level.player.max_jumps}
 
             win.fill((0, 0, 0))
             win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
@@ -298,6 +293,7 @@ def main(win):
                         cur_target_time = level.target_time
                         cur_objectives_collected = level.objectives_collected
                         controller.level = level = level.hot_swap_level
+                        controller.hud = hud = HUD(level.player, win, retro=level.retro)
                         camera.prepare(level, hud)
                         level.time += cur_time
                         level.achievements.update(cur_achievements)

@@ -32,7 +32,6 @@ class NonPlayer(Actor):
         self.kill_at_end = kill_at_end
         self.spot_range = spot_range * block_size
         if path is None:
-            self.max_jumps = 0
             self.spot_range *= 2
         self.patrol_path_index = 0
         if self.patrol_path is not None:
@@ -107,7 +106,7 @@ class NonPlayer(Actor):
             else:
                 if self.is_hostile and (self.__spot_player__() or self.cooldowns["spot_player"] > 0):
                     dist = math.dist(self.level.player.rect.center, self.rect.center)
-                    if self.can_shoot:
+                    if self.abilities["can_shoot"]:
                         if dist < self.spot_range // 3:
                             if abs(self.rect.x - self.level.player.rect.x) > 5:
                                 self.direction = (MovementDirection.RIGHT if self.rect.centerx - self.level.player.rect.centerx >= 0 else MovementDirection.LEFT)
@@ -165,7 +164,7 @@ class NonPlayer(Actor):
                     if ent.rect.collidepoint(self.rect.centerx + (self.facing * ((self.rect.width // 2) + i)), self.rect.y):
                         return False
             self.cooldowns["spot_player"] = NonPlayer.PLAYER_SPOT_COOLDOWN
-            if self.state in [MovementState.IDLE, MovementState.CROUCH, MovementState.RUN, MovementState.IDLE_ATTACK, MovementState.CROUCH_ATTACK, MovementState.RUN_ATTACK] and self.can_shoot and dist > self.spot_range // 3:
+            if self.state in [MovementState.IDLE, MovementState.CROUCH, MovementState.RUN, MovementState.IDLE_ATTACK, MovementState.CROUCH_ATTACK, MovementState.RUN_ATTACK] and self.abilities["can_shoot"] and dist > self.spot_range // 3:
                 self.shoot_at_target(self.level.player.rect.center)
             self.level.player.been_seen_this_level = True
             return True

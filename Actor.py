@@ -66,13 +66,9 @@ class Actor(Entity):
         self.should_move_vert = True
         self.teleport_distance = 0
         self.is_crouching = False
-        self.can_open_doors = False
-        self.can_move_blocks = False
-        self.can_wall_jump = False
+        self.abilities = {"can_double_jump": False, "can_open_doors": False, "can_move_blocks": False, "can_block": False, "can_shoot": can_shoot, "can_teleport": False, "can_resize": can_resize, "can_wall_jump": False, "can_bullet_time": False, "can_heal": False}
         self.is_wall_jumping = False
         self.jump_count = 0
-        self.max_jumps = 1
-        self.can_shoot = False
         self.state = MovementState.IDLE
         self.state_changed = False
         self.idle_count = 0
@@ -96,14 +92,15 @@ class Actor(Entity):
         self.difficulty = difficulty
         self.is_attacking = False
         self.attack_damage = attack_damage * difficulty
-        self.can_shoot = can_shoot
-        self.can_resize = can_resize
-        self.can_heal = False
         self.proj_sprite = load_sprite_sheets("Projectiles", ("Bullet" if proj_sprite is None else proj_sprite), sprite_master, retro=self.level.retro)[("Bullet" if proj_sprite is None else proj_sprite).upper()][0]
         self.active_projectiles = []
         self.cached_x, self.cached_y = self.rect.x, self.rect.y
         self.cooldowns = {"get_hit": 0.0, "launch_projectile": 0.0, "resize": 0.0, "resize_delay": 0.0, "resize_effect": 0.0, "heal": 0.0, "attack": 0.0, "doublejump_effect_trail": 0.0}
         self.cached_cooldowns = self.cooldowns.copy()
+
+    @property
+    def max_jumps(self) -> int:
+        return 2 if self.abilities["can_double_jump"] else 1
 
     @property
     def gravity(self) -> float:
@@ -113,7 +110,7 @@ class Actor(Entity):
         projectiles = []
         for proj in self.active_projectiles:
             projectiles.append(proj.save())
-        return {self.name: {"hp": self.hp, "cached x y": (self.cached_x, self.cached_y), "cooldowns": self.cached_cooldowns, "size": self.size, "size_target": self.size, "can_wall_jump": self.can_wall_jump, "can_shoot": self.can_shoot, "can_resize": self.can_resize, "max_jumps": self.max_jumps, "projectiles": projectiles}}
+        return {self.name: {"hp": self.hp, "cached x y": (self.cached_x, self.cached_y), "cooldowns": self.cached_cooldowns, "size": self.size, "size_target": self.size, "projectiles": projectiles}}
 
     def load(self, data) -> None:
         self.rect.x, self.rect.y = self.cached_x, self.cached_y = data["cached x y"]
@@ -122,10 +119,6 @@ class Actor(Entity):
         self.cached_hp = self.hp
         self.load_attribute(data, "size")
         self.load_attribute(data, "size_target")
-        self.load_attribute(data, "can_wall_jump")
-        self.load_attribute(data, "can_shoot")
-        self.load_attribute(data, "can_resize")
-        self.load_attribute(data, "max_jumps")
         for proj in data["projectiles"]:
             self.active_projectiles.append(Projectile(self.level, self.controller, self.rect.centerx + (self.rect.width * self.facing // 3), self.rect.centery, None, 0, self.attack_damage, self.difficulty, sprite=self.proj_sprite, name=f'{self.name}\'s projectile #{len(self.active_projectiles) + 1}'))
             self.active_projectiles[-1].load(list(proj.values())[0])
@@ -149,11 +142,11 @@ class Actor(Entity):
             self.cooldowns["resize_delay"] = Actor.RESIZE_DELAY
 
     def grow(self) -> None:
-        if self.can_resize and self.cooldowns["resize"] <= 0:
+        if self.abilities["can_resize"] and self.cooldowns["resize"] <= 0:
             self.resize(min(self.size_target * Actor.RESIZE_SCALE_LIMIT, Actor.RESIZE_SCALE_LIMIT))
 
     def shrink(self) -> None:
-        if self.can_resize and self.cooldowns["resize"] <= 0:
+        if self.abilities["can_resize"] and self.cooldowns["resize"] <= 0:
             self.resize(max(self.size_target / Actor.RESIZE_SCALE_LIMIT, 1 / Actor.RESIZE_SCALE_LIMIT))
 
     def move(self, dx, dy) -> None:
@@ -266,7 +259,7 @@ class Actor(Entity):
                     if ent.collide(self):
                         self.collide(ent)
                         if overlap.width <= overlap.height and (self.x_vel == 0 or self.direction == (MovementDirection.RIGHT if self.x_vel >= 0 else MovementDirection.LEFT)):
-                            if self.can_move_blocks and isinstance(ent, MovableBlock) and ent.should_move_horiz and self.direction == (MovementDirection.RIGHT if ent.rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT):
+                            if self.abilities["can_move_blocks"] and isinstance(ent, MovableBlock) and ent.should_move_horiz and self.direction == (MovementDirection.RIGHT if ent.rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT):
                                 ent.push_x = self.x_vel * self.size
                             if (isinstance(ent, Actor) and ent.is_hostile) or not isinstance(ent, Actor):
                                 if self.x_vel <= 0 and self.rect.centerx > ent.rect.centerx:
@@ -348,7 +341,7 @@ class Actor(Entity):
                     self.state = MovementState.TELEPORT
                     self.animation_count = 0
             elif self.should_move_vert and (self.is_wall_jumping or self.y_vel > Actor.MIN_FALL_VEL or self.y_vel < 0):
-                if self.can_wall_jump and self.is_wall_jumping:
+                if self.abilities["can_wall_jump"] and self.is_wall_jumping:
                     if self.state != MovementState.WALL_JUMP:
                         self.state = MovementState.WALL_JUMP
                         self.animation_count = 0
@@ -446,7 +439,7 @@ class Actor(Entity):
             self.die()
         super().loop(dtime)
 
-        if self.can_heal and self.hp < self.max_hp and self.cooldowns["heal"] <= 0:
+        if self.abilities["can_heal"] and self.hp < self.max_hp and self.cooldowns["heal"] <= 0:
             self.hp = min(self.max_hp, self.hp + ((self.max_hp * dtime) / (50 * self.difficulty)))
 
         if len(self.active_projectiles) > 0:
