@@ -319,6 +319,7 @@ def main(win):
                                 controller.quit()
 
             if controller.goto_main:
+                controller.level = None
                 break
             elif next_level is not None:
                 if level.end_message is not None:
