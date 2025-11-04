@@ -58,6 +58,7 @@ class Level:
         self._player.deaths_this_level = 0
         self._player.kills_this_level = 0
         self.target_time = (0 if meta_dict[name].get("target_time") is None else meta_dict[name]["target_time"])
+        self.default_objective = (None if meta_dict[name].get("default_objective") is None else meta_dict[name]["default_objective"])
         self.objectives_collected = []
         self.objectives_available = len(self.objectives)
         self.enemies_available = len(self.enemies)

@@ -196,6 +196,9 @@ def main(win):
             camera.fade_in(controller)
             if level.start_message is not None:
                 display_text(load_text_from_file(level.start_message), controller, should_type_text=True, retro=level.retro)
+
+            camera.draw(controller.master_volume, glitches=None)
+            controller.activate_objective(level.default_objective)
     
             dtime_offset = 0
             glitch_timer = 0

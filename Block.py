@@ -187,6 +187,7 @@ class Door(MovingBlock):
                 self.locked_sprite = self.load_image(join(ASSETS_FOLDER, "Terrain", "Terrain.png"), width, height, image_master, locked_coord_x, locked_coord_y, retro=self.level.retro)
                 self.locked_mask = pygame.mask.from_surface(self.locked_sprite)
                 self.unlocked_sprite = self.load_image(join(ASSETS_FOLDER, "Terrain", "Terrain.png"), width, height, image_master, unlocked_coord_x, unlocked_coord_y, retro=self.level.retro)
+                self.unlocked_mask = pygame.mask.from_surface(self.unlocked_sprite)
                 self.locked_mask = pygame.mask.from_surface(self.unlocked_sprite)
                 self.sprite = self.locked_sprite
                 self.mask = self.locked_mask
@@ -251,6 +252,9 @@ class Door(MovingBlock):
         return True
 
     def loop(self, dtime) -> None:
+        if (self.is_locked and self.sprite == self.unlocked_sprite) or (not self.is_locked and self.sprite == self.locked_sprite):
+            self.is_locked = not self.is_locked
+            self.toggle_lock()
         if not self.is_open and self.rect.y == self.patrol_path_closed[0][1]:
             return
         else:

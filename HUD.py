@@ -10,7 +10,7 @@ class HUD:
         self.win = win
         self.scale_factor: tuple[float, float] = (self.win.get_width() / 1920, self.win.get_height() / 1080)
         self.retro: bool = retro
-        self.border = self.__make_border__(win, retro)
+        self.objective: pygame.Surface | None = None
         self.save_icon_timer: float = 0.0
         self.hp_outline: pygame.Surface | None = pygame.Surface((389 * self.scale_factor[0], 16 * self.scale_factor[1]), pygame.SRCALPHA)
         self.hp_outline.fill((0, 0, 0))
@@ -34,6 +34,7 @@ class HUD:
         self.time_punc_icon_width: int = self.time_characters["COLON"].get_width()
         self.old_time: str = "00:00.000"
         self.time_display: list[pygame.Surface | None] = [self.time_characters["0"], self.time_characters["0"], self.time_characters["COLON"], self.time_characters["0"], self.time_characters["0"], self.time_characters["DECIMAL"], self.time_characters["0"], self.time_characters["0"], self.time_characters["0"]]
+        self.border = self.__make_border__(win, retro)
 
         self.icon_bar: pygame.Surface | None = pygame.Surface((self.hp_outline.get_width(), 64 * self.scale_factor[1]), pygame.SRCALPHA)
         file = join(ASSETS_FOLDER, "Icons", "jump.png")
@@ -93,6 +94,14 @@ class HUD:
             self.save_icon: pygame.Surface | None = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
             if retro:
                 self.save_icon = retroify_image(self.save_icon)
+
+    def activate_objective(self, text: str | None) -> None:
+        text_colour = RETRO_BLACK if self.retro else NORMAL_BLACK
+        self.objective = pygame.font.SysFont("courier", 32).render("".join(['-', text]), True, text_colour)
+
+    def __draw_objective__(self) -> None:
+        if self.objective is not None:
+            self.win.blit(self.objective, (self.win.get_width() - (self.objective.get_width() + 5) , self.time_characters["0"].get_height() + 10))
 
     @staticmethod
     def __make_border__(win, retro) -> pygame.Surface:
@@ -216,6 +225,7 @@ class HUD:
         self.__draw_boss_health_bar__()
         self.__draw_icons__()
         self.__draw_time__(formatted_level_time)
+        self.__draw_objective__()
         if self.save_icon_timer > 0:
             self.__draw_save__()
         if self.retro:

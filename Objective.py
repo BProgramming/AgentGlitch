@@ -36,7 +36,7 @@ class Objective(Entity):
             self.update_geo()
         self.audios = audios
         self.sound = None if sound == "none" else sound
-        self.text = None if text == "none" or text is None else load_text_from_file(text)
+        self.text = None if text == "none" or text is None else text
         self.trigger = None if trigger is None else trigger.casefold().split(" ")
         self.achievement = achievement
         self.name = name
@@ -59,12 +59,13 @@ class Objective(Entity):
         if self.trigger is not None:
             alive = []
             for objective in self.level.objectives:
-                if objective.hp > 0 and objective.name.split(" ")[0] == self.name.split(" ")[0]:
+                if objective.hp > 0 and objective.name.casefold().split(" ")[0] == self.name.casefold().split(" ")[0]:
                     alive.append(objective)
             if len(alive) == 0:
+                self.controller.activate_objective(self.level.default_objective, popup=False)
                 for to_fire in self.trigger:
                     for trigger in self.level.triggers:
-                        if trigger.name.casefold().startswith(to_fire):
+                        if trigger.name.casefold().startswith(to_fire.casefold()):
                             trigger.collide(self.level.player)
                             break
             return

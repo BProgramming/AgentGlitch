@@ -381,7 +381,7 @@ class Selector(Menu):
     def cycle_images(self, direction: int) -> None:
         if direction > 0:
             self.image_index += 1
-        else:
+        elif direction < 0:
             self.image_index -= 1
         if self.image_index >= len(self.images["retro" if self.controller.retro else "normal"]):
             self.image_index = 0
@@ -389,7 +389,6 @@ class Selector(Menu):
             self.image_index = len(self.images["retro" if self.controller.retro else "normal"]) - 1
         self.image_selected = self.images["retro" if self.controller.retro else "normal"][self.image_index].copy()
         self.img_rect = pygame.Rect(self.rect.x + (self.rect.width - self.image_selected.get_width()) // 2, self.rect.y + self.rect.height - (self.buttons[0].normal.get_height() * len(self.buttons) // 2) - self.image_selected.get_height(), self.image_selected.get_width(), self.image_selected.get_height())
-
 
     def set_alpha(self, alpha: int) -> None:
         self.image_selected.set_alpha(alpha)

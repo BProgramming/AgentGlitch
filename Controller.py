@@ -66,6 +66,12 @@ class Controller:
         self.should_hot_swap_level = False
         self.should_scroll_to_point = None
 
+    def activate_objective(self, text: str | None, popup: bool=True) -> None:
+        if text is not None and self.hud is not None:
+            if popup:
+                display_text(f'New objective: {text}', self, retro=self.retro)
+            self.hud.activate_objective(text)
+
     def refresh_selector_images(self) -> None:
         for sel in [self.difficulty_picker, self.sprite_picker, self.level_picker, self.keyboard_layout_picker, self.gamepad_layout_picker]:
             sel.cycle_images(0)
