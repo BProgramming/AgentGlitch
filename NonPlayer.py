@@ -193,7 +193,7 @@ class NonPlayer(Actor):
         return True
 
     def draw(self, win, offset_x, offset_y, master_volume) -> None:
-        if self.difficulty <= DifficultyScale.EASY:
+        if self.difficulty <= DifficultyScale.EASY and self.is_hostile:
             adj_x_image = self.rect.centerx - offset_x - (self.__adj_spot_range__() if self.facing == MovementDirection.LEFT else 0)
             adj_y_image = self.rect.y - offset_y + (7 * self.rect.height // 24)
             window_width = win.get_width()
