@@ -280,7 +280,7 @@ class Actor(Entity):
                                 self.rect.top = ent.rect.bottom
                                 self.hit_head()
 
-                        if collided and self.should_move_vert and not self.is_wall_jumping and self.direction == (MovementDirection.RIGHT if overlap.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT):
+                        if collided and self.should_move_vert and self.abilities["can_wall_jump"] and not self.is_wall_jumping and self.direction == (MovementDirection.RIGHT if overlap.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT):
                             self.y_vel = min(self.y_vel, 0.0)
                             self.jump_count = 0
                             self.is_wall_jumping = True
