@@ -354,6 +354,16 @@ def display_text(output: list | str, controller, should_type_text=False, min_pau
             clear.blit(line2, ((win.get_width() - line2.get_width()) // 2, win.get_height() * 0.95))
         for j in range(len(output)):
             line = output[j]
+            if '<b>' in line:
+                line = line.replace('<b>', '')
+                is_bold = True
+            else:
+                is_bold = False
+            if '<i>' in line:
+                line = line.replace('<i>', '')
+                is_italics = True
+            else:
+                is_italics = False
             if should_type_text:
                 text = []
                 for i in range(len(line)):
@@ -361,7 +371,7 @@ def display_text(output: list | str, controller, should_type_text=False, min_pau
                     if (i == 0 and line[0] == "\"") or (i < len(line) - 1 and line[i + 1] == "\""):
                         pass
                     else:
-                        text_line = pygame.font.SysFont("courier", 32).render("".join(text), True, text_colour)
+                        text_line = pygame.font.SysFont("courier", 32, bold=is_bold, italic=is_italics).render("".join(text), True, text_colour)
                         text_box = pygame.Surface((text_line.get_width() + 10, text_line.get_height() + 10), pygame.SRCALPHA)
                         text_box.fill(box_colour)
                         text_box.blit(text_line, (5, 5))
@@ -383,7 +393,7 @@ def display_text(output: list | str, controller, should_type_text=False, min_pau
                             pause_dtime += 0.01
             else:
                 text = line
-                text_line = pygame.font.SysFont("courier", 32).render("".join(text), True, text_colour)
+                text_line = pygame.font.SysFont("courier", 32, bold=is_bold, italic=is_italics).render("".join(text), True, text_colour)
                 text_box = pygame.Surface((text_line.get_width() + 10, text_line.get_height() + 10), pygame.SRCALPHA)
                 text_box.fill(box_colour)
                 text_box.blit(text_line, (5, 5))

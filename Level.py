@@ -34,8 +34,8 @@ class Level:
             self.start_cinematic = [self.start_cinematic]
         if type(self.end_cinematic) not in [list, tuple]:
             self.end_cinematic = [self.end_cinematic]
-        self.start_message = (None if meta_dict[name].get("start_message") is None else meta_dict[name]["start_message"])
-        self.end_message = (None if meta_dict[name].get("end_message") is None else meta_dict[name]["end_message"])
+        self.start_message = (None if meta_dict[name].get("start_message") is None or meta_dict[name]["start_message"].casefold() == "none" else meta_dict[name]["start_message"])
+        self.end_message = (None if meta_dict[name].get("end_message") is None or meta_dict[name]["end_message"].casefold() == "none"  else meta_dict[name]["end_message"])
         if self._retro and meta_dict[name].get("retro_music") is not None:
             self.music = validate_file_list("Music", list(meta_dict[name]["retro_music"].split(' ')), "mp3")
         else:
@@ -300,7 +300,7 @@ class Level:
                             case "OBJECTIVE":
                                 objectives.append(Objective(level, controller, j * block_size, i * block_size, block_size, block_size, sprite_master, block_audios, is_active=bool(data.get("is_active") is not None and data["is_active"].upper() == "TRUE"), sprite=(None if data.get("sprite") is None else data["sprite"]), sound=("objective" if data.get("sound") is None else data["sound"].lower()), text=(None if data.get("text") is None else data["text"]), trigger=(None if data.get("trigger") is None else data["trigger"]), is_blocking=bool(data.get("is_blocking") is not None and data["is_blocking"].upper() == "TRUE"), achievement=(None if data.get("achievement") is None else data["achievement"]),  name=(element if data.get("name") is None else data["name"])))
                             case "BLOCK":
-                                if i > 0 and len(str(layout[i - 1][j])) > 0 and objects_dict.get(str(layout[i - 1][j])) is not None and objects_dict[str(layout[i - 1][j])]["type"] in ["Block"]:
+                                if i > 0 and len(str(layout[i - 1][j])) > 0 and objects_dict.get(str(layout[i - 1][j])) is not None and objects_dict[str(layout[i - 1][j])]["type"] in ["Block"] and (objects_dict[str(layout[i - 1][j])].get("is_blocking") is not None and objects_dict[str(layout[i - 1][j])]["is_blocking"].upper() == "TRUE"):
                                     is_stacked = True
                                 else:
                                     is_stacked = False
@@ -308,7 +308,7 @@ class Level:
                                 blocks.append(block)
                                 static_blocks[-1][-1] = block
                             case "BREAKABLEBLOCK":
-                                if i > 0 and len(str(layout[i - 1][j])) > 0 and objects_dict.get(str(layout[i - 1][j])) is not None and objects_dict[str(layout[i - 1][j])]["type"] in ["Block"]:
+                                if i > 0 and len(str(layout[i - 1][j])) > 0 and objects_dict.get(str(layout[i - 1][j])) is not None and objects_dict[str(layout[i - 1][j])]["type"] in ["Block"] and (objects_dict[str(layout[i - 1][j])].get("is_blocking") is not None and objects_dict[str(layout[i - 1][j])]["is_blocking"].upper() == "TRUE"):
                                     is_stacked = True
                                 else:
                                     is_stacked = False

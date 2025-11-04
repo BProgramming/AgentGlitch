@@ -120,8 +120,8 @@ class HUD:
     def __draw_objective__(self) -> None:
         if self.objective is not None:
             if self.objective_capsule is not None:
-                self.win.blit(self.objective_capsule, (self.win.get_width() - self.objective_capsule.get_width(), self.time_capsule.get_height() + 7))
-            self.win.blit(self.objective, (self.win.get_width() - (10 + self.objective.get_width()) , self.time_capsule.get_height() + 9))
+                self.win.blit(self.objective_capsule, (self.win.get_width() - (self.objective_capsule.get_width() - 1), self.time_capsule.get_height() + 7))
+            self.win.blit(self.objective, (self.win.get_width() - (self.objective.get_width() + 9) , self.time_capsule.get_height() + 9))
 
     @staticmethod
     def __make_border__(win, retro) -> pygame.Surface:

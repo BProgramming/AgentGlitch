@@ -41,7 +41,9 @@ class Projectile(Entity):
         return self.__lerp_point__(a[0], b[0], weight), self.__lerp_point__(a[1], b[1], weight)
 
     def clamp_target(self) -> None:
-        self.target = self.lerp(self.rect.center, self.target, self.max_dist / max(1.0, math.dist(self.rect.center, self.target)))
+        dist = math.dist(self.rect.center, self.target)
+        if dist != 0:
+            self.target = self.lerp(self.rect.center, self.target, self.max_dist / dist)
 
     def move(self, speed) -> None:
         if self.rect.colliderect(self.level.player) and pygame.sprite.collide_mask(self, self.level.player):
@@ -55,7 +57,9 @@ class Projectile(Entity):
                     self.collide(ent)
                     return
 
-        self.rect.center = self.lerp(self.rect.center, self.target, speed / math.dist(self.rect.center, self.target))
+        dist = math.dist(self.rect.center, self.target)
+        if dist != 0:
+            self.rect.center = self.lerp(self.rect.center, self.target, speed / dist)
         TOLERANCE = 1
         if abs(math.dist(self.rect.center, self.target)) <= TOLERANCE:
             self.hp = 0

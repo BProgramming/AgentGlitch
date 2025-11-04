@@ -125,7 +125,7 @@ class MovingBlock(Block):
                 self.increment_patrol_index()
 
     def collide(self, ent) -> bool:
-        if self.hold and ent == self.level.player:
+        if self.hold and self.is_enabled and ent == self.level.player:
             self.hold = False
         if hasattr(ent, "push_x"):
             ent.push_x = self.x_vel
