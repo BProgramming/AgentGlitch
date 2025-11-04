@@ -121,4 +121,21 @@ def convert_all(base):
         run_conversion(f'{dir}Player{i}', base, target)
         run_conversion(f'{dir}RetroPlayer{i}', base, target)
 
-convert_all('white')
+#convert_all('white')
+
+def recolour_icons(path):
+    for file in listdir(path):
+        filepath = join(path, file)
+        im = Image.open(filepath)
+        data = []
+        for pixel in im.getdata():
+            if pixel == (0, 0, 0, 255):
+                data.append((255, 255, 255, 255))
+            else:
+                data.append(pixel)
+
+        new = Image.new(im.mode, im.size)
+        new.putdata(data)
+        new.save(filepath)
+
+recolour_icons('C:\\Users\\brent\\PycharmProjects\\AgentGlitch\\Assets\\Icons\\Timer')

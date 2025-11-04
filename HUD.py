@@ -30,10 +30,15 @@ class HUD:
             handle_exception(f'File {FileNotFoundError(abspath(join(ASSETS_FOLDER, "Icons", "Timer", "colon.png")))} not found.')
         if self.time_characters.get("DECIMAL") is None:
             handle_exception(f'File {FileNotFoundError(abspath(join(ASSETS_FOLDER, "Icons", "Timer", "decimal.png")))} not found.')
+        if self.retro:
+            for key in self.time_characters:
+                self.time_characters[key] = retroify_image(self.time_characters[key])
         self.time_num_icon_width: int = self.time_characters["0"].get_width()
         self.time_punc_icon_width: int = self.time_characters["COLON"].get_width()
         self.old_time: str = "00:00.000"
         self.time_display: list[pygame.Surface | None] = [self.time_characters["0"], self.time_characters["0"], self.time_characters["COLON"], self.time_characters["0"], self.time_characters["0"], self.time_characters["DECIMAL"], self.time_characters["0"], self.time_characters["0"], self.time_characters["0"]]
+        self.time_capsule: pygame.Surface = self.__make_capsule__(self.retro, (7 * self.time_num_icon_width) + (2 * self.time_punc_icon_width) + ((self.time_characters["0"].get_height() + 4) / 2) + 20, self.time_characters["0"].get_height() + 4)
+        self.objective_capsule: pygame.Surface | None = None
         self.border = self.__make_border__(win, retro)
 
         self.icon_bar: pygame.Surface | None = pygame.Surface((self.hp_outline.get_width(), 64 * self.scale_factor[1]), pygame.SRCALPHA)
@@ -95,13 +100,28 @@ class HUD:
             if retro:
                 self.save_icon = retroify_image(self.save_icon)
 
+    @staticmethod
+    def __make_capsule__(retro, width, height):
+        capsule: pygame.Surface = pygame.Surface((width, height), pygame.SRCALPHA)
+        pygame.draw.circle(capsule, RETRO_BLACK if retro else NORMAL_BLACK, ((capsule.get_height() / 2), (capsule.get_height() / 2)), (capsule.get_height() / 2))
+        pygame.draw.circle(capsule, RETRO_WHITE if retro else NORMAL_WHITE, ((capsule.get_height() / 2), (capsule.get_height() / 2)), (capsule.get_height() / 2), width=1)
+        bar = pygame.Surface((capsule.get_width() - (capsule.get_height() / 2), capsule.get_height()), pygame.SRCALPHA)
+        bar.fill(RETRO_BLACK if retro else NORMAL_BLACK)
+        pygame.draw.line(bar, RETRO_WHITE if retro else NORMAL_WHITE, (0, 0), (bar.get_width(), 0), 1)
+        pygame.draw.line(bar, RETRO_WHITE if retro else NORMAL_WHITE, (0, bar.get_height() - 1), (bar.get_width(), bar.get_height() - 1), 1)
+        capsule.blit(bar, ((capsule.get_height() // 2), 0))
+        return capsule
+
     def activate_objective(self, text: str | None) -> None:
-        text_colour = RETRO_BLACK if self.retro else NORMAL_BLACK
-        self.objective = pygame.font.SysFont("courier", 32).render("".join(['-', text]), True, text_colour)
+        text_colour = RETRO_WHITE if self.retro else NORMAL_WHITE
+        self.objective = pygame.font.SysFont("courier", 32).render(text, True, text_colour)
+        self.objective_capsule: pygame.Surface =self.__make_capsule__(self.retro, self.objective.get_width() + ((self.objective.get_height() + 4)// 2) + 20, self.objective.get_height() + 4)
 
     def __draw_objective__(self) -> None:
         if self.objective is not None:
-            self.win.blit(self.objective, (self.win.get_width() - (self.objective.get_width() + 5) , self.time_characters["0"].get_height() + 10))
+            if self.objective_capsule is not None:
+                self.win.blit(self.objective_capsule, (self.win.get_width() - self.objective_capsule.get_width(), self.time_capsule.get_height() + 7))
+            self.win.blit(self.objective, (self.win.get_width() - (10 + self.objective.get_width()) , self.time_capsule.get_height() + 9))
 
     @staticmethod
     def __make_border__(win, retro) -> pygame.Surface:
@@ -183,20 +203,20 @@ class HUD:
         else:
             self.icon_jump.set_alpha(128 if self.player.jump_count >= self.player.max_jumps else 255)
             self.win.blit(self.icon_jump, (10 * self.scale_factor[0], 28))
-        if self.player.abilities["can_teleport"]:
-            self.icon_teleport.set_alpha(128 if self.player.cooldowns["teleport"] > 0 else 255)
-            self.win.blit(self.icon_teleport, (75 * self.scale_factor[0], 28 * self.scale_factor[1]))
         if self.player.abilities["can_wall_jump"]:
             self.icon_wall_jump.set_alpha(255 if self.player.is_wall_jumping else 128)
-            self.win.blit(self.icon_wall_jump, (140 * self.scale_factor[0], 28 * self.scale_factor[1]))
+            self.win.blit(self.icon_wall_jump, (75 * self.scale_factor[0], 28 * self.scale_factor[1]))
+        if self.player.abilities["can_teleport"]:
+            self.icon_teleport.set_alpha(128 / (1 + self.player.cooldowns["teleport"]) if self.player.cooldowns["teleport"] > 0 else 255)
+            self.win.blit(self.icon_teleport, (140 * self.scale_factor[0], 28 * self.scale_factor[1]))
         if self.player.abilities["can_resize"]:
-            self.icon_resize.set_alpha(128 if self.player.cooldowns["resize"] > 0 else 255)
+            self.icon_resize.set_alpha(128 / (1 + self.player.cooldowns["resize"])  if self.player.cooldowns["resize"] > 0 else 255)
             self.win.blit(self.icon_resize, (205 * self.scale_factor[0], 28 * self.scale_factor[1]))
         if self.player.abilities["can_block"]:
-            self.icon_block.set_alpha(128 if self.player.cooldowns["block"] > 0 else 255)
+            self.icon_block.set_alpha(128 / (1 + self.player.cooldowns["block"])  if self.player.cooldowns["block"] > 0 else 255)
             self.win.blit(self.icon_block, (270 * self.scale_factor[0], 28 * self.scale_factor[1]))
         if self.player.abilities["can_bullet_time"]:
-            self.icon_bullet_time.set_alpha(128 if self.player.cooldowns["bullet_time"] > 0 else 255)
+            self.icon_bullet_time.set_alpha(128 / (1 + self.player.cooldowns["bullet_time"])  if self.player.cooldowns["bullet_time"] > 0 else 255)
             self.win.blit(self.icon_bullet_time, (335 * self.scale_factor[0], 28 * self.scale_factor[1]))
 
     def __draw_save__(self) -> None:
@@ -204,6 +224,7 @@ class HUD:
 
     def __draw_time__(self, formatted_level_time: str) -> None:
         if len(formatted_level_time) <= 9:
+            self.win.blit(self.time_capsule, (self.win.get_width() - self.time_capsule.get_width(), 8))
             for i in range(len(formatted_level_time)):
                 if formatted_level_time[i] != self.old_time[i]:
                     char = formatted_level_time[i]
