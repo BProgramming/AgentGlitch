@@ -194,12 +194,13 @@ class Trigger(Entity):
             case TriggerType.SET_PROPERTY:
                 set_property(self, self.value)
             case TriggerType.SET_OBJECTIVE:
+                text = None
                 for objective in self.level.objectives:
                     if self.value["target"] == objective.name:
                         objective.is_active = self.value["value"]
-                        if objective.text is not None:
-                            self.controller.activate_objective(objective.text)
-                            break
+                        if text is None and objective.text is not None:
+                            text = objective.text
+                self.controller.activate_objective(text)
             case TriggerType.CINEMATIC:
                 if self.level.cinematics is not None and self.level.cinematics.get(self.value) is not None:
                     self.level.cinematics.queue(self.value)
