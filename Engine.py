@@ -93,9 +93,11 @@ def main(win):
         new_game = False
         if isfile(title_screen_file):
             slide = pygame.image.load(title_screen_file).convert_alpha()
-            slide = pygame.transform.scale_by(slide, (win.get_width() / slide.get_width(), win.get_height() / slide.get_height()))
+            scale_factor = min(win.get_width() / slide.get_width(), win.get_height() / slide.get_height())
+            slide = pygame.transform.scale_by(slide, scale_factor)
             slide_retro = pygame.image.load(title_screen_retro_file).convert_alpha()
-            slide_retro = retroify_image(pygame.transform.scale_by(slide_retro, (win.get_width() / slide_retro.get_width(), win.get_height() / slide_retro.get_height())))
+            scale_factor_retro = min(win.get_width() / slide_retro.get_width(), win.get_height() / slide_retro.get_height())
+            slide_retro = retroify_image(pygame.transform.scale_by(slide_retro, scale_factor_retro))
             controller.main_menu.clear_normal = slide.copy()
             controller.main_menu.clear_retro = slide_retro.copy()
             black = pygame.Surface((win.get_width(), win.get_height()), pygame.SRCALPHA)

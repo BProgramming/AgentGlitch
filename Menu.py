@@ -197,7 +197,9 @@ class Menu:
         if self.clear_retro is None:
             self.clear_retro = retroify_image(self.clear_normal)
 
-        self.controller.win.blit(self.clear_retro if self.controller.retro else self.clear_normal, (0, 0))
+        self.controller.win.fill((0, 0, 0))
+        clear = self.clear_retro if self.controller.retro else self.clear_normal
+        self.controller.win.blit(clear, ((self.controller.win.get_width() - clear.get_width()) / 2, (self.controller.win.get_height() - clear.get_height()) / 2))
         screen = self.screen_retro if self.controller.retro else self.screen_normal
         self.controller.win.blit(screen, (self.rect.x, self.rect.y))
         for button in self.buttons:
