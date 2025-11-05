@@ -2,7 +2,7 @@ import random
 import sys
 import time
 import traceback
-
+import re
 import pygame
 import csv
 import json
@@ -377,6 +377,29 @@ def display_text(output: list | str, controller, should_type_text=False, min_pau
                 is_italics = True
             else:
                 is_italics = False
+            if '<key=' in line:
+                keys_to_replace = re.findall("<key=\w+>", line)
+                for i, key in enumerate(keys_to_replace):
+                    key_partial = key[5:-1]
+                    keys_out = []
+                    if controller.active_keyboard_layout is not None and controller.KEYBOARD_LAYOUTS[controller.active_keyboard_layout].get(key_partial) is not None:
+                        keys_out += controller.KEYBOARD_LAYOUTS[controller.active_keyboard_layout][key_partial]
+                    elif controller.active_gamepad_layout is not None and controller.GAMEPAD_LAYOUTS[controller.active_gamepad_layout].get(key_partial) is not None:
+                        keys_out += controller.GAMEPAD_LAYOUTS[controller.active_gamepad_layout][key_partial]
+                    elif i == 0:
+                        keys_out = ['KEY NOT FOUND']
+                    if len(keys_out) > 2:
+                        txt = f'{', '.join([pygame.key.name(int(k)).title() for k in keys_out[:-1]])}, or {pygame.key.name(int(keys_out[-1])).title()}'
+                    elif len(keys_out) > 1:
+                        txt = f'{pygame.key.name(int(keys_out[0])).title()} or {pygame.key.name(int(keys_out[1])).title()}'
+                    elif len(keys_out) == 1:
+                        if keys_out[0] == 'KEY NOT FOUND':
+                            txt = f'{str(keys_out[0])}'
+                        else:
+                            txt = f'{pygame.key.name(int(keys_out[0])).title()}'
+                    else:
+                        txt = ''
+                    line = line.replace(key, txt)
             if should_type_text:
                 text = []
                 for i in range(len(line)):
