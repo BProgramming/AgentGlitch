@@ -255,11 +255,14 @@ def main(win):
                     break
                 dtime_offset += result[0]
                 if level.player.hp <= 0 and level.player.cooldowns.get("dead") is not None and level.player.cooldowns.get("dead") <= 0:
-                    if controller.difficulty >= DifficultyScale.HARDEST:
-                        controller.goto_restart = True
-                        break
+                    if controller.should_hot_swap_level:
+                        level.player.hp = level.player.max_hp
                     else:
-                        dtime_offset += level.player.revert()
+                        if controller.difficulty >= DifficultyScale.HARDEST:
+                            controller.goto_restart = True
+                            break
+                        else:
+                            dtime_offset += level.player.revert()
 
                 vfx_manager.manage(dtime)
                 for ent in level.entities:

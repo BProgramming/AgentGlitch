@@ -22,6 +22,7 @@ class Boss(NonPlayer):
         self.trigger = trigger
 
     def die(self) -> None:
+        super().die()
         self.level.boss_hp_pct = 0
         if self.trigger is not None:
             for trigger in self.trigger:

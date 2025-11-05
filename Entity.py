@@ -28,6 +28,9 @@ class Entity(pygame.sprite.Sprite):
     def gravity(self) -> float:
         return self.GRAVITY
 
+    def die(self) -> None:
+        self.hp = 0
+
     def save(self) -> dict:
         return {self.name: {"hp": self.hp}}
 
@@ -48,7 +51,7 @@ class Entity(pygame.sprite.Sprite):
     def loop(self, dtime: float) -> None:
         if self.cooldowns is not None:
             self.update_cooldowns(dtime)
-        if self.hp <= 0 and (self.cooldowns.get('dead') is None or self.cooldowns['dead'] <= 0):
+        if self.hp <= 0 and (self != self.level.player or self.cooldowns['dead'] <= 0):
             self.level.queue_purge(self)
 
     def draw(self, win: pygame.Surface, offset_x: float, offset_y: float, master_volume: dict) -> None:

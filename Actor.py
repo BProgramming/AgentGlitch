@@ -164,7 +164,7 @@ class Actor(Entity):
             if self.rect.top + dy < self.level.level_bounds[0][1]:
                 self.hit_head()
             elif self.rect.top + dy > self.level.level_bounds[1][1]:
-                self.hp = 0
+                self.die()
             else:
                 self.rect.y += dy
 
@@ -199,8 +199,6 @@ class Actor(Entity):
         self.should_move_vert = False
         if self.y_vel > 2 * Actor.VELOCITY_JUMP:
             self.hp -= self.y_vel * self.y_vel / (18000 * self.size)
-            if self.hp <= 0 and self.cooldowns.get('dead') is not None:
-                self.cooldowns['dead'] = Actor.DEATH_TIME
         self.y_vel = 0.0
         self.jump_count = 0
         self.is_wall_jumping = False
@@ -231,8 +229,6 @@ class Actor(Entity):
         self.cooldowns["heal"] = Actor.HEAL_DELAY * self.difficulty
         if ent.attack_damage is not None:
             self.hp -= ent.attack_damage
-            if self.hp <= 0 and self.cooldowns.get('dead') is not None:
-                self.cooldowns['dead'] = Actor.DEATH_TIME
 
     def get_collisions(self) -> bool:
         collided = False
@@ -309,7 +305,9 @@ class Actor(Entity):
         return collided
 
     def die(self) -> None:
-        return
+        super().die()
+        if self.hp <= 0 and self.cooldowns.get('dead') is not None:
+            self.cooldowns['dead'] = Actor.DEATH_TIME
 
     def update_state(self) -> None:
         old = self.state

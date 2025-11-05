@@ -68,7 +68,7 @@ class BreakableBlock(Block):
                 self.mask = pygame.mask.from_surface(self.sprite)
                 self.cooldowns["get_hit"] += BreakableBlock.GET_HIT_COOLDOWN
             else:
-                self.hp = 0
+                self.die()
                 self.level.visual_effects_manager.spawn(self.level.visual_effects_manager.spawn(VisualEffect(self, self.level.visual_effects_manager.image_master, image_name="BREAKBURST", alpha=128, scale=(self.rect.width, self.rect.height)), time=BreakableBlock.BREAK_EFFECT))
             self.play_sound("smash_box")
 
@@ -463,7 +463,7 @@ class FallingHazard(Hazard):
         if should_reset:
             self.should_fire = False
             if self.fire_once:
-                self.hp = 0
+                self.die()
                 return True
             else:
                 self.rect.x = self.start_x

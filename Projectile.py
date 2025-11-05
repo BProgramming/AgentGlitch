@@ -62,13 +62,13 @@ class Projectile(Entity):
             self.rect.center = self.lerp(self.rect.center, self.target, speed / dist)
         TOLERANCE = 1
         if abs(math.dist(self.rect.center, self.target)) <= TOLERANCE:
-            self.hp = 0
+            self.die()
 
     def loop(self, dtime) -> None:
         self.move(self.speed * dtime * (0.5 if self.level.player is not None and self.level.player.is_slow_time else 1))
 
     def collide(self, ent) -> bool:
-        self.hp = 0
+        self.die()
         return True
 
     def set_difficulty(self, scale) -> None:

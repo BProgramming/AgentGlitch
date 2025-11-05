@@ -47,7 +47,7 @@ class Objective(Entity):
         return False
 
     def get_hit(self, ent) -> None:
-        self.hp = 0
+        self.die()
         self.play_sound(self.sound)
         self.__collect__()
 
