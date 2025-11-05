@@ -30,14 +30,14 @@ class Player(Actor):
             self.toggle_retro()
             self.update_sprite()
         self.abilities["can_open_doors"] = self.abilities["can_move_blocks"] = self.abilities["can_heal"] = True
-        self.cooldowns.update({"teleport": 0.0, "teleport_delay": 0.0, "teleport_effect_trail": 0.0, "block": 0.0, "block_attempt": 0.0, "blocking_effect": 0.0, "bullet_time": 0.0, "bullet_time_active": 0.0})
+        self.cooldowns.update({"teleport": 0.0, "teleport_delay": 0.0, "teleport_effect_trail": 0.0, "block": 0.0, "block_attempt": 0.0, "blocking_effect": 0.0, "bullet_time": 0.0, "bullet_time_active": 0.0, "dead": 0.0})
         self.cached_cooldowns = self.cooldowns.copy()
         self.target_vel = Player.VELOCITY_TARGET
         self.drag_vel = Player.VELOCITY_DRAG_PCT
         self.is_blocking = False
         self.is_slow_time = False
         self.attack_damage *= 2
-        self.max_hp = self.hp = self.cached_hp = 100 / self.difficulty
+        self.max_hp = self.hp = 100 / self.difficulty
         self.been_hit_this_level = False
         self.been_seen_this_level = False
         self.deaths_this_level = 0
@@ -96,34 +96,37 @@ class Player(Actor):
                 super().get_hit(ent)
 
     def move_left(self) -> None:
-        self.should_move_horiz = True
-        if self.direction != MovementDirection.LEFT:
-            self.direction = self.facing = MovementDirection.LEFT
-        if self.x_vel > 0:
-            self.x_vel = 0
+        if self.hp > 0:
+            self.should_move_horiz = True
+            if self.direction != MovementDirection.LEFT:
+                self.direction = self.facing = MovementDirection.LEFT
+            if self.x_vel > 0:
+                self.x_vel = 0
 
     def move_right(self) -> None:
-        self.should_move_horiz = True
-        if self.direction != MovementDirection.RIGHT:
-            self.direction = self.facing = MovementDirection.RIGHT
-        if self.x_vel < 0:
-            self.x_vel = 0
+        if self.hp > 0:
+            self.should_move_horiz = True
+            if self.direction != MovementDirection.RIGHT:
+                self.direction = self.facing = MovementDirection.RIGHT
+            if self.x_vel < 0:
+                self.x_vel = 0
 
     def revert(self) -> int:
         start = time.perf_counter_ns()
-        text = ["Careful!", "You died.", "Watch out!", "OUCH!", "Don't try that again!", "Agent? Agent?!", "Initiating respawn...", "Reverting time..."]
+        text = ["Careful!", "You died.", "Watch out!", "OUCH!", "Don't try that again!", "Initiating respawn...", "Reverting time..."]
         display_text(text[random.randrange(len(text))], self.controller, min_pause_time=0, should_sleep=True, retro=self.level.retro)
         self.should_move_vert = False
         self.rect.x, self.rect.y = self.cached_x, self.cached_y
-        self.hp = self.cached_hp
+        self.hp = self.max_hp
         self.size = self.cached_size
         self.size_target = self.cached_size_target
         self.cooldowns = self.cached_cooldowns
         self.deaths_this_level += 1
+        self.x_vel = self.y_vel = 0.0
         return (time.perf_counter_ns() - start) // 1000000
 
     def teleport(self) -> None:
-        if self.abilities["can_teleport"] and self.cooldowns["teleport"] <= 0:
+        if self.hp > 0 and self.abilities["can_teleport"] and self.cooldowns["teleport"] <= 0:
             for i in range(int(Player.VELOCITY_TARGET * Player.MULTIPLIER_TELEPORT) + 1, 0, -1):
                 cast = Entity(self.level, self.controller, self.rect.x + (self.direction * i), self.rect.y, self.rect.width, self.rect.height - 1)
                 if cast.rect.right <= self.level.level_bounds[0][0] or cast.rect.left >= self.level.level_bounds[1][0]:
@@ -154,7 +157,7 @@ class Player(Actor):
                     self.play_attack_audio("ATTACK_MELEE")
 
     def bullet_time(self) -> None:
-        if self.abilities["can_bullet_time"]:
+        if self.hp > 0 and self.abilities["can_bullet_time"]:
             if self.is_slow_time:
                 self.is_slow_time = False
                 self.cooldowns["bullet_time_active"] = 0

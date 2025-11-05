@@ -58,6 +58,19 @@ def handle_exception(msg) -> None:
     sys.exit()
 
 
+def link_trigger(to_link, to_be_linked) -> list | None:
+    if to_link is None:
+        return None
+    else:
+        triggers = []
+        for active_triggers in to_link:
+            for possible_triggers in to_be_linked:
+                if possible_triggers.name.casefold().startswith(active_triggers.casefold()):
+                    triggers.append(possible_triggers)
+                    break
+        return None if len(triggers) == 0 else triggers
+
+
 def validate_file_list(dir, lst, ext=None) -> list | None:
     out = []
     for name in lst:

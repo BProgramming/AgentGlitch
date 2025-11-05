@@ -364,12 +364,23 @@ class Level:
                                     path = None
                                 else:
                                     path = load_path([int(i) for i in data["path"].split(' ')], i, j, block_size)
-                                enemies.append(Boss(level, controller, j * block_size, i * block_size, sprite_master, enemy_audios, controller.difficulty, block_size, music=(None if data.get("music") is None or data["music"].upper() == "NONE" else data["music"]), death_triggers=(None if data.get("death_triggers") is None else data["death_triggers"]), path=path, hp=data["hp"], show_health_bar=(True if data.get("show_health_bar") is None or data["show_health_bar"].upper() != "FALSE" else False), can_shoot=bool(data.get("can_shoot") is not None and data["can_shoot"].upper() == "TRUE"), sprite=data["sprite"], proj_sprite=(None if data.get("proj_sprite") is None or data["proj_sprite"].upper() == "NONE" else data["proj_sprite"]), name=(element if data.get("name") is None else data["name"])))
+                                enemies.append(Boss(level, controller, j * block_size, i * block_size, sprite_master, enemy_audios, controller.difficulty, block_size, music=(None if data.get("music") is None or data["music"].upper() == "NONE" else data["music"]), trigger=(None if data.get("trigger") is None else data["trigger"]), path=path, hp=data["hp"], show_health_bar=(True if data.get("show_health_bar") is None or data["show_health_bar"].upper() != "FALSE" else False), can_shoot=bool(data.get("can_shoot") is not None and data["can_shoot"].upper() == "TRUE"), sprite=data["sprite"], proj_sprite=(None if data.get("proj_sprite") is None or data["proj_sprite"].upper() == "NONE" else data["proj_sprite"]), name=(element if data.get("name") is None else data["name"])))
                             case "TRIGGER":
                                 triggers.append(Trigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, win, objects_dict, sprite_master, enemy_audios, block_audios, message_audios, image_master, block_size, fire_once=bool(data.get("fire_once") is not None and data["fire_once"].upper() == "TRUE"), type=(TriggerType(data["type"]) if isinstance(data["type"], int) else TriggerType.convert_string(data["type"])), input=(None if data.get("input") is None else data["input"]), name=(element if data.get("name") is None else data["name"])))
                             case _:
                                 pass
 
         player = Player(level, controller, player_start[0], player_start[1], sprite_master, player_audios, controller.difficulty, block_size, sprite=(player_sprite if player_sprite is not None else controller.player_sprite_selected[0]), retro_sprite=(player_sprite if player_sprite is not None else controller.player_sprite_selected[1]))
+
+        to_link = [ent for ent in [player] + blocks + hazards + enemies + objectives if hasattr(ent, 'trigger')]
+        for i, ent in enumerate(to_link):
+            win.fill((0, 0, 0))
+            bar = pygame.Surface((int(win.get_width() * ((i + 1) / len(to_link))), 10), pygame.SRCALPHA)
+            bar.fill(bar_colour)
+            win.blit(bar, (0, win.get_height() - 12))
+            pct = 100 * (i + 1) // len(to_link)
+            win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
+            display_text(f'Linking game objects... {" " if pct < 100 else ""}{" " if pct < 10 else ""}{pct}%', controller, min_pause_time=0, should_sleep=False, retro=level.retro)
+            ent.link_triggers(triggers)
 
         return level_bounds, player, triggers, blocks, dynamic_blocks, doors, static_blocks, hazards, falling_hazards, enemies, objectives

@@ -44,7 +44,7 @@ class NonPlayer(Actor):
                 if dist < min_dist:
                     self.patrol_path_index = i
             self.direction = self.facing = (MovementDirection.RIGHT if self.patrol_path[self.patrol_path_index][0] - self.rect.x >= 0 else MovementDirection.LEFT)
-        self.max_hp = self.hp = self.cached_hp = hp * self.difficulty
+        self.max_hp = self.hp = hp * self.difficulty
         self.cooldowns.update({"spot_player": 0})
         self.cached_cooldowns = self.cooldowns.copy()
         vision_hidden = pygame.Surface((256, 10), pygame.SRCALPHA)

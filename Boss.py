@@ -4,47 +4,28 @@ import pygame
 import random
 from Actor import MovementState
 from NonPlayer import NonPlayer
-from Helpers import set_property, validate_file_list
+from Helpers import validate_file_list
 
 
 class Boss(NonPlayer):
     PLAYER_SPOT_RANGE = 6
     PLAYER_SPOT_COOLDOWN = 3
 
-    def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, music=None, death_triggers=None, path=None, hp=100, show_health_bar=True, can_shoot=False, spot_range=PLAYER_SPOT_RANGE, sprite=None, proj_sprite=None, name="Boss"):
+    def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, music=None, trigger=None, path=None, hp=100, show_health_bar=True, can_shoot=False, spot_range=PLAYER_SPOT_RANGE, sprite=None, proj_sprite=None, name="Boss"):
         super().__init__(level, controller, x, y, sprite_master, audios, difficulty, block_size, path=path, hp=hp, can_shoot=can_shoot, spot_range=spot_range, sprite=sprite, proj_sprite=proj_sprite, name=name)
         self.music = (None if music is None else validate_file_list("Music", list(music.split(' ')), "mp3"))
         self.music_is_playing = False
         self.is_animated_attack = True
         self.audio_trigger_frames.update({"WIND_UP": [0], "ATTACK_ANIM": [0], "WIND_DOWN": [0]})
-        self.death_triggers = {}
         self.is_on_screen = False
         self.show_health_bar = show_health_bar
-        if death_triggers is not None:
-            if death_triggers.get("properties") is not None:
-                self.death_triggers["properties"] = death_triggers["properties"]
-            if death_triggers.get("cinematics") is not None:
-                self.death_triggers["cinematics"] = death_triggers["cinematics"]
-            if death_triggers.get("achievement") is not None:
-                self.death_triggers["achievement"] = death_triggers["achievement"]
-            elif death_triggers.get("achievements") is not None:
-                self.death_triggers["achievement"] = death_triggers["achievements"]
+        self.trigger = trigger
 
     def die(self) -> None:
         self.level.boss_hp_pct = 0
-        if self.death_triggers.get("discord_status") is not None and self.death_triggers["discord_status"].get("details") is not None and self.death_triggers["discord_status"].get("state") is not None:
-            self.controller.discord.set_status(details=self.death_triggers["discord_status"]["details"], state=self.death_triggers["discord_status"]["state"])
-        if self.death_triggers.get("properties") is not None:
-            for trigger in self.death_triggers["properties"]:
-                set_property(self, trigger)
-        if self.death_triggers.get("cinematics") is not None:
-            for cinematic in self.death_triggers["cinematics"]:
-                self.level.cinematics.queue(cinematic)
-        if self.death_triggers.get("achievement") is not None and self.controller.steamworks is not None:
-            for achievement in self.death_triggers["achievement"]:
-                if not self.controller.steamworks.UserStats.GetAchievement(achievement):
-                    self.controller.steamworks.UserStats.SetAchievement(achievement)
-                    self.controller.should_store_steam_stats = True
+        if self.trigger is not None:
+            for trigger in self.trigger:
+                trigger.collide(self.level.player)
 
     def __update_onscreen_presence__(self) -> None:
         if self.level.boss_hp_pct is None and math.dist((self.level.player.rect.x, self.level.player.rect.y), (self.rect.x, self.rect.y)) <= self.spot_range:

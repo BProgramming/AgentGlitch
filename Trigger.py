@@ -24,6 +24,7 @@ class TriggerType(Enum):
     HOT_SWAP_LEVEL = 11
     SCROLL_CAMERA_TO_POINT = 12
     SCROLL_CAMERA_TO_PLAYER = 13
+    SET_DISCORD_STATUS = 14
 
     @classmethod
     def convert_string(cls, string: str) -> 'TriggerType':
@@ -129,7 +130,7 @@ class Trigger(Entity):
                                 path = None
                             else:
                                 path = load_path([int(i) for i in data["path"].split(' ')], i, j, block_size)
-                            return Boss(self.level, self.controller, j * block_size, i * block_size, sprite_master, enemy_audios, self.controller.difficulty, block_size, music=(None if data.get("music") is None or data["music"].upper() == "NONE" else data["music"]), death_triggers=(None if data.get("death_triggers") is None else data["death_triggers"]), path=path, hp=data["hp"], show_health_bar=(True if data.get("show_health_bar") is None or data["show_health_bar"].upper() != "FALSE" else False), can_shoot=bool(data.get("can_shoot") is not None and data["can_shoot"].upper() == "TRUE"), sprite=data["sprite"], proj_sprite=(None if data.get("proj_sprite") is None or data["proj_sprite"].upper() == "NONE" else data["proj_sprite"]), name=(element if data.get("name") is None else data["name"]))
+                            return Boss(self.level, self.controller, j * block_size, i * block_size, sprite_master, enemy_audios, self.controller.difficulty, block_size, music=(None if data.get("music") is None or data["music"].upper() == "NONE" else data["music"]), trigger=(None if data.get("trigger") is None else data["trigger"]), path=path, hp=data["hp"], show_health_bar=(True if data.get("show_health_bar") is None or data["show_health_bar"].upper() != "FALSE" else False), can_shoot=bool(data.get("can_shoot") is not None and data["can_shoot"].upper() == "TRUE"), sprite=data["sprite"], proj_sprite=(None if data.get("proj_sprite") is None or data["proj_sprite"].upper() == "NONE" else data["proj_sprite"]), name=(element if data.get("name") is None else data["name"]))
                         case "TRIGGER":
                             return Trigger(self.level, self.controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, self.win, objects_dict, sprite_master, enemy_audios, block_audios, message_audios, image_master, block_size, fire_once=bool(data.get("fire_once") is not None and data["fire_once"].upper() == "TRUE"), type=(TriggerType(data["type"]) if isinstance(data["type"], int) else TriggerType.convert_string(data["type"])), input=(None if data.get("input") is None else data["input"]), name=(element if data.get("name") is None else data["name"]))
                         case _:
@@ -156,6 +157,8 @@ class Trigger(Entity):
                 return {"coords": (int(txt[0]) * block_size, int(txt[1]) * block_size), "time": (0.0 if input.get("time") is None else input["time"])}
             case TriggerType.SCROLL_CAMERA_TO_PLAYER:
                 return None
+            case TriggerType.SET_DISCORD_STATUS:
+                return {"state": "" if input.get("state") is None else input["state"], "details": "" if input.get("details") is None else input["details"]}
         return None
 
     def collide(self, ent: Entity | None) -> list:
@@ -214,6 +217,8 @@ class Trigger(Entity):
                 self.controller.should_scroll_to_point = self.value
             case TriggerType.SCROLL_CAMERA_TO_PLAYER:
                 self.controller.should_scroll_to_point = None
+            case TriggerType.SET_DISCORD_STATUS:
+                self.controller.discord.set_status(details=self.value["details"], state=self.value["state"])
         return [(time.perf_counter_ns() - start) // 1000000, next_level]
 
     def draw(self, win, offset_x, offset_y, master_volume) -> None:

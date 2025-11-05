@@ -1,5 +1,7 @@
 import pygame
 
+from Helpers import link_trigger
+
 
 class Entity(pygame.sprite.Sprite):
     GRAVITY = 1100
@@ -46,7 +48,7 @@ class Entity(pygame.sprite.Sprite):
     def loop(self, dtime: float) -> None:
         if self.cooldowns is not None:
             self.update_cooldowns(dtime)
-        if self.hp <= 0:
+        if self.hp <= 0 and (self.cooldowns.get('dead') is None or self.cooldowns['dead'] <= 0):
             self.level.queue_purge(self)
 
     def draw(self, win: pygame.Surface, offset_x: float, offset_y: float, master_volume: dict) -> None:
@@ -63,3 +65,7 @@ class Entity(pygame.sprite.Sprite):
 
     def set_difficulty(self, scale: float) -> None:
         return
+
+    def link_triggers(self, triggers: list) -> None:
+        if hasattr(self, 'trigger'):
+            self.trigger = link_trigger(None if self.trigger is None else self.trigger.split(" "), triggers)

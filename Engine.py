@@ -252,7 +252,7 @@ def main(win):
                     next_level = result[1]
                     break
                 dtime_offset += result[0]
-                if level.player.hp <= 0:
+                if level.player.hp <= 0 and level.player.cooldowns.get("dead") is not None and level.player.cooldowns.get("dead") <= 0:
                     if controller.difficulty >= DifficultyScale.HARDEST:
                         controller.goto_restart = True
                         break

@@ -33,6 +33,7 @@ class MovementState(Enum):
     WIND_DOWN = 19
     IDLE_CROUCH = 20
     IDLE_CROUCH_ATTACK = 21
+    DEAD = 22
 
     def __str__(self) -> str:
         return self.name
@@ -54,10 +55,10 @@ class Actor(Entity):
     HEAL_DELAY = 5
     DOUBLEJUMP_EFFECT_TRAIL = 0.08
     HORIZ_PUSH_DECAY_RATE = 200
+    DEATH_TIME = 1.5
 
     def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, can_shoot=False, can_resize=False, width=SIZE, height=SIZE, attack_damage=ATTACK_DAMAGE, sprite=None, proj_sprite=None, name=None):
         super().__init__(level, controller, x, y, width, height, name=name)
-        self.cached_hp = self.hp
         self.is_hostile = False
         self.patrol_path = None
         self.x_vel = self.y_vel = 0.0
@@ -118,7 +119,6 @@ class Actor(Entity):
         self.rect.x, self.rect.y = self.cached_x, self.cached_y = data["cached x y"]
         self.cooldowns = self.cached_cooldowns = data["cooldowns"]
         self.load_attribute(data, "hp")
-        self.cached_hp = self.hp
         self.load_attribute(data, "size")
         self.load_attribute(data, "size_target")
         for proj in data["projectiles"]:
@@ -137,18 +137,18 @@ class Actor(Entity):
             proj.attack_damage = self.attack_damage
 
     def resize(self, target: float) -> None:
-        if self.size_target != target:
+        if self.hp > 0 and self.size_target != target:
             self.size_target = target
             self.attack_damage *= target
             self.cooldowns["resize"] = Actor.RESIZE_DELAY
             self.cooldowns["resize_delay"] = Actor.RESIZE_DELAY
 
     def grow(self) -> None:
-        if self.abilities["can_resize"] and self.cooldowns["resize"] <= 0:
+        if self.hp > 0 and self.abilities["can_resize"] and self.cooldowns["resize"] <= 0:
             self.resize(min(self.size_target * Actor.RESIZE_SCALE_LIMIT, Actor.RESIZE_SCALE_LIMIT))
 
     def shrink(self) -> None:
-        if self.abilities["can_resize"] and self.cooldowns["resize"] <= 0:
+        if self.hp > 0 and self.abilities["can_resize"] and self.cooldowns["resize"] <= 0:
             self.resize(max(self.size_target / Actor.RESIZE_SCALE_LIMIT, 1 / Actor.RESIZE_SCALE_LIMIT))
 
     def move(self, dx, dy) -> None:
@@ -169,9 +169,8 @@ class Actor(Entity):
                 self.rect.y += dy
 
     def cache(self) -> None:
-        if self.cooldowns["get_hit"] <= 0 and self.state != MovementState.HIT and self.hp == self.max_hp and self.jump_count == 0 and self.y_vel == 0:
+        if self.cooldowns["get_hit"] <= 0 and self.state in (MovementState.IDLE, MovementState.IDLE_CROUCH, MovementState.RUN, MovementState.CROUCH) and self.hp == self.max_hp and self.jump_count == 0 and self.y_vel == 0:
             self.cached_x, self.cached_y = self.rect.x, self.rect.y
-            self.cached_hp = self.hp
             self.cached_size = self.size
             self.cached_size_target = self.size_target
             self.cached_cooldowns = self.cooldowns.copy()
@@ -180,7 +179,7 @@ class Actor(Entity):
         return 0
 
     def jump(self) -> None:
-        if self.jump_count < self.max_jumps:
+        if self.hp > 0 and self.jump_count < self.max_jumps:
             self.should_move_vert = True
             self.y_vel = -Actor.VELOCITY_JUMP
             self.jump_count += 1
@@ -200,6 +199,8 @@ class Actor(Entity):
         self.should_move_vert = False
         if self.y_vel > 2 * Actor.VELOCITY_JUMP:
             self.hp -= self.y_vel * self.y_vel / (18000 * self.size)
+            if self.hp <= 0 and self.cooldowns.get('dead') is not None:
+                self.cooldowns['dead'] = Actor.DEATH_TIME
         self.y_vel = 0.0
         self.jump_count = 0
         self.is_wall_jumping = False
@@ -218,7 +219,7 @@ class Actor(Entity):
                     set_sound_source(self.rect, self.level.player.rect, self.controller.master_volume["non-player"], active_audio_channel)
 
     def shoot_at_target(self, target) -> None:
-        if self.cooldowns["launch_projectile"] <= 0:
+        if self.hp > 0 and self.cooldowns["launch_projectile"] <= 0:
             self.is_attacking = True
             proj = Projectile(self.level, self.controller, self.rect.centerx, self.rect.centery, (target[0], self.rect.centery), Actor.MAX_SHOOT_DISTANCE, self.attack_damage, self.difficulty, sprite=self.proj_sprite, name=f'{self.name}\'s projectile #{(len(self.active_projectiles) + 1)}')
             self.active_projectiles.append(proj)
@@ -230,6 +231,8 @@ class Actor(Entity):
         self.cooldowns["heal"] = Actor.HEAL_DELAY * self.difficulty
         if ent.attack_damage is not None:
             self.hp -= ent.attack_damage
+            if self.hp <= 0 and self.cooldowns.get('dead') is not None:
+                self.cooldowns['dead'] = Actor.DEATH_TIME
 
     def get_collisions(self) -> bool:
         collided = False
@@ -310,7 +313,11 @@ class Actor(Entity):
 
     def update_state(self) -> None:
         old = self.state
-        if self.size_target != self.size:
+        if self.hp <= 0 and self.cooldowns.get('dead') is not None:
+            if self.state != MovementState.DEAD:
+                self.state = MovementState.DEAD
+                self.animation_count = 0
+        elif self.size_target != self.size:
             # this is not combined because, when kept separate, it lets the animation keep playing until the cooldown ends
             if self.state != MovementState.RESIZE:
                 self.state = MovementState.RESIZE
