@@ -199,6 +199,8 @@ class Actor(Entity):
         self.should_move_vert = False
         if self.y_vel > 2 * Actor.VELOCITY_JUMP:
             self.hp -= self.y_vel * self.y_vel / (18000 * self.size)
+            if self.hp < 0:
+                self.die()
         self.y_vel = 0.0
         self.jump_count = 0
         self.is_wall_jumping = False
@@ -229,6 +231,8 @@ class Actor(Entity):
         self.cooldowns["heal"] = Actor.HEAL_DELAY * self.difficulty
         if ent.attack_damage is not None:
             self.hp -= ent.attack_damage
+            if self.hp < 0:
+                self.die()
 
     def get_collisions(self) -> bool:
         collided = False
@@ -306,7 +310,7 @@ class Actor(Entity):
 
     def die(self) -> None:
         super().die()
-        if self.hp <= 0 and self.cooldowns.get('dead') is not None:
+        if self.hp <= 0 and self.cooldowns.get('dead') is not None and self.cooldowns['dead'] <= 0:
             self.cooldowns['dead'] = Actor.DEATH_TIME
 
     def update_state(self) -> None:
@@ -450,11 +454,9 @@ class Actor(Entity):
         self.mask = pygame.mask.from_surface(self.sprite)
 
     def loop(self, dtime) -> bool:
-        self.animation_count += dtime
-
-        if self.hp <= 0:
-            self.die()
         super().loop(dtime)
+
+        self.animation_count += dtime
 
         if self.abilities["can_heal"] and self.hp < self.max_hp and self.cooldowns["heal"] <= 0:
             self.hp = min(self.max_hp, self.hp + ((self.max_hp * dtime) / (50 * self.difficulty)))
@@ -502,12 +504,12 @@ class Actor(Entity):
                 if self.should_move_vert:
                     self.y_vel += self.gravity * dtime
 
-                if (self.x_vel + self.push_x != 0 or self.y_vel + self.push_y != 0) and self.hp > 0:
+                if (self.x_vel + self.push_x != 0 or self.y_vel + self.push_y != 0):
                     if self.level.player.is_slow_time and self != self.level.player:
                         self.x_vel /= 2
                         self.y_vel /= 2
 
-                    if self.state == MovementState.CROUCH:
+                    if self.state in (MovementState.CROUCH, MovementState.CROUCH_ATTACK, MovementState.IDLE_CROUCH, MovementState.IDLE_CROUCH_ATTACK):
                         self.x_vel *= 0.75
 
                     self.move((self.x_vel + self.push_x) * dtime, (self.y_vel + self.push_y) * dtime)

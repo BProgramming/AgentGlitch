@@ -121,6 +121,7 @@ class Player(Actor):
         self.size = self.cached_size
         self.size_target = self.cached_size_target
         self.cooldowns = self.cached_cooldowns
+        self.cooldowns['dead'] = 0.0
         self.deaths_this_level += 1
         self.x_vel = self.y_vel = 0.0
         return (time.perf_counter_ns() - start) // 1000000

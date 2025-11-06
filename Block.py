@@ -127,7 +127,7 @@ class MovingBlock(Block):
     def collide(self, ent) -> bool:
         if self.hold and self.is_enabled and ent == self.level.player:
             self.hold = False
-        if hasattr(ent, "push_x"):
+        if hasattr(ent, "push_x") and (ent.rect.y < self.rect.y or (hasattr(ent, 'is_wall_jumping') and ent.is_wall_jumping) or (ent.rect.x >= self.rect.x and ent.direction == self.direction == MovementDirection.RIGHT) or (ent.rect.x <= self.rect.x and ent.direction == self.direction == MovementDirection.LEFT)):
             ent.push_x = self.x_vel
         if hasattr(ent, "push_y"):
             ent.push_y = self.y_vel

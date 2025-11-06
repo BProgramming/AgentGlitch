@@ -104,6 +104,7 @@ def run_conversion(path, base, target):
         filepath = join(path, file)
         print(filepath)
         convert(Image.open(filepath), base, target, lips=True).save(filepath)
+run_conversion('C:\\Users\\brent\\PycharmProjects\\AgentGlitch\\Assets\\Sprites\\BusWaiter', 'white', 'asian')
 
 def convert_all(base):
     dir = "C:\\Users\\brent\\PycharmProjects\\AgentGlitch\\Assets\\Sprites\\"
@@ -138,4 +139,4 @@ def recolour_icons(path):
         new.putdata(data)
         new.save(filepath)
 
-recolour_icons('C:\\Users\\brent\\PycharmProjects\\AgentGlitch\\Assets\\Icons\\Timer')
+#recolour_icons('C:\\Users\\brent\\PycharmProjects\\AgentGlitch\\Assets\\Icons\\Timer')

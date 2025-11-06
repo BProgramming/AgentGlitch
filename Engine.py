@@ -254,17 +254,15 @@ def main(win):
                     next_level = result[1]
                     break
                 dtime_offset += result[0]
-                if level.player.hp <= 0 and level.player.cooldowns.get("dead") is not None and level.player.cooldowns.get("dead") <= 0:
-                    if controller.should_hot_swap_level:
-                        level.player.hp = level.player.max_hp
+                if level.player.hp <= 0 and level.player.cooldowns.get("dead") is not None and level.player.cooldowns["dead"] <= 0:
+                    if controller.difficulty >= DifficultyScale.HARDEST:
+                        controller.goto_restart = True
+                        break
                     else:
-                        if controller.difficulty >= DifficultyScale.HARDEST:
-                            controller.goto_restart = True
-                            break
-                        else:
-                            dtime_offset += level.player.revert()
+                        dtime_offset += level.player.revert()
 
                 vfx_manager.manage(dtime)
+
                 for ent in level.entities:
                     if (not isinstance(ent, Actor) and type(ent).__name__.upper() != "BLOCK") or (isinstance(ent, Actor) and math.dist(ent.rect.center, (camera.focus_x, camera.focus_y)) < win.get_width() * 1.5):
                         if hasattr(ent, "patrol") and callable(ent.patrol):
@@ -272,7 +270,6 @@ def main(win):
                         ent.loop(dtime)
                         if isinstance(ent, NonPlayer) and ent.queued_message is not None:
                             dtime_offset += ent.play_queued_message()
-
                 level.purge()
 
                 for effect in level.particle_effects:
@@ -297,16 +294,16 @@ def main(win):
                     controller.should_hot_swap_level = False
                     if level.hot_swap_level is not None:
                         cur_time = level.time
-                        cur_achievements = level.achievements
                         cur_target_time = level.target_time
                         cur_objectives_collected = level.objectives_collected
+                        cur_achievements = level.achievements
                         controller.level = level = level.hot_swap_level
                         controller.hud = hud = HUD(level.player, win, retro=level.retro)
                         camera.prepare(level, hud)
                         level.time += cur_time
-                        level.achievements.update(cur_achievements)
                         level.target_time += cur_target_time
                         level.objectives_collected += cur_objectives_collected
+                        level.achievements.update(cur_achievements)
 
             if controller.music is not None:
                 pygame.mixer.music.fadeout(1000)

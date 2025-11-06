@@ -1,6 +1,6 @@
 import pygame
 
-from Helpers import link_trigger
+from Helpers import link_trigger, MovementDirection
 
 
 class Entity(pygame.sprite.Sprite):
@@ -22,6 +22,7 @@ class Entity(pygame.sprite.Sprite):
         self.max_hp: float = 100
         self.hp: float = 100
         self.is_stacked: bool = False # this property is only used by blocks, but needed here for generic checks
+        self.direction: MovementDirection | None = None # this property is only used by actors, but needed here for generic checks
         self.cooldowns: dict | None = None
 
     @property
@@ -51,7 +52,7 @@ class Entity(pygame.sprite.Sprite):
     def loop(self, dtime: float) -> None:
         if self.cooldowns is not None:
             self.update_cooldowns(dtime)
-        if self.hp <= 0 and (self != self.level.player or self.cooldowns['dead'] <= 0):
+        if self.hp <= 0 and (self.cooldowns.get('dead') is None or self.cooldowns['dead'] <= 0):
             self.level.queue_purge(self)
 
     def draw(self, win: pygame.Surface, offset_x: float, offset_y: float, master_volume: dict) -> None:
