@@ -23,7 +23,7 @@ class Entity(pygame.sprite.Sprite):
         self.hp: float = 100
         self.is_stacked: bool = False # this property is only used by blocks, but needed here for generic checks
         self.direction: MovementDirection | None = None # this property is only used by actors, but needed here for generic checks
-        self.cooldowns: dict | None = None
+        self.cooldowns: dict[str, float] = {}
 
     @property
     def gravity(self) -> float:

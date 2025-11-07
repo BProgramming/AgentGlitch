@@ -58,7 +58,7 @@ class BreakableBlock(Block):
     def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=0, coord_y=0, coord_x2=0, coord_y2=0, name="BreakableBlock"):
         super().__init__(level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=coord_x, coord_y=coord_y, name=name)
         self.sprite_damaged = self.load_image(join(ASSETS_FOLDER, "Terrain", "Terrain.png"), width, height, image_master, coord_x2, coord_y2, retro=self.level.retro)
-        self.cooldowns = {"get_hit": 0}
+        self.cooldowns.update({"get_hit": 0})
 
     def get_hit(self, ent) -> None:
         if self.cooldowns["get_hit"] <= 0:
@@ -93,7 +93,7 @@ class MovingBlock(Block):
             self.direction = self.facing = (MovementDirection.RIGHT if self.patrol_path[self.patrol_path_index][0] - self.rect.x > 0 else MovementDirection.LEFT)
         self.x_vel = self.y_vel = 0.0
         self.should_move_horiz = self.should_move_vert = True
-        self.cooldowns = {"wait": 0.0}
+        self.cooldowns.update({"wait": 0.0})
 
     def increment_patrol_index(self) -> None:
         if self.patrol_path_index < 0:
@@ -428,7 +428,7 @@ class FallingHazard(Hazard):
         self.has_fired = False
         self.should_fire = False
         self.y_vel = 0.0
-        self.cooldowns = {"reset_time": 0.0, "landing_effect": 0.0}
+        self.cooldowns.update({"reset_time": 0.0, "landing_effect": 0.0})
 
     def update_sprite(self) -> int:
         if hasattr(self, "has_fired") and self.has_fired:

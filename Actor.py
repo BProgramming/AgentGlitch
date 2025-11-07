@@ -98,7 +98,7 @@ class Actor(Entity):
         self.proj_sprite = load_sprite_sheets("Projectiles", ("Bullet" if proj_sprite is None else proj_sprite), sprite_master, retro=self.level.retro)[("Bullet" if proj_sprite is None else proj_sprite).upper()][0]
         self.active_projectiles = []
         self.cached_x, self.cached_y = self.rect.x, self.rect.y
-        self.cooldowns = {"get_hit": 0.0, "launch_projectile": 0.0, "resize": 0.0, "resize_delay": 0.0, "resize_effect": 0.0, "heal": 0.0, "attack": 0.0, "doublejump_effect_trail": 0.0}
+        self.cooldowns.update({"get_hit": 0.0, "launch_projectile": 0.0, "resize": 0.0, "resize_delay": 0.0, "resize_effect": 0.0, "heal": 0.0, "attack": 0.0, "doublejump_effect_trail": 0.0})
         self.cached_cooldowns = self.cooldowns.copy()
 
     @property

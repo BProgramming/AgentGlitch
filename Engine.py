@@ -1,4 +1,6 @@
 import pygame
+
+from Block import Block
 from SteamworksConnection import SteamworksConnection
 from Helpers import load_json_dict, load_object_dicts, load_levels, load_audios, display_text, DifficultyScale, \
     handle_exception, load_text_from_file, ASSETS_FOLDER, GAME_DATA_FOLDER, FIRST_LEVEL_NAME, retroify_image, \
@@ -264,7 +266,7 @@ def main(win):
                 vfx_manager.manage(dtime)
 
                 for ent in level.entities:
-                    if (not isinstance(ent, Actor) and type(ent).__name__.upper() != "BLOCK") or (isinstance(ent, Actor) and math.dist(ent.rect.center, (camera.focus_x, camera.focus_y)) < win.get_width() * 1.5):
+                    if (not isinstance(ent, Actor) and not type(ent) is Block) or (isinstance(ent, Actor) and math.dist(ent.rect.center, (camera.focus_x, camera.focus_y)) < win.get_width() * 1.5):
                         if hasattr(ent, "patrol") and callable(ent.patrol):
                             ent.patrol(dtime)
                         ent.loop(dtime)

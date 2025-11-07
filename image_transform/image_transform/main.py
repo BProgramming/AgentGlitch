@@ -104,7 +104,7 @@ def run_conversion(path, base, target):
         filepath = join(path, file)
         print(filepath)
         convert(Image.open(filepath), base, target, lips=True).save(filepath)
-run_conversion('C:\\Users\\brent\\PycharmProjects\\AgentGlitch\\Assets\\Sprites\\BusWaiter', 'white', 'asian')
+#run_conversion('C:\\Users\\brent\\PycharmProjects\\AgentGlitch\\Assets\\Sprites\\BusWaiter', 'white', 'asian')
 
 def convert_all(base):
     dir = "C:\\Users\\brent\\PycharmProjects\\AgentGlitch\\Assets\\Sprites\\"
@@ -119,10 +119,10 @@ def convert_all(base):
             target = 'brown'
         else:
             target = 'white'
-        run_conversion(f'{dir}Player{i}', base, target)
-        run_conversion(f'{dir}RetroPlayer{i}', base, target)
+        run_conversion(f'{dir}UnarmedAgent{i}', base, target)
+        #run_conversion(f'{dir}RetroPlayer{i}', base, target)
 
-#convert_all('white')
+convert_all('white')
 
 def recolour_icons(path):
     for file in listdir(path):
