@@ -75,7 +75,7 @@ class BreakableBlock(Block):
 
 class MovingBlock(Block):
     VELOCITY_TARGET = 500
-    PATH_STOP_TIME = 0.5
+    PATH_STOP_TIME = 1
 
     def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, is_enabled=True, hold_for_collision=False, speed=VELOCITY_TARGET, path=None, coord_x=0, coord_y=0, is_blocking=True, name="MovingBlock"):
         Block.__init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=coord_x, coord_y=coord_y, is_blocking=is_blocking, name=name)
@@ -415,7 +415,7 @@ class MovingHazard(MovingBlock, Hazard):
 
 class FallingHazard(Hazard):
     ATTACK_DAMAGE = 99
-    RESET_DELAY = 1
+    RESET_DELAY = 2.5
     LANDING_EFFECT = 0.05
 
     def __init__(self, level, controller, x, y, width, height, image_master, sprite_master, audios, difficulty, hit_sides="D", drop_x=0, drop_y=0, fire_once=True, sprite=None, coord_x=0, coord_y=0, attack_damage=ATTACK_DAMAGE, name="FallingHazard"):
