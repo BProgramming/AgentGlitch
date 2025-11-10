@@ -2,7 +2,7 @@ import time
 import pygame
 from enum import Enum
 from os.path import join, isfile
-from Helpers import display_text, load_text_from_file, load_path, set_property, ASSETS_FOLDER
+from Helpers import display_text, load_text_from_file, load_path, set_property, ASSETS_FOLDER, handle_exception
 from Entity import Entity
 from Block import Block, BreakableBlock, MovableBlock, Hazard, MovingBlock, MovingHazard, Door, FallingHazard
 from Objective import Objective
@@ -61,7 +61,11 @@ class Trigger(Entity):
         match self.type:
             case TriggerType.TEXT:
                 if type(input) == dict and input.get("text") is not None and input.get("audio") is not None:
-                    return {"text": load_text_from_file(input["text"]), "audio": message_audios[input["audio"]]}
+                    if message_audios.get(input["audio"]) is None:
+                        handle_exception(f'Audio file {input["audio"]} not found.')
+                        return None
+                    else:
+                        return {"text": load_text_from_file(input["text"]), "audio": message_audios[input["audio"]]}
                 else:
                     return load_text_from_file(input)
             case TriggerType.CHANGE_LEVEL:
