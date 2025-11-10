@@ -241,9 +241,9 @@ class Actor(Entity):
         if self == self.level.player:
             ents = self.level.get_entities_in_range((self.rect.x, self.rect.y))
         elif self.is_hostile:
-            ents = [self.level.player] + self.level.get_entities_in_range((self.rect.x, self.rect.y), blocks_only=True)
+            ents = [self.level.player] + self.level.get_entities_in_range((self.rect.x, self.rect.y), blocks_only=True, include_doors=True)
         else:
-            ents = self.level.get_entities_in_range((self.rect.x, self.rect.y), blocks_only=True)
+            ents = self.level.get_entities_in_range((self.rect.x, self.rect.y), blocks_only=True, include_doors=True)
         for ent in ents:
             if self.rect.colliderect(ent.rect):
                 if pygame.sprite.collide_mask(self, ent):

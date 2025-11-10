@@ -166,7 +166,7 @@ class Trigger(Entity):
         return None
 
     def collide(self, ent: Entity | None) -> list:
-        start = time.perf_counter_ns()
+        start = time.perf_counter()
 
         next_level = None
         if ((self.fire_once or self.type == TriggerType.CINEMATIC) and self.has_fired) or self.type is None or self.value is None:
@@ -223,7 +223,7 @@ class Trigger(Entity):
                 self.controller.should_scroll_to_point = None
             case TriggerType.SET_DISCORD_STATUS:
                 self.controller.discord.set_status(details=self.value["details"], state=self.value["state"])
-        return [(time.perf_counter_ns() - start) // 1000000, next_level]
+        return [time.perf_counter() - start, next_level]
 
     def draw(self, win, offset_x, offset_y, master_volume) -> None:
         pass

@@ -70,16 +70,15 @@ class Cinematic:
         self.should_fade_in = should_fade_in
         self.should_fade_out = should_fade_out
 
-    def play(self, win: pygame.Surface) -> int:
-        start = time.perf_counter_ns()
+    def play(self, win: pygame.Surface) -> float:
+        start = time.perf_counter()
         pygame.mixer.pause()
         if self.type == CinematicType.SLIDE:
             self.__play_slide__(self.cinematic, self.controller, win, text=self.text, should_glitch=self.should_glitch, pause_key=self.pause_key, should_fade_in=self.should_fade_in, should_fade_out=self.should_fade_out)
         elif self.type == CinematicType.VIDEO:
             self.__play_video__(self.cinematic, self.controller, win, text=self.text, should_glitch=self.should_glitch, pause_key=self.pause_key, should_fade_in=self.should_fade_in, should_fade_out=self.should_fade_out)
         pygame.mixer.unpause()
-        return (time.perf_counter_ns() - start) // 1000000
-
+        return time.perf_counter() - start
     @staticmethod
     def __play_slide__(slide: pygame.Surface, controller, win: pygame.Surface, text: str | None=None, should_glitch: bool=False, pause_key: int | list[int] | tuple[int] | None=None, should_fade_in: bool=True, should_fade_out: bool=True) -> None:
         og_slide = slide

@@ -30,8 +30,7 @@ pygame.display.set_caption("AGENT GLITCH")
 
 import math
 import random
-import time
-import sys
+import time as tm
 import traceback
 from Cinematics import *
 from Controller import Controller
@@ -110,7 +109,7 @@ def main(win):
                     black.set_alpha(255 - (4 * i))
                     win.blit(black, (0, 0))
                     pygame.display.update()
-                    time.sleep(0.01)
+                    tm.sleep(0.01)
             controller.main_menu.buttons[1].is_enabled = isfile(join(GAME_DATA_FOLDER, "save.p"))
             new_game = controller.main()
             for i in range(64):
@@ -119,7 +118,7 @@ def main(win):
                 black.set_alpha(4 * i)
                 win.blit(black, (0, 0))
                 pygame.display.update()
-                time.sleep(0.01)
+                tm.sleep(0.01)
         else:
             handle_exception(f'File {FileNotFoundError(abspath(title_screen_file))} not found.')
         controller.goto_main = False
@@ -212,8 +211,8 @@ def main(win):
 
             # MAIN GAME LOOP: #
             while True:
-                dtime = (clock.tick(FPS_TARGET) - dtime_offset) / 1000
-                dtime_offset = 0
+                dtime: float = (clock.tick(FPS_TARGET) / 1000) - dtime_offset
+                dtime_offset: float = 0.0
                 level.time += dtime
 
                 if hud.save_icon_timer > 0:
@@ -295,6 +294,7 @@ def main(win):
                 if controller.should_hot_swap_level:
                     controller.should_hot_swap_level = False
                     if level.hot_swap_level is not None:
+                        start = tm.perf_counter()
                         cur_time = level.time
                         cur_target_time = level.target_time
                         cur_objectives_collected = level.objectives_collected
@@ -306,6 +306,7 @@ def main(win):
                         level.target_time += cur_target_time
                         level.objectives_collected += cur_objectives_collected
                         level.achievements.update(cur_achievements)
+                        dtime_offset += tm.perf_counter() - start
 
             if controller.music is not None:
                 pygame.mixer.music.fadeout(1000)

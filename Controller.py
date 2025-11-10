@@ -121,8 +121,8 @@ class Controller:
             for ent in [self.level.player] + self.level.entities:
                 ent.set_difficulty(self.difficulty)
 
-    def get_gamepad(self, notify=True) -> int:
-        start = time.perf_counter_ns()
+    def get_gamepad(self, notify=True) -> float:
+        start = time.perf_counter()
         if pygame.joystick.get_count() > 0:
             gamepad = pygame.joystick.Joystick(0)
         else:
@@ -157,7 +157,7 @@ class Controller:
 
             if notify:
                 display_text(msg, self, retro=self.level.retro)
-        return (time.perf_counter_ns() - start) // 1000000
+        return time.perf_counter() - start
 
     def set_keyboard_layout(self, name) -> None:
         layout = Controller.KEYBOARD_LAYOUTS[name]
@@ -364,9 +364,9 @@ class Controller:
                 case _:
                     pass
 
-    def pause(self) -> int:
+    def pause(self) -> float:
         self.pause_menu.clear_normal = self.pause_menu.clear_retro = None
-        start = time.perf_counter_ns()
+        start = time.perf_counter()
         pygame.mixer.pause()
         self.pause_menu.fade_in()
 
@@ -415,7 +415,7 @@ class Controller:
 
         self.pause_menu.fade_out()
         pygame.mixer.unpause()
-        return (time.perf_counter_ns() - start) // 1000000
+        return time.perf_counter() - start
 
     def main(self) -> bool:
         self.main_menu.fade_in()

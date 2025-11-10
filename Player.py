@@ -111,8 +111,8 @@ class Player(Actor):
             if self.x_vel < 0:
                 self.x_vel = 0
 
-    def revert(self) -> int:
-        start = time.perf_counter_ns()
+    def revert(self) -> float:
+        start = time.perf_counter()
         text = ["Careful!", "You died.", "Watch out!", "OUCH!", "Don't try that again!", "Initiating respawn...", "Reverting time..."]
         display_text(text[random.randrange(len(text))], self.controller, min_pause_time=0, should_sleep=True, retro=self.level.retro)
         self.should_move_vert = False
@@ -124,7 +124,7 @@ class Player(Actor):
         self.cooldowns['dead'] = 0.0
         self.deaths_this_level += 1
         self.x_vel = self.y_vel = 0.0
-        return (time.perf_counter_ns() - start) // 1000000
+        return time.perf_counter() - start
 
     def teleport(self) -> None:
         if self.hp > 0 and self.abilities["can_teleport"] and self.cooldowns["teleport"] <= 0:
