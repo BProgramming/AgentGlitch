@@ -235,9 +235,9 @@ class Actor(Entity):
             if self.hp < 0:
                 self.die()
 
-    def get_collisions(self) -> bool:
+    def get_collisions(self) -> tuple[bool, float]:
         collided = False
-
+        dtime_offset: float = 0.0
         if self == self.level.player:
             ents = self.level.get_entities_in_range((self.rect.x, self.rect.y))
         elif self.is_hostile:
@@ -261,7 +261,7 @@ class Actor(Entity):
                             if overlap.width >= overlap.height and ((self.rect.y <= ent.rect.y and "U" in ent.hit_sides) or (self.rect.y >= ent.rect.y and "D" in ent.hit_sides)):
                                 self.get_hit(ent)
                     elif isinstance(ent, Objective) and self == self.level.player:
-                        ent.get_hit(self)
+                        dtime_offset += ent.get_hit(self)
                     if ent.collide(self):
                         self.collide(ent)
                         if overlap.width <= overlap.height and (self.x_vel == 0 or self.direction == (MovementDirection.RIGHT if self.x_vel >= 0 else MovementDirection.LEFT)):
@@ -289,7 +289,7 @@ class Actor(Entity):
                             self.jump_count = 0
                             self.is_wall_jumping = True
                 elif isinstance(ent, Objective) and self == self.level.player and ent.sprite is None:
-                    ent.get_hit(self)
+                    dtime_offset += ent.get_hit(self)
             elif ent.rect.top <= self.rect.bottom <= ent.rect.bottom and self.rect.left + (self.rect.width // 4) <= ent.rect.right and self.rect.right - (self.rect.width // 4) >= ent.rect.left:
                 if isinstance(ent, MovingBlock) or isinstance(ent, MovableBlock) :
                     ent.collide(self)
@@ -307,7 +307,7 @@ class Actor(Entity):
             check_blocks = len(self.level.get_entities_in_range((self.rect.x, self.rect.y), dist_x=dist_x, blocks_only=True, include_doors=False))
             if check_blocks == 0:
                 self.is_wall_jumping = False
-        return collided
+        return collided, dtime_offset
 
     def die(self) -> None:
         super().die()
@@ -452,7 +452,8 @@ class Actor(Entity):
         self.rect = self.sprite.get_rect(topleft=(self.rect.x, self.rect.y))
         self.mask = pygame.mask.from_surface(self.sprite)
 
-    def loop(self, dtime) -> bool:
+    def loop(self, dtime) -> tuple[bool, float]:
+        dtime_offset: float = 0.0
         super().loop(dtime)
 
         self.animation_count += dtime
@@ -475,7 +476,10 @@ class Actor(Entity):
             self.push_y = 0
 
             self.should_move_vert = True
-            collided = self.get_collisions()
+            result = self.get_collisions()
+            collided = result[0]
+            dtime_offset += result[1]
+            dtime -= dtime_offset
 
             if self.cooldowns["resize_delay"] <= 0:
                 if self.size != self.size_target:
@@ -503,7 +507,7 @@ class Actor(Entity):
                 if self.should_move_vert:
                     self.y_vel += self.gravity * dtime
 
-                if (self.x_vel + self.push_x != 0 or self.y_vel + self.push_y != 0):
+                if self.x_vel + self.push_x != 0 or self.y_vel + self.push_y != 0:
                     if self.level.player.is_slow_time and self != self.level.player:
                         self.x_vel /= 2
                         self.y_vel /= 2
@@ -519,7 +523,7 @@ class Actor(Entity):
 
         self.cache()
         self.update_state()
-        return collided
+        return collided, dtime_offset
 
     def draw(self, win, offset_x, offset_y, master_volume) -> None:
         adj_x_image = self.rect.x - offset_x

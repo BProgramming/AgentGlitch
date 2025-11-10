@@ -210,8 +210,12 @@ def main(win):
             clock.tick(FPS_TARGET)
 
             # MAIN GAME LOOP: #
+            should_tick = True
             while True:
                 dtime: float = (clock.tick(FPS_TARGET) / 1000) - dtime_offset
+                if not should_tick:
+                    dtime = 0.0
+                    should_tick = True
                 dtime_offset: float = 0.0
                 level.time += dtime
 
@@ -250,7 +254,7 @@ def main(win):
                 if (controller.goto_load and isfile(join(GAME_DATA_FOLDER, "save.p"))) or controller.goto_main or controller.goto_restart:
                     break
 
-                result = level.player.loop(dtime)
+                result = level.player.loop(dtime) # the player loses health in here during the hot-swap bug
                 if result[1] is not None:
                     next_level = result[1]
                     break
@@ -294,7 +298,6 @@ def main(win):
                 if controller.should_hot_swap_level:
                     controller.should_hot_swap_level = False
                     if level.hot_swap_level is not None:
-                        start = tm.perf_counter()
                         cur_time = level.time
                         cur_target_time = level.target_time
                         cur_objectives_collected = level.objectives_collected
@@ -306,7 +309,7 @@ def main(win):
                         level.target_time += cur_target_time
                         level.objectives_collected += cur_objectives_collected
                         level.achievements.update(cur_achievements)
-                        dtime_offset += tm.perf_counter() - start
+                        should_tick = False
 
             if controller.music is not None:
                 pygame.mixer.music.fadeout(1000)

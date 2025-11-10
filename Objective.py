@@ -1,5 +1,7 @@
 import math
 import random
+import time
+
 import pygame
 from os.path import join, isfile, abspath
 from Entity import Entity
@@ -46,7 +48,8 @@ class Objective(Entity):
     def collide(self, ent) -> bool:
         return False
 
-    def get_hit(self, ent) -> None:
+    def get_hit(self, ent) -> float:
+        start = time.perf_counter()
         self.die()
         self.play_sound(self.sound)
         self.__collect__()
@@ -59,11 +62,13 @@ class Objective(Entity):
         for objective in self.level.objectives:
             if objective.hp > 0 and objective.name.casefold().split(" ")[0] == self.name.casefold().split(" ")[0]:
                 alive.append(objective)
+        dtime_offset: float = time.perf_counter() - start
         if len(alive) == 0:
             self.controller.activate_objective(self.level.default_objective, popup=False)
             if self.trigger is not None:
                 for trigger in self.trigger:
-                    trigger.collide(self.level.player)
+                    dtime_offset += trigger.collide(self.level.player)[0]
+        return dtime_offset
 
     def save(self) -> dict:
         return super().save()
