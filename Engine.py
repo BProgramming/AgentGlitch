@@ -73,12 +73,12 @@ def main(win):
     loading_screens = load_images("LoadingScreens", None)
 
     if meta_dict.get("MAIN_MENU") is not None and meta_dict["MAIN_MENU"].get("title_screen") is not None:
-        title_screen_file = join(ASSETS_FOLDER, "Screens", meta_dict["MAIN_MENU"]["title_screen"])
+        title_screen_file = join(ASSETS_FOLDER, "TitleScreens", meta_dict["MAIN_MENU"]["title_screen"])
     else:
-        title_screen_file = join(ASSETS_FOLDER, "Screens", "title.png")
+        title_screen_file = join(ASSETS_FOLDER, "TitleScreens", "title.png")
 
     if meta_dict.get("MAIN_MENU") is not None and meta_dict["MAIN_MENU"].get("title_screen_retro") is not None:
-        title_screen_retro_file = join(ASSETS_FOLDER, "Screens", meta_dict["MAIN_MENU"]["title_screen_retro"])
+        title_screen_retro_file = join(ASSETS_FOLDER, "TitleScreens", meta_dict["MAIN_MENU"]["title_screen_retro"])
     else:
         title_screen_retro_file = title_screen_file
 
