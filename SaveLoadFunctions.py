@@ -3,7 +3,7 @@ import pickle
 from os.path import join, isfile
 from Actor import Actor
 from Block import BreakableBlock
-from Helpers import GAME_DATA_FOLDER, FIRST_LEVEL_NAME
+from Helpers import GAME_DATA_FOLDER
 
 
 def save_player_profile(controller, level):
@@ -12,7 +12,7 @@ def save_player_profile(controller, level):
     if level is not None:
         cur_level = level.name
     else:
-        cur_level = FIRST_LEVEL_NAME
+        cur_level = controller.start_level
         if isfile(profile_file):
             with open(profile_file, "rb") as f:
                 data = pickle.load(open(profile_file, "rb"))

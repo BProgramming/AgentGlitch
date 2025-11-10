@@ -14,7 +14,6 @@ from enum import Enum, IntEnum
 
 ASSETS_FOLDER: str = "Assets"
 GAME_DATA_FOLDER: str = "GameData"
-FIRST_LEVEL_NAME: str = "__START__"
 DLC_APP_ID: int = 0
 NORMAL_WHITE: tuple[int, int, int, int] = (255, 255, 255, 255)
 RETRO_WHITE: tuple[int, int, int, int] = (250, 215, 195, 255)
@@ -292,7 +291,7 @@ def __load_single_audio__(dir1, dir2) -> dict | None:
         return None
 
 
-def load_audios(dir, dir2=None) -> dict | None:
+def load_audios(dir, dir2=None, suppress_error=False) -> dict | None:
     if dir2 is None:
         path = join(ASSETS_FOLDER, "SoundEffects", dir)
     else:
@@ -311,7 +310,7 @@ def load_audios(dir, dir2=None) -> dict | None:
                 sounds[key][i] = sound_master[file]["sound"]
 
         return sounds
-    elif dir2 is not None:
+    elif dir2 is not None and not suppress_error:
         handle_exception(f'File {FileNotFoundError(abspath(path))} not found.')
     return None
 

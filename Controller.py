@@ -26,6 +26,7 @@ class Controller:
         self.discord = discord
         self.should_store_steam_stats = False
         self.player_sprite_selected = [None, None]
+        self.start_level: str | None = None
         self.difficulty = DifficultyScale.MEDIUM
         self.hud = None
         self.goto_load = self.goto_main = self.goto_restart = False

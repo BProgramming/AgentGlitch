@@ -3,8 +3,7 @@ import pygame
 from Block import Block
 from SteamworksConnection import SteamworksConnection
 from Helpers import load_json_dict, load_object_dicts, load_levels, load_audios, display_text, DifficultyScale, \
-    handle_exception, load_text_from_file, ASSETS_FOLDER, GAME_DATA_FOLDER, FIRST_LEVEL_NAME, retroify_image, \
-    load_images
+    handle_exception, load_text_from_file, ASSETS_FOLDER, retroify_image, load_images
 from os.path import join, isfile, abspath
 from DiscordConnection import DiscordConnection
 from SimpleVFX.SimpleVFX import VisualEffectsManager
@@ -54,6 +53,7 @@ def main(win):
     controller = Controller(None, win, main_menu_music=(None if meta_dict.get("MAIN_MENU") is None or meta_dict["MAIN_MENU"].get("music") is None else list(meta_dict["MAIN_MENU"]["music"].split(' '))), steamworks=steamworks, discord=discord)
     controller.get_gamepad(notify=False)
     controller.has_dlc.update(steamworks.has_dlc())
+    controller.start_level = meta_dict["MAIN_MENU"]["start_level"]
 
     if meta_dict.get("MAIN_MENU") is not None and meta_dict["MAIN_MENU"].get("start_cinematics") is not None:
         start_cinematics = meta_dict["MAIN_MENU"]["start_cinematics"]
@@ -135,7 +135,7 @@ def main(win):
             display_text("Loading mission... [1/3]", controller, min_pause_time=0, should_sleep=False, retro=controller.retro, background=True)
             should_load = False
             if new_game:
-                cur_level = FIRST_LEVEL_NAME
+                cur_level = meta_dict["MAIN_MENU"]["start_level"]
                 controller.save_player_profile()
                 new_game = False
             elif controller.goto_load:
@@ -154,7 +154,7 @@ def main(win):
             display_text("Loading mission... [2/3]", controller, min_pause_time=0, should_sleep=False, retro=controller.retro, background=True)
             player_audio = enemy_audio = load_audios("Actors")
             block_audio = load_audios("Blocks")
-            message_audio = load_audios("Messages", dir2=cur_level)
+            message_audio = load_audios("Messages", dir2=cur_level, suppress_error=True)
             vfx_manager = VisualEffectsManager(join(ASSETS_FOLDER, "VisualEffects"))
             win.fill((0, 0, 0))
             win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
