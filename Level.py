@@ -232,7 +232,7 @@ class Level:
 
         above_player = []
 
-        for ent in self.triggers + self.__get_static_block_slice__(win, offset_x, offset_y) + self.dynamic_blocks + list(self.doors.values()) + self.hazards + self.enemies + self.objectives:
+        for ent in self.triggers + self.__get_static_block_slice__(win, offset_x, offset_y) + self.dynamic_blocks + list(self.doors.values()) + self.hazards + self.objectives:
             if isinstance(ent, list):
                 for ent_lower in ent:
                     if ent_lower is not None:
@@ -245,6 +245,9 @@ class Level:
                     ent.draw(win, offset_x, offset_y, master_volume)
                 else:
                     above_player.append(ent)
+
+        for ent in self.enemies:
+            ent.draw(win, offset_x, offset_y, master_volume)
 
         self.player.draw(win, offset_x, offset_y, master_volume)
 
@@ -286,7 +289,7 @@ class Level:
             win.blit(bar, (0, win.get_height() - 12))
             pct = 100 * (i + 1)//len(layout)
             win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
-            display_text(f'Building level... {" " if pct < 100 else ""}{" " if pct < 10 else ""}{pct}%', controller, min_pause_time=0, should_sleep=False, retro=level.retro)
+            display_text(f'Building level... {" " if pct < 100 else ""}{" " if pct < 10 else ""}{pct}%', controller, min_pause_time=0, should_sleep=False, retro=level.retro, background=True)
             static_blocks.append([])
             for j in range(len(layout[i])):
                 static_blocks[-1].append(None)
@@ -358,7 +361,7 @@ class Level:
                                     path = None
                                 else:
                                     path = load_path([int(i) for i in data["path"].split(' ')], i, j, block_size)
-                                enemies.append(NonPlayer(level, controller, j * block_size, i * block_size, sprite_master, enemy_audios, controller.difficulty, block_size, path=path, kill_at_end=bool(data.get("kill_at_end") is not None and data["kill_at_end"].upper() == "TRUE"), is_hostile=bool(data.get("is_hostile") is None or data["is_hostile"].upper() != "FALSE"), collision_message=(None if data.get("collision_message") is None else data["collision_message"]), hp=data["hp"], can_shoot=bool(data.get("can_shoot") is not None and data["can_shoot"].upper() == "TRUE"), sprite=data["sprite"], proj_sprite=(None if data.get("proj_sprite") is None or data["proj_sprite"].upper() == "NONE" else data["proj_sprite"]), name=(element if data.get("name") is None else data["name"])))
+                                enemies.append(NonPlayer(level, controller, j * block_size, i * block_size, sprite_master, enemy_audios, controller.difficulty, block_size, path=path, kill_at_end=bool(data.get("kill_at_end") is not None and data["kill_at_end"].upper() == "TRUE"), is_hostile=bool(data.get("is_hostile") is None or data["is_hostile"].upper() != "FALSE"), collision_message=(None if data.get("collision_message") is None else data["collision_message"]), bark=(None if data.get("bark") is None else data["bark"]), hp=data["hp"], can_shoot=bool(data.get("can_shoot") is not None and data["can_shoot"].upper() == "TRUE"), sprite=data["sprite"], proj_sprite=(None if data.get("proj_sprite") is None or data["proj_sprite"].upper() == "NONE" else data["proj_sprite"]), name=(element if data.get("name") is None else data["name"])))
                             case "BOSS":
                                 if data["path"].upper() == "NONE":
                                     path = None
@@ -380,7 +383,7 @@ class Level:
             win.blit(bar, (0, win.get_height() - 12))
             pct = 100 * (i + 1) // len(to_link)
             win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
-            display_text(f'Linking game objects... {" " if pct < 100 else ""}{" " if pct < 10 else ""}{pct}%', controller, min_pause_time=0, should_sleep=False, retro=level.retro)
+            display_text(f'Linking game objects... {" " if pct < 100 else ""}{" " if pct < 10 else ""}{pct}%', controller, min_pause_time=0, should_sleep=False, retro=level.retro, background=True)
             ent.link_triggers(triggers)
 
         return level_bounds, player, triggers, blocks, dynamic_blocks, doors, static_blocks, hazards, falling_hazards, enemies, objectives

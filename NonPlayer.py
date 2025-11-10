@@ -1,9 +1,11 @@
 import math
 import pygame
 import time
+import re
 from Actor import Actor, MovementState
 from Block import Door
-from Helpers import DifficultyScale, MovementDirection, load_text_from_file, display_text, ASSETS_FOLDER, retroify_image
+from Helpers import DifficultyScale, MovementDirection, load_text_from_file, display_text, ASSETS_FOLDER, \
+    retroify_image, RETRO_BLACK, RETRO_WHITE, NORMAL_WHITE, NORMAL_BLACK, TEXT_BOX_BORDER_RADIUS, process_text
 from os.path import isfile, join
 
 
@@ -12,7 +14,7 @@ class NonPlayer(Actor):
     PLAYER_SPOT_RANGE = 3
     PLAYER_SPOT_COOLDOWN = 2
 
-    def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, path=None, kill_at_end=False, is_hostile=True, collision_message=None, hp=100, can_shoot=False, spot_range=PLAYER_SPOT_RANGE, sprite=None, proj_sprite=None, name="Enemy"):
+    def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, path=None, kill_at_end=False, is_hostile=True, collision_message=None, bark=None, hp=100, can_shoot=False, spot_range=PLAYER_SPOT_RANGE, sprite=None, proj_sprite=None, name="Enemy"):
         super().__init__(level, controller, x, y, sprite_master, audios, difficulty, block_size, can_shoot=can_shoot, sprite=sprite, proj_sprite=proj_sprite, name=name)
         self.target_vel = NonPlayer.VELOCITY_TARGET
         self.is_hostile = is_hostile
@@ -62,6 +64,29 @@ class NonPlayer(Actor):
             vision_hidden = retroify_image(vision_hidden)
             vision_spotted = retroify_image(vision_spotted)
         self.vision = {"hidden": {MovementDirection.LEFT: vision_hidden, MovementDirection.RIGHT: pygame.transform.flip(vision_hidden, True, False)}, "spotted": {MovementDirection.LEFT: vision_spotted, MovementDirection.RIGHT: pygame.transform.flip(vision_spotted, True, False)}}
+        self.bark: pygame.Surface | None = None if bark is None else self.set_bark(load_text_from_file(bark))
+        self.has_barked = False
+
+    def set_bark(self, output: list[str] | str | None) -> pygame.Surface | None:
+        if output is None or output == "":
+            return None
+        else:
+            if isinstance(output, list):
+                line = "\n".join(output)
+            else:
+                line = output
+            line, is_bold, is_italics = process_text(line, self.controller)
+
+            text_colour = RETRO_WHITE if self.controller.retro else NORMAL_WHITE
+            box_colour = RETRO_BLACK if self.controller.retro else NORMAL_BLACK
+            box_colour = (box_colour[0], box_colour[1], box_colour[2], 128)
+
+            text_line = pygame.font.SysFont("courier", 32, bold=is_bold, italic=is_italics).render(line, True, text_colour)
+            text_box = pygame.Surface((text_line.get_width() + 10, text_line.get_height() + 10), pygame.SRCALPHA)
+            pygame.draw.rect(text_box, box_colour, pygame.Rect(0, 0, text_box.get_width(), text_box.get_height()), border_radius=TEXT_BOX_BORDER_RADIUS)
+            #text_box.fill(box_colour)
+            text_box.blit(text_line, (5, 5))
+            return text_box
 
     def __increment_patrol_index__(self) -> None:
         if self.patrol_path_index < 0:
@@ -190,18 +215,35 @@ class NonPlayer(Actor):
         elif self.collision_message is not None:
             self.queued_message = self.collision_message
             self.collision_message = None
+        elif self.bark is not None:
+            self.cooldowns["bark"] = NonPlayer.BARK_TIME
+            self.has_barked = True
         return True
 
     def draw(self, win, offset_x, offset_y, master_volume) -> None:
         if self.difficulty <= DifficultyScale.EASY and self.is_hostile:
-            adj_x_image = self.rect.centerx - offset_x - (self.__adj_spot_range__() if self.facing == MovementDirection.LEFT else 0)
-            adj_y_image = self.rect.y - offset_y + (7 * self.rect.height // 24)
+            adj_x = self.rect.centerx - offset_x - (self.__adj_spot_range__() if self.facing == MovementDirection.LEFT else 0)
+            adj_y = self.rect.y - offset_y + (7 * self.rect.height // 24)
             window_width = win.get_width()
             window_height = win.get_height()
-            if -self.__adj_spot_range__() < adj_x_image <= window_width and -self.rect.height < adj_y_image <= window_height:
+            if -self.__adj_spot_range__() < adj_x <= window_width and -self.rect.height < adj_y <= window_height:
                 if self.cooldowns["spot_player"] > 0:
                     vision = self.vision["spotted"][self.facing]
                 else:
                     vision = self.vision["hidden"][self.facing]
-                win.blit(pygame.transform.scale(vision, (self.__adj_spot_range__(), self.rect.height // 4)), (adj_x_image, adj_y_image))
+                win.blit(pygame.transform.scale(vision, (self.__adj_spot_range__(), self.rect.height // 4)), (adj_x, adj_y))
         super().draw(win, offset_x, offset_y, master_volume)
+        if self.cooldowns["bark"] > 0 and self.bark is not None:
+            adj_x = self.rect.x - offset_x
+            if adj_x > win.get_width() // 2:
+                adj_x -= self.bark.get_width() - self.rect.width
+            adj_y = self.rect.y - (offset_y + self.bark.get_height())
+            win.blit(self.bark, (adj_x, adj_y))
+
+    def loop(self, dtime) -> bool:
+        if self.has_barked and self.cooldowns["bark"] <= 0:
+            self.bark = None
+            self.cooldowns["bark"] = 0
+            self.has_barked = False
+
+        return super().loop(dtime)

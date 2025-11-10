@@ -56,6 +56,7 @@ class Actor(Entity):
     DOUBLEJUMP_EFFECT_TRAIL = 0.08
     HORIZ_PUSH_DECAY_RATE = 200
     DEATH_TIME = 1.5
+    BARK_TIME = 2
 
     def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size, can_shoot=False, can_resize=False, width=SIZE, height=SIZE, attack_damage=ATTACK_DAMAGE, sprite=None, proj_sprite=None, name=None):
         super().__init__(level, controller, x, y, width, height, name=name)
@@ -98,7 +99,7 @@ class Actor(Entity):
         self.proj_sprite = load_sprite_sheets("Projectiles", ("Bullet" if proj_sprite is None else proj_sprite), sprite_master, retro=self.level.retro)[("Bullet" if proj_sprite is None else proj_sprite).upper()][0]
         self.active_projectiles = []
         self.cached_x, self.cached_y = self.rect.x, self.rect.y
-        self.cooldowns.update({"get_hit": 0.0, "launch_projectile": 0.0, "resize": 0.0, "resize_delay": 0.0, "resize_effect": 0.0, "heal": 0.0, "attack": 0.0, "doublejump_effect_trail": 0.0})
+        self.cooldowns.update({"bark": 0.0, "get_hit": 0.0, "launch_projectile": 0.0, "resize": 0.0, "resize_delay": 0.0, "resize_effect": 0.0, "heal": 0.0, "attack": 0.0, "doublejump_effect_trail": 0.0})
         self.cached_cooldowns = self.cooldowns.copy()
 
     @property

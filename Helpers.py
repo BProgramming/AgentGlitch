@@ -20,6 +20,7 @@ NORMAL_WHITE: tuple[int, int, int, int] = (255, 255, 255, 255)
 RETRO_WHITE: tuple[int, int, int, int] = (250, 215, 195, 255)
 NORMAL_BLACK: tuple[int, int, int, int] = (33, 31, 48, 255)
 RETRO_BLACK: tuple[int, int, int, int] = (0, 0, 0, 255)
+TEXT_BOX_BORDER_RADIUS: int = 4
 
 
 class MovementDirection(IntEnum):
@@ -344,7 +345,46 @@ def load_text_from_file(file) -> list | None:
         return None
 
 
-def display_text(output: list | str, controller, should_type_text=False, min_pause_time=0.08, should_sleep=True, audio=None, retro=False) -> None:
+def process_text(line: str, controller) -> tuple[str, bool, bool]:
+    if '<b>' in line:
+        line = line.replace('<b>', '')
+        is_bold = True
+    else:
+        is_bold = False
+    if '<i>' in line:
+        line = line.replace('<i>', '')
+        is_italics = True
+    else:
+        is_italics = False
+    if '<key=' in line:
+        keys_to_replace = re.findall(r"<key=\w+>", line)
+        for i, key in enumerate(keys_to_replace):
+            key_partial = key[5:-1]
+            keys_out = []
+            if controller.active_keyboard_layout is not None and controller.KEYBOARD_LAYOUTS[
+                controller.active_keyboard_layout].get(key_partial) is not None:
+                keys_out += controller.KEYBOARD_LAYOUTS[controller.active_keyboard_layout][key_partial]
+            elif controller.active_gamepad_layout is not None and controller.GAMEPAD_LAYOUTS[
+                controller.active_gamepad_layout].get(key_partial) is not None:
+                keys_out += controller.GAMEPAD_LAYOUTS[controller.active_gamepad_layout][key_partial]
+            elif i == 0:
+                keys_out = ['KEY NOT FOUND']
+            if len(keys_out) > 2:
+                txt = f'{', '.join([pygame.key.name(int(k)).title() for k in keys_out[:-1]])}, or {pygame.key.name(int(keys_out[-1])).title()}'
+            elif len(keys_out) > 1:
+                txt = f'{pygame.key.name(int(keys_out[0])).title()} or {pygame.key.name(int(keys_out[1])).title()}'
+            elif len(keys_out) == 1:
+                if keys_out[0] == 'KEY NOT FOUND':
+                    txt = f'{str(keys_out[0])}'
+                else:
+                    txt = f'{pygame.key.name(int(keys_out[0])).title()}'
+            else:
+                txt = ''
+            line = line.replace(key, txt)
+    return line, is_bold, is_italics
+
+
+def display_text(output: list | str, controller, should_type_text=False, min_pause_time=0.08, should_sleep=True, audio=None, retro=False, background=False) -> None:
     if output is None or output == "":
         return
     else:
@@ -356,7 +396,17 @@ def display_text(output: list | str, controller, should_type_text=False, min_pau
             output = [output]
         clear = pygame.display.get_surface().copy()
         if retro and not should_type_text:
-            clear.fill(RETRO_BLACK)
+            if not background:
+                clear.fill(RETRO_BLACK)
+            else:
+                box_wide = pygame.Surface((win.get_width(), win.get_height() * 0.06))
+                box_tall = pygame.Surface((win.get_width() * 0.06, win.get_height()))
+                box_wide.fill(RETRO_BLACK)
+                box_tall.fill(RETRO_BLACK)
+                clear.blit(box_wide, (0, 0))
+                clear.blit(box_wide, (0, win.get_height() - box_wide.get_height()))
+                clear.blit(box_tall, (0, 0))
+                clear.blit(box_tall, (win.get_width() - box_tall.get_width(), 0))
             line = pygame.Surface((win.get_width() * 0.75, 2), pygame.SRCALPHA)
             line2 = pygame.Surface((win.get_width() * 0.5, 2), pygame.SRCALPHA)
             line.fill(RETRO_WHITE)
@@ -366,40 +416,7 @@ def display_text(output: list | str, controller, should_type_text=False, min_pau
             clear.blit(line2, ((win.get_width() - line2.get_width()) // 2, win.get_height() * 0.05))
             clear.blit(line2, ((win.get_width() - line2.get_width()) // 2, win.get_height() * 0.95))
         for j in range(len(output)):
-            line = output[j]
-            if '<b>' in line:
-                line = line.replace('<b>', '')
-                is_bold = True
-            else:
-                is_bold = False
-            if '<i>' in line:
-                line = line.replace('<i>', '')
-                is_italics = True
-            else:
-                is_italics = False
-            if '<key=' in line:
-                keys_to_replace = re.findall("<key=\w+>", line)
-                for i, key in enumerate(keys_to_replace):
-                    key_partial = key[5:-1]
-                    keys_out = []
-                    if controller.active_keyboard_layout is not None and controller.KEYBOARD_LAYOUTS[controller.active_keyboard_layout].get(key_partial) is not None:
-                        keys_out += controller.KEYBOARD_LAYOUTS[controller.active_keyboard_layout][key_partial]
-                    elif controller.active_gamepad_layout is not None and controller.GAMEPAD_LAYOUTS[controller.active_gamepad_layout].get(key_partial) is not None:
-                        keys_out += controller.GAMEPAD_LAYOUTS[controller.active_gamepad_layout][key_partial]
-                    elif i == 0:
-                        keys_out = ['KEY NOT FOUND']
-                    if len(keys_out) > 2:
-                        txt = f'{', '.join([pygame.key.name(int(k)).title() for k in keys_out[:-1]])}, or {pygame.key.name(int(keys_out[-1])).title()}'
-                    elif len(keys_out) > 1:
-                        txt = f'{pygame.key.name(int(keys_out[0])).title()} or {pygame.key.name(int(keys_out[1])).title()}'
-                    elif len(keys_out) == 1:
-                        if keys_out[0] == 'KEY NOT FOUND':
-                            txt = f'{str(keys_out[0])}'
-                        else:
-                            txt = f'{pygame.key.name(int(keys_out[0])).title()}'
-                    else:
-                        txt = ''
-                    line = line.replace(key, txt)
+            line, is_bold, is_italics = process_text(output[j], controller)
             if should_type_text:
                 text = []
                 for i in range(len(line)):
@@ -409,7 +426,8 @@ def display_text(output: list | str, controller, should_type_text=False, min_pau
                     else:
                         text_line = pygame.font.SysFont("courier", 32, bold=is_bold, italic=is_italics).render("".join(text), True, text_colour)
                         text_box = pygame.Surface((text_line.get_width() + 10, text_line.get_height() + 10), pygame.SRCALPHA)
-                        text_box.fill(box_colour)
+                        pygame.draw.rect(text_box, box_colour, pygame.Rect(0, 0, text_box.get_width(), text_box.get_height()), border_radius=TEXT_BOX_BORDER_RADIUS)
+                        #text_box.fill(box_colour)
                         text_box.blit(text_line, (5, 5))
                         win.blit(clear, (0, 0))
                         win.blit(text_box, ((win.get_width() - text_box.get_width()) // 2, win.get_height() - (text_box.get_height() + 100)))
@@ -431,7 +449,8 @@ def display_text(output: list | str, controller, should_type_text=False, min_pau
                 text = line
                 text_line = pygame.font.SysFont("courier", 32, bold=is_bold, italic=is_italics).render("".join(text), True, text_colour)
                 text_box = pygame.Surface((text_line.get_width() + 10, text_line.get_height() + 10), pygame.SRCALPHA)
-                text_box.fill(box_colour)
+                pygame.draw.rect(text_box, box_colour, pygame.Rect(0, 0, text_box.get_width(), text_box.get_height()), border_radius=TEXT_BOX_BORDER_RADIUS)
+                #text_box.fill(box_colour)
                 text_box.blit(text_line, (5, 5))
                 win.blit(clear, (0, 0))
                 if retro:
