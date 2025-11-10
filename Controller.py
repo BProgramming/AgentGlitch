@@ -66,12 +66,14 @@ class Controller:
         self.music_index = 0
         self.should_hot_swap_level = False
         self.should_scroll_to_point = None
+        self.active_objective: str | None = None
 
     def activate_objective(self, text: str | None, popup: bool=True) -> None:
         if text is not None and self.hud is not None:
             if popup:
                 display_text(f'New objective: {text}', self, retro=self.retro)
-            self.hud.activate_objective(text)
+            self.active_objective = text
+        self.hud.activate_objective(self.active_objective)
 
     def refresh_selector_images(self) -> None:
         for sel in [self.difficulty_picker, self.sprite_picker, self.level_picker, self.keyboard_layout_picker, self.gamepad_layout_picker]:
@@ -82,7 +84,7 @@ class Controller:
         return self.force_retro or (self.level is not None and self.level.retro)
 
     def save(self):
-        save(self.level, self.hud)
+        save(self.level, self.hud, self)
 
     def save_player_profile(self):
         save_player_profile(self, self.level)

@@ -49,14 +49,14 @@ def load_player_profile(controller):
         return []
 
 
-def save(level, hud):
+def save(level, hud, controller):
     if level is None:
         return
     else:
         if hud is not None:
             hud.save_icon_timer = 1.0
 
-        data = {"level": level.name, "time": level.time}
+        data = {"level": level.name, "time": level.time, "objective": controller.active_objective}
         for ent in [level.player] + level.entities + level.objectives_collected:
             ent_data = ent.save()
             if ent_data is not None:
@@ -78,11 +78,12 @@ def load_part1():
         return None
 
 
-def load_part2(data, level):
+def load_part2(data, level, controller):
     if data is None or level is None:
         return False
     else:
-        level.time = (0 if data.get("time") is None else data["time"])
+        level.time = 0 if data.get("time") is None else data["time"]
+        controller.active_objective = None if data.get("objective") is None else data["objective"]
         for ent in [level.player] + level.entities:
             ent_data = data.get(ent.name)
             if ent_data is not None:

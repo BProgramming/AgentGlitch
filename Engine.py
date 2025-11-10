@@ -170,7 +170,7 @@ def main(win):
             controller.hud = hud = HUD(level.player, win, retro=level.retro)
 
             if should_load:
-                load_part2(load_data, controller.level)
+                load_part2(load_data, controller.level, controller)
             controller.save()
             controller.get_gamepad()
 
@@ -185,7 +185,7 @@ def main(win):
             controller.discord.set_status(details="On a mission:", state=controller.level.display_name)
 
             # FROM HERE, THE LEVEL ACTUALLY STARTS: #
-            if level.start_cinematic is not None:
+            if not should_load and level.start_cinematic is not None:
                 for cinematic in level.start_cinematic:
                     level.cinematics.play(cinematic, win)
 
@@ -197,11 +197,11 @@ def main(win):
                 controller.cycle_music()
 
             camera.fade_in(controller)
-            if level.start_message is not None:
+            if not should_load and level.start_message is not None:
                 display_text(load_text_from_file(level.start_message), controller, should_type_text=True, retro=level.retro)
 
             camera.draw(controller.master_volume, glitches=None)
-            controller.activate_objective(level.default_objective)
+            controller.activate_objective(level.default_objective if controller.active_objective is None else None)
     
             dtime_offset = 0
             glitch_timer = 0
@@ -305,6 +305,7 @@ def main(win):
                         cur_achievements = level.achievements
                         controller.level = level = level.hot_swap_level
                         controller.hud = hud = HUD(level.player, win, retro=level.retro)
+                        controller.active_objective = None
                         camera.prepare(level, hud)
                         level.time += cur_time
                         level.target_time += cur_target_time
