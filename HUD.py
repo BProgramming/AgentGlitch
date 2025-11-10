@@ -37,7 +37,7 @@ class HUD:
         self.time_punc_icon_width: int = self.time_characters["COLON"].get_width()
         self.old_time: str = "00:00.000"
         self.time_display: list[pygame.Surface | None] = [self.time_characters["0"], self.time_characters["0"], self.time_characters["COLON"], self.time_characters["0"], self.time_characters["0"], self.time_characters["DECIMAL"], self.time_characters["0"], self.time_characters["0"], self.time_characters["0"]]
-        self.time_capsule: pygame.Surface = self.__make_capsule__(self.retro, (7 * self.time_num_icon_width) + (2 * self.time_punc_icon_width) + ((self.time_characters["0"].get_height() + 4) / 2) + 20, self.time_characters["0"].get_height() + 4)
+        self.time_capsule: pygame.Surface = self.__make_capsule__(self.retro, (5 * self.time_num_icon_width) + (2 * self.time_punc_icon_width) + ((self.time_characters["0"].get_height() + 4) / 2) + 20, self.time_characters["0"].get_height() + 4)
         self.objective_capsule: pygame.Surface | None = None
         self.border = self.__make_border__(win, retro)
 
@@ -223,7 +223,7 @@ class HUD:
         self.win.blit(self.save_icon, (self.win.get_width() * 0.94, self.win.get_height() - (self.win.get_width() * 0.06)))
 
     def __draw_time__(self, formatted_level_time: str) -> None:
-        if len(formatted_level_time) <= 9:
+        if len(formatted_level_time) <= 7:
             self.win.blit(self.time_capsule, (self.win.get_width() - self.time_capsule.get_width(), 8))
             for i in range(len(formatted_level_time)):
                 if formatted_level_time[i] != self.old_time[i]:
@@ -234,9 +234,9 @@ class HUD:
                         char = "DECIMAL"
                     self.time_display[i] = self.time_characters[char]
                 offset_x = (len(formatted_level_time) - i) * self.time_num_icon_width
-                if i < len(formatted_level_time) - 6:
+                if i < len(formatted_level_time) - 4:
                     offset_x += self.time_punc_icon_width - self.time_num_icon_width
-                if i < len(formatted_level_time) - 3:
+                if i < len(formatted_level_time) - 1:
                     offset_x += self.time_punc_icon_width - self.time_num_icon_width
                 self.win.blit(self.time_display[i], (self.win.get_width() - (10 + offset_x), 10))
             self.old_time = formatted_level_time

@@ -75,7 +75,7 @@ class Level:
 
     def award_achievements(self, steamworks):
         unlocked_achievements = []
-        if self.target_time is not None and self.target_time > 0 and self.formatted_time <= self.target_time and self.achievements.get("target_time") is not None and self.achievements["target_time"].upper() != "NONE":
+        if self.target_time is not None and self.target_time > 0 and self.time <= self.target_time and self.achievements.get("target_time") is not None and self.achievements["target_time"].upper() != "NONE":
             unlocked_achievements.append(self.achievements["target_time"])
         if 0 < self.objectives_available == len(self.objectives_collected) and self.achievements.get("all_objectives") is not None and self.achievements["all_objectives"].upper() != "NONE":
             unlocked_achievements.append(self.achievements["all_objectives"])
@@ -101,9 +101,9 @@ class Level:
     @property
     def formatted_time(self) -> str:
         minutes = int(self.time // 60)
-        seconds = int((self.time - (minutes * 60)))
-        milliseconds = int((self.time - ((minutes * 60) + seconds)) * 1000)
-        return f'{"0" if minutes < 10 else ""}{minutes}:{"0" if seconds < 10 else ""}{seconds}.{"0" if milliseconds < 100 else ""}{"0" if milliseconds < 10 else ""}{milliseconds}'
+        seconds = int(self.time - (minutes * 60))
+        fractional_seconds = int((self.time - ((minutes * 60) + seconds)) * 10)
+        return f'{"0" if minutes < 10 else ""}{minutes}:{"0" if seconds < 10 else ""}{seconds}.{fractional_seconds}'
 
     def get_recap_text(self) -> list:
         text = [f'Mission time: {self.formatted_time}.',
