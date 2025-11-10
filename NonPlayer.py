@@ -167,7 +167,7 @@ class NonPlayer(Actor):
                     target_x = self.patrol_path[self.patrol_path_index][0] - self.rect.x
                     if abs(target_x) > 5:
                         self.direction = self.facing = (MovementDirection.RIGHT if target_x >= 0 else MovementDirection.LEFT)
-                        self.x_vel = float(self.direction) * min(self.target_vel, abs(target_x) / dtime)
+                        self.x_vel = float(self.direction) * min(self.target_vel, abs(target_x) * dtime)
                         self.should_move_horiz = self.__find_floor__(self.x_vel * dtime)
 
                     target_y = self.patrol_path[self.patrol_path_index][1] - self.rect.y

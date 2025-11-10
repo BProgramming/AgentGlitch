@@ -210,12 +210,13 @@ def main(win):
             clock.tick(FPS_TARGET)
 
             # MAIN GAME LOOP: #
-            should_tick = True
+            is_swap = False
             while True:
                 dtime: float = (clock.tick(FPS_TARGET) / 1000) - dtime_offset
-                if not should_tick:
+                if is_swap:
                     dtime = 0.0
-                    should_tick = True
+                    controller.activate_objective(level.default_objective, popup=False)
+                    is_swap = False
                 dtime_offset: float = 0.0
                 level.time += dtime
 
@@ -309,7 +310,7 @@ def main(win):
                         level.target_time += cur_target_time
                         level.objectives_collected += cur_objectives_collected
                         level.achievements.update(cur_achievements)
-                        should_tick = False
+                        is_swap = True
 
             if controller.music is not None:
                 pygame.mixer.music.fadeout(1000)
