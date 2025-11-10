@@ -357,35 +357,33 @@ class Actor(Entity):
                     if self.state != MovementState.WALL_JUMP:
                         self.state = MovementState.WALL_JUMP
                         self.animation_count = 0
+                elif self.y_vel > Actor.MIN_FALL_VEL:
+                    if self.is_attacking and self.state != MovementState.FALL_ATTACK:
+                        if self.state != MovementState.FALL:
+                            self.animation_count = 0
+                        self.state = MovementState.FALL_ATTACK
+                    elif not self.is_attacking and self.state != MovementState.FALL:
+                        if self.state != MovementState.FALL_ATTACK:
+                            self.animation_count = 0
+                        self.state = MovementState.FALL
+                elif self.jump_count > 1:
+                    if self.is_attacking and self.state != MovementState.DOUBLE_JUMP_ATTACK:
+                        if self.state != MovementState.DOUBLE_JUMP:
+                            self.animation_count = 0
+                        self.state = MovementState.DOUBLE_JUMP_ATTACK
+                    elif not self.is_attacking and self.state != MovementState.DOUBLE_JUMP:
+                        if self.state != MovementState.DOUBLE_JUMP_ATTACK:
+                            self.animation_count = 0
+                        self.state = MovementState.DOUBLE_JUMP
                 else:
-                    if self.y_vel > Actor.MIN_FALL_VEL:
-                        if self.is_attacking and self.state != MovementState.FALL_ATTACK:
-                            if self.state != MovementState.FALL:
-                                self.animation_count = 0
-                            self.state = MovementState.FALL_ATTACK
-                        elif not self.is_attacking and self.state != MovementState.FALL:
-                            if self.state != MovementState.FALL_ATTACK:
-                                self.animation_count = 0
-                            self.state = MovementState.FALL
-                    elif self.y_vel < 0:
-                        if self.jump_count <= 1:
-                            if self.is_attacking and self.state != MovementState.JUMP_ATTACK:
-                                if self.state != MovementState.JUMP:
-                                    self.animation_count = 0
-                                self.state = MovementState.JUMP_ATTACK
-                            elif not self.is_attacking and self.state != MovementState.JUMP:
-                                if self.state != MovementState.JUMP_ATTACK:
-                                    self.animation_count = 0
-                                self.state = MovementState.JUMP
-                        elif self.jump_count > 1:
-                            if self.is_attacking and self.state != MovementState.DOUBLE_JUMP_ATTACK:
-                                if self.state != MovementState.DOUBLE_JUMP:
-                                    self.animation_count = 0
-                                self.state = MovementState.DOUBLE_JUMP_ATTACK
-                            elif not self.is_attacking and self.state != MovementState.DOUBLE_JUMP:
-                                if self.state != MovementState.DOUBLE_JUMP_ATTACK:
-                                    self.animation_count = 0
-                                self.state = MovementState.DOUBLE_JUMP
+                    if self.is_attacking and self.state != MovementState.JUMP_ATTACK:
+                        if self.state != MovementState.JUMP:
+                            self.animation_count = 0
+                        self.state = MovementState.JUMP_ATTACK
+                    elif not self.is_attacking and self.state != MovementState.JUMP:
+                        if self.state != MovementState.JUMP_ATTACK:
+                            self.animation_count = 0
+                        self.state = MovementState.JUMP
             elif self.should_move_horiz:
                 if self.is_crouching:
                     if self.is_attacking and self.state != MovementState.CROUCH_ATTACK:
