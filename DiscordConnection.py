@@ -17,9 +17,15 @@ class DiscordConnection:
         if self.presence is not None:
             self.activity["details"] = details
             self.activity["state"] = state
-            self.presence.set(self.activity)
+            try:
+                self.presence.set(self.activity)
+            except PresenceError:
+                pass
 
     def close(self) -> None:
         if self.presence is not None:
-            self.presence.clear()
-            self.presence.close()
+            try:
+                self.presence.clear()
+                self.presence.close()
+            except PresenceError:
+                pass
