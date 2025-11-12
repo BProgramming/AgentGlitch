@@ -33,8 +33,9 @@ class Controller:
         self.has_dlc: dict[str, bool] = steamworks.has_dlc()
         self.force_retro: bool = False
         self.level = level
-        self.master_volume = {"background": 1.0, "player": 1.0, "non-player": 1.0, "cinematics": 1.0}
+        self.master_volume: dict[str, float] = {"master": 1.0, "background": 1.0, "player": 1.0, "non-player": 1.0, "cinematics": 1.0}
         dif = {"label": "Difficulty", "type": ButtonType.BAR, "snap": True, "value": self.difficulty, "range": (float(DifficultyScale.EASIEST), float(DifficultyScale.EASY), float(DifficultyScale.MEDIUM), float(DifficultyScale.HARD), float(DifficultyScale.HARDEST))}
+        vol_mt = {"label": "Master volume", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["master"], "range": (0, 100)}
         vol_bg = {"label": "Music", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["background"], "range": (0, 100)}
         vol_pc = {"label": "Player", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["player"], "range": (0, 100)}
         vol_fx = {"label": "Effects", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["non-player"], "range": (0, 100)}
@@ -45,7 +46,7 @@ class Controller:
             self.main_menu = Menu(self, None, [{"label": "New game", "type": ButtonType.CLICK}, {"label": "Continue", "type": ButtonType.CLICK}, {"label": "Select a level", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}], music=main_menu_music)
         self.pause_menu = Menu(self, "PAUSED", [{"label": "Resume", "type": ButtonType.CLICK}, {"label": "Load last save", "type": ButtonType.CLICK}, {"label": "Restart level", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Quit to menu", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}])
         self.settings_menu = Menu(self, "SETTINGS", [dif, {"label": "Controls", "type": ButtonType.CLICK}, {"label": "Volume", "type": ButtonType.CLICK}, {"label": "Toggle fullscreen", "type": ButtonType.CLICK}, {"label": "Back", "type": ButtonType.CLICK}])
-        self.volume_menu = Menu(self, "VOLUME", [vol_bg, vol_pc, vol_fx, vol_cn, {"label": "Back", "type": ButtonType.CLICK}])
+        self.volume_menu = Menu(self, "VOLUME", [vol_mt, vol_bg, vol_pc, vol_fx, vol_cn, {"label": "Back", "type": ButtonType.CLICK}])
         self.controls_menu = Menu(self, "CONTROLS", [{"label": "Keyboard", "type": ButtonType.CLICK}, {"label": "Controller", "type": ButtonType.CLICK}, {"label": "Back", "type": ButtonType.CLICK}])
         difficulty_images = [make_image_from_text(256, 128, "EASIEST", ["Agent is much stronger", "Agent can survive huge falls", "Enemies are much weaker", "Enemy sight ranges are visible"], border=5), make_image_from_text(256, 128, "EASY", ["Agent is stronger", "Agent can survive big falls", "Enemies are weaker", "Enemy sight ranges are visible"], border=5), make_image_from_text(256, 128, "MEDIUM", ["Agent is normal strength", "Agent can survive moderate falls", "Enemies are normal strength", "Enemy sight ranges are not visible"], border=5), make_image_from_text(256, 128, "HARD", ["Agent is weaker", "Agent can survive small falls", "Enemies are stronger", "Enemy sight ranges are not visible"], border=5), make_image_from_text(256, 128, "HARDEST", ["Agent is much weaker", "Agent can survive tiny falls", "Enemies are much stronger", "Enemy sight ranges are not visible"], border=5)]
         self.difficulty_picker = Selector(self, "CHOOSE DIFFICULTY", ["You can change this at any time."], difficulty_images, [DifficultyScale.EASIEST, DifficultyScale.EASY, DifficultyScale.MEDIUM, DifficultyScale.HARD, DifficultyScale.HARDEST], index=2)
@@ -239,16 +240,18 @@ class Controller:
                         pass
 
     def volume(self, clear_normal=None, clear_retro=None) -> None:
-        self.volume_menu.buttons[0].value = self.master_volume["background"] * 100
-        self.volume_menu.buttons[1].value = self.master_volume["player"] * 100
-        self.volume_menu.buttons[2].value = self.master_volume["non-player"] * 100
-        self.volume_menu.buttons[3].value = self.master_volume["cinematics"] * 100
+        self.volume_menu.buttons[0].value = self.master_volume["master"] * 100
+        self.volume_menu.buttons[1].value = self.master_volume["background"] * 100
+        self.volume_menu.buttons[2].value = self.master_volume["player"] * 100
+        self.volume_menu.buttons[3].value = self.master_volume["non-player"] * 100
+        self.volume_menu.buttons[4].value = self.master_volume["cinematics"] * 100
 
         self.volume_menu.fade_in()
         self.volume_menu.clear_normal = clear_normal
         self.volume_menu.clear_retro = clear_retro
 
-        notch_val = self.volume_menu.buttons[0].value
+        mt_notch = self.volume_menu.buttons[0].value
+        bg_notch = self.volume_menu.buttons[1].value
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -258,9 +261,15 @@ class Controller:
                     pygame.mouse.set_visible(False)
                     return
 
-            if notch_val != self.volume_menu.buttons[0].value:
-                notch_val = self.volume_menu.buttons[0].value
-                self.master_volume["background"] = notch_val / 100
+            if mt_notch != self.volume_menu.buttons[0].value:
+                mt_notch = self.volume_menu.buttons[0].value
+                for button in self.volume_menu.buttons[1:5]:
+                    button.value = mt_notch
+                for key in self.master_volume.keys():
+                    self.master_volume[key] = mt_notch / 100
+            elif bg_notch != self.volume_menu.buttons[1].value:
+                bg_notch = self.volume_menu.buttons[1].value
+                self.master_volume["background"] = bg_notch / 100
                 pygame.mixer.music.set_volume(self.master_volume["background"])
 
             self.volume_menu.draw()
@@ -269,18 +278,20 @@ class Controller:
 
             match val:
                 case 0:
-                    pass  #set background music volume
+                    pass  #set master volume
                 case 1:
-                    pass  #set player volume
+                    pass  #set background music volume
                 case 2:
-                    pass  #set effects volume
+                    pass  #set player volume
                 case 3:
-                    pass  #set cinematics volume
+                    pass  #set effects volume
                 case 4:
+                    pass  #set cinematics volume
+                case 5:
                     self.volume_menu.fade_out()
-                    self.master_volume["player"] = self.volume_menu.buttons[1].value / 100
-                    self.master_volume["non-player"] = self.volume_menu.buttons[2].value / 100
-                    self.master_volume["cinematics"] = self.volume_menu.buttons[3].value / 100
+                    self.master_volume["player"] = self.volume_menu.buttons[2].value / 100
+                    self.master_volume["non-player"] = self.volume_menu.buttons[3].value / 100
+                    self.master_volume["cinematics"] = self.volume_menu.buttons[4].value / 100
                     return
                 case _:
                     pass
