@@ -144,7 +144,7 @@ class Menu:
         if self.clear_retro is None:
             self.clear_retro = retroify_image(self.clear_normal)
 
-        if self.controller.active_gamepad_layout is not None:
+        if self.controller.gamepad is not None:
             self.set_mouse_pos(0)
         pygame.mouse.set_visible(True)
 
@@ -207,7 +207,7 @@ class Menu:
 
     def loop(self) -> int | None:
         self.controller.get_gamepad()
-        if self.controller.active_gamepad_layout is not None:
+        if self.controller.gamepad is not None:
             pygame.mouse.set_visible(False)
             should_process_event = True
             joystick_movement = 0

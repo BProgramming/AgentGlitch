@@ -431,7 +431,7 @@ def display_text(output: list | str, controller, should_type_text=False, min_pau
                         win.blit(clear, (0, 0))
                         win.blit(text_box, ((win.get_width() - text_box.get_width()) // 2, win.get_height() - (text_box.get_height() + 100)))
                         pygame.display.update()
-                        pause_dtime = 0
+                        pause_dtime: float = 0.0
                         while pause_dtime < min_pause_time:
                             for event in pygame.event.get():
                                 if event.type == pygame.QUIT:
