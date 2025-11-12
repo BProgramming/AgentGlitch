@@ -49,11 +49,12 @@ class Entity(pygame.sprite.Sprite):
             elif self.cooldowns[key] < 0:
                 self.cooldowns[key] = 0.0
 
-    def loop(self, dtime: float) -> None:
+    def loop(self, dtime: float) -> float:
         if self.cooldowns is not None:
             self.update_cooldowns(dtime)
         if self.hp <= 0 and (self.cooldowns.get('dead') is None or self.cooldowns['dead'] <= 0):
             self.level.queue_purge(self)
+        return 0.0
 
     def draw(self, win: pygame.Surface, offset_x: float, offset_y: float, master_volume: dict) -> None:
         adj_x = self.rect.x - offset_x

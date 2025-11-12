@@ -85,15 +85,16 @@ class Player(Actor):
             scale = max(self.rect.width, self.rect.height)
             self.level.visual_effects_manager.spawn(VisualEffect(self, self.level.visual_effects_manager.image_master, image_name="BLOCKSHIELD", alpha=128, scale=(scale, scale), linked_to_source=True), time=Player.BLOCK_EFFECT_TIME)
 
-    def get_hit(self, ent) -> None:
+    def get_hit(self, ent) -> float:
         if self.controller.should_scroll_to_point is not None:
-            return
+            return 0.0
         else:
             if isinstance(ent, NonPlayer) and self.cooldowns["blocking_effect"] > 0:
                 self.cooldowns["blocking_effect"] = 0
+                return 0.0
             else:
                 self.been_hit_this_level = True
-                super().get_hit(ent)
+                return super().get_hit(ent)
 
     def move_left(self) -> None:
         if self.hp > 0:
@@ -145,17 +146,19 @@ class Player(Actor):
                     return
 
     def attack(self) -> None:
+        dtime_offset: float = 0.0
         if self.state in [MovementState.IDLE, MovementState.IDLE_CROUCH, MovementState.CROUCH, MovementState.RUN, MovementState.FALL, MovementState.JUMP, MovementState.DOUBLE_JUMP, MovementState.IDLE_ATTACK, MovementState.IDLE_CROUCH_ATTACK, MovementState.CROUCH_ATTACK, MovementState.RUN_ATTACK, MovementState.FALL_ATTACK, MovementState.JUMP_ATTACK, MovementState.DOUBLE_JUMP_ATTACK]:
             self.is_attacking = True
             for ent in self.level.get_entities_in_range((self.rect.x, self.rect.y)):
                 if isinstance(ent, NonPlayer) and ent.is_hostile and pygame.sprite.collide_rect(self, ent) and self.facing == (MovementDirection.RIGHT if ent.rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT):
-                    ent.get_hit(self)
+                    dtime_offset += ent.get_hit(self)
                     if ent.patrol_path is not None:
                         ent.push_x -= self.direction * int(Player.ATTACK_PUSHBACK)
                     self.play_attack_audio("ATTACK_MELEE")
                 elif isinstance(ent, BreakableBlock) and pygame.sprite.collide_rect(self, ent):
-                    ent.get_hit(self)
+                    dtime_offset += ent.get_hit(self)
                     self.play_attack_audio("ATTACK_MELEE")
+        return dtime_offset
 
     def bullet_time(self) -> None:
         if self.hp > 0 and self.abilities["can_bullet_time"]:
@@ -173,19 +176,20 @@ class Player(Actor):
                         active_audio_channel.play(self.audios["BULLET_TIME"][random.randrange(len(self.audios["BULLET_TIME"]))])
                         active_audio_channel.set_volume(self.controller.master_volume["player"])
 
-    def get_triggers(self) -> list:
-        fired_triggers = 0
+    def get_triggers(self) -> tuple[str, int]:
+        dtime_offset: float = 0.0
         next_level = None
         for trigger in self.level.triggers:
             if pygame.sprite.collide_rect(self, trigger):
                 result = trigger.collide(self)
-                fired_triggers += result[0]
-                next_level = result[1]
+                next_level = result[0]
+                dtime_offset += result[1]
                 if trigger.fire_once:
                     self.level.queue_purge(trigger)
-        return [fired_triggers, next_level]
+        return next_level, dtime_offset
 
-    def loop(self, dtime) -> list:
+    def loop(self, dtime: float) -> tuple[str, float]:
+        dtime_offset: float = 0.0
         if self.teleport_distance != 0:
             self.animation_count += dtime
             if self.cooldowns["teleport_delay"] <= 0:
@@ -197,5 +201,6 @@ class Player(Actor):
         else:
             if self.is_slow_time and self.cooldowns["bullet_time_active"] <= 0:
                 self.is_slow_time = False
-            super().loop(dtime)
-        return self.get_triggers()
+            dtime_offset += super().loop(dtime)
+        triggers = self.get_triggers()
+        return triggers[0], triggers[1] + dtime_offset

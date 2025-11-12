@@ -227,13 +227,14 @@ class Actor(Entity):
             self.cooldowns["launch_projectile"] = Actor.LAUNCH_PROJECTILE_COOLDOWN
             self.play_attack_audio("ATTACK_RANGE")
 
-    def get_hit(self, ent) -> None:
+    def get_hit(self, ent) -> float:
         self.cooldowns["get_hit"] = Actor.GET_HIT_COOLDOWN
         self.cooldowns["heal"] = Actor.HEAL_DELAY * self.difficulty
         if ent.attack_damage is not None:
             self.hp -= ent.attack_damage
             if self.hp < 0:
                 self.die()
+        return 0.0
 
     def get_collisions(self) -> tuple[bool, float]:
         collided = False
@@ -253,13 +254,13 @@ class Actor(Entity):
                         overlap = self.rect.clip(ent.rect)
                     if isinstance(ent, Actor) and ent != self.level.player:
                         if ent.facing == (MovementDirection.RIGHT if self.rect.centerx - ent.rect.centerx >= 0 else MovementDirection.LEFT) and ent.is_attacking and self.cooldowns["get_hit"] <= 0:
-                            self.get_hit(ent)
+                            dtime_offset += self.get_hit(ent)
                     elif isinstance(ent, Hazard):
                         if ent.is_attacking and self.cooldowns["get_hit"] <= 0:
                             if overlap.width <= overlap.height and ((self.rect.x <= ent.rect.x and "L" in ent.hit_sides) or (self.rect.x >= ent.rect.x and "R" in ent.hit_sides)):
-                                self.get_hit(ent)
+                                dtime_offset += self.get_hit(ent)
                             if overlap.width >= overlap.height and ((self.rect.y <= ent.rect.y and "U" in ent.hit_sides) or (self.rect.y >= ent.rect.y and "D" in ent.hit_sides)):
-                                self.get_hit(ent)
+                                dtime_offset += self.get_hit(ent)
                     elif isinstance(ent, Objective) and self == self.level.player:
                         dtime_offset += ent.get_hit(self)
                     if ent.collide(self):
@@ -452,9 +453,8 @@ class Actor(Entity):
         self.rect = self.sprite.get_rect(topleft=(self.rect.x, self.rect.y))
         self.mask = pygame.mask.from_surface(self.sprite)
 
-    def loop(self, dtime) -> tuple[bool, float]:
-        dtime_offset: float = 0.0
-        super().loop(dtime)
+    def loop(self, dtime: float) -> float:
+        dtime_offset: float = super().loop(dtime)
 
         self.animation_count += dtime
 
@@ -466,7 +466,7 @@ class Actor(Entity):
                 if proj.hp <= 0:
                     self.active_projectiles.remove(proj)
                 else:
-                    proj.loop(dtime)
+                    dtime_offset += proj.loop(dtime)
 
         if (self == self.level.player or self.patrol_path is not None) and self.state != MovementState.WIND_UP and self.state != MovementState.WIND_DOWN:
             if self.push_x > 0:
@@ -523,7 +523,7 @@ class Actor(Entity):
 
         self.cache()
         self.update_state()
-        return collided, dtime_offset
+        return dtime_offset
 
     def draw(self, win, offset_x, offset_y, master_volume) -> None:
         adj_x_image = self.rect.x - offset_x

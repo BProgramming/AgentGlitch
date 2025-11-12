@@ -92,9 +92,10 @@ class ParticleEffect:
                     self.image_index = next_ind
                     break
 
-    def loop(self, dtime):
+    def loop(self, dtime: float) -> float:
         if self.should_move:
             self.move(dtime)
+        return 0.0
 
     def draw(self, win, offset_x, offset_y, master_volume) -> None:
         if self.should_move:

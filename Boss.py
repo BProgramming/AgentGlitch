@@ -22,11 +22,12 @@ class Boss(NonPlayer):
         self.trigger = trigger
 
     def die(self) -> None:
+        dtime_offset: float = 0.0
         super().die()
         self.level.boss_hp_pct = 0
         if self.trigger is not None:
             for trigger in self.trigger:
-                trigger.collide(self.level.player)
+                dtime_offset += trigger.collide(self.level.player)[1]
 
     def __update_onscreen_presence__(self) -> None:
         if self.level.boss_hp_pct is None and math.dist((self.level.player.rect.x, self.level.player.rect.y), (self.rect.x, self.rect.y)) <= self.spot_range:
@@ -68,7 +69,7 @@ class Boss(NonPlayer):
 
         return active_index
 
-    def loop(self, dtime) -> bool:
+    def loop(self, dtime: float) -> float:
         self.__update_onscreen_presence__()
         if self.show_health_bar:
             self.__update_health_bar__()

@@ -561,9 +561,10 @@ class Controller:
             self.level.player.shrink()
         return 0
 
-    def handle_continuous_input(self) -> None:
+    def handle_continuous_input(self) -> float:
+        dtime_offset: float = 0.0
         if self.should_scroll_to_point is not None:
-            return
+            return 0.0
 
         player_is_moving = False
         player_is_attacking = False
@@ -598,7 +599,7 @@ class Controller:
             stick = self.gamepad.get_axis(self.axis_attack)
             if not player_is_attacking and stick is not None and stick > Controller.JOYSTICK_TOLERANCE:
                 player_is_attacking = True
-                self.level.player.attack()
+                dtime_offset += self.level.player.attack()
 
         keys = pygame.key.get_pressed()
         if not player_is_moving:
@@ -618,7 +619,7 @@ class Controller:
             for input_key in self.keys_attack:
                 if keys[input_key]:
                     player_is_attacking = True
-                    self.level.player.attack()
+                    dtime_offset += self.level.player.attack()
                     break
 
         if not player_is_attacking:
@@ -635,3 +636,5 @@ class Controller:
             if keys[input_key]:
                 self.level.player.block()
                 break
+
+        return dtime_offset

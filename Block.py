@@ -158,9 +158,7 @@ class MovingBlock(Block):
                 else:
                     self.rect.y = target
 
-    def loop(self, dtime) -> None:
-        super().loop(dtime)
-
+    def loop(self, dtime: float) -> float:
         if self.is_enabled and not self.hold:
             if not self.should_move_horiz:
                 self.x_vel = 0.0
@@ -174,6 +172,7 @@ class MovingBlock(Block):
                     self.y_vel /= 2
 
                 self.move(self.x_vel * dtime, self.y_vel * dtime)
+        return super().loop(dtime)
 
 
 class Door(MovingBlock):
@@ -251,16 +250,16 @@ class Door(MovingBlock):
             self.open()
         return True
 
-    def loop(self, dtime) -> None:
+    def loop(self, dtime: float) -> float:
         if (self.is_locked and self.sprite == self.unlocked_sprite) or (not self.is_locked and self.sprite == self.locked_sprite):
             self.is_locked = not self.is_locked
             self.toggle_lock()
         if not self.is_open and self.rect.y == self.patrol_path_closed[0][1]:
-            return
+            return 0
         else:
             if math.dist((self.level.player.rect.centerx, self.level.player.rect.centery), (self.rect.centerx, self.rect.centery)) > math.sqrt(self.rect.height**2 + (1.5 * self.rect.width)**2):
                 self.close()
-            super().loop(dtime)
+            return super().loop(dtime)
 
 class MovableBlock(Block):
     def __init__(self, level, controller, x, y, width, height, image_master, audios, is_stacked, coord_x=0, coord_y=0, name="MovableBlock"):
@@ -320,9 +319,7 @@ class MovableBlock(Block):
             else:
                 self.rect.y += dy
 
-    def loop(self, dtime) -> None:
-        super().loop(dtime)
-
+    def loop(self, dtime: float) -> float:
         self.push_x *= max(0.0, 1 - (2 * dtime))
         self.push_y = 0.0
         self.get_collisions()
@@ -336,6 +333,8 @@ class MovableBlock(Block):
 
         if self.x_vel + self.push_x != 0.0 or self.y_vel + self.push_y != 0.0:
             self.move((self.x_vel + self.push_x) * dtime, (self.y_vel + self.push_y) * dtime)
+
+        return super().loop(dtime)
 
 
 class Hazard(Block):
@@ -376,9 +375,9 @@ class Hazard(Block):
         self.rect = self.sprite.get_rect(topleft=(self.rect.x, self.rect.y))
         self.mask = pygame.mask.from_surface(self.sprite)
 
-    def loop(self, dtime) -> None:
+    def loop(self, dtime: float) -> float:
         self.animation_count += dtime
-        super().loop(dtime)
+        return super().loop(dtime)
 
     def draw(self, win, offset_x, offset_y, master_volume) -> None:
         adj_x = self.rect.x - offset_x
@@ -409,8 +408,8 @@ class MovingHazard(MovingBlock, Hazard):
         self.sprite = None
         self.update_sprite()
 
-    def loop(self, dtime) -> None:
-        MovingBlock.loop(self, dtime)
+    def loop(self, dtime: float) -> float:
+        return MovingBlock.loop(self, dtime)
 
 
 class FallingHazard(Hazard):
@@ -444,7 +443,8 @@ class FallingHazard(Hazard):
         self.sprite = self.sprites[active_index]
         return active_index
 
-    def loop(self, dtime) -> bool:
+    def loop(self, dtime: float) -> float:
+        dtime_offset = 0.0
         if not self.has_fired:
             if abs(self.level.player.rect.x - self.rect.x) <= self.drop_x and self.level.player.rect.top >= self.rect.bottom and abs(self.level.player.rect.y - self.rect.y) <= self.drop_y:
                 self.should_fire = True
@@ -454,24 +454,23 @@ class FallingHazard(Hazard):
                 self.play_sound("block_drop")
             else:
                 self.animation_count += dtime
-                return False
+                return dtime_offset
 
         should_reset = bool(self.cooldowns["reset_time"] > 0)
-        super().loop(dtime)
+        dtime_offset += super().loop(dtime)
         should_reset = should_reset and bool(self.cooldowns["reset_time"] <= 0)
 
         if should_reset:
             self.should_fire = False
             if self.fire_once:
                 self.die()
-                return True
+                return dtime_offset
             else:
                 self.rect.x = self.start_x
                 self.rect.y = self.start_y
                 self.has_fired = False
                 self.y_vel = 0
 
-        collided = False
         if self.has_fired and self.cooldowns["reset_time"] <= 0:
             self.y_vel += self.gravity * dtime
 
@@ -485,7 +484,6 @@ class FallingHazard(Hazard):
                 if ent != self and pygame.sprite.collide_rect(self, ent) and pygame.sprite.collide_mask(self, ent):
                     self.rect.bottom = ent.rect.top
                     self.y_vel = 0
-                    collided = True
                     self.play_sound("block_land")
                     self.level.visual_effects_manager.spawn(VisualEffect(self, self.level.visual_effects_manager.image_master, image_name="LANDBURST", direction=ImageDirection.BOTTOM, alpha=128, scale=(self.rect.width * 2, self.rect.height / 2)), time=FallingHazard.LANDING_EFFECT)
                     if isinstance(ent, FallingHazard):
@@ -497,6 +495,5 @@ class FallingHazard(Hazard):
             self.rect.y += self.y_vel
             if self.rect.y > self.level.level_bounds[1][1]:
                 self.cooldowns["reset_time"] += FallingHazard.RESET_DELAY
-                collided = True
 
-        return collided
+        return dtime_offset

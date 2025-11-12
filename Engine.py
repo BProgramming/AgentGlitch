@@ -203,21 +203,16 @@ def main(win):
             camera.draw(controller.master_volume, glitches=None)
             controller.activate_objective(level.default_objective if controller.active_objective is None else None)
     
-            dtime_offset = 0
+            dtime_offset: float = 0.0
             glitch_timer = 0
             glitches = None
             next_level = None
             clock.tick(FPS_TARGET)
 
             # MAIN GAME LOOP: #
-            is_swap = False
             while True:
                 dtime: float = (clock.tick(FPS_TARGET) / 1000) - dtime_offset
-                if is_swap:
-                    dtime = 0.0
-                    controller.activate_objective(level.default_objective, popup=False)
-                    is_swap = False
-                dtime_offset: float = 0.0
+                dtime_offset = 0.0
                 level.time += dtime
 
                 if hud.save_icon_timer > 0:
@@ -251,15 +246,16 @@ def main(win):
                         pygame.mixer.music.play()
                         if "LOOP" not in controller.music[controller.music_index].upper():
                             controller.cycle_music()
-                controller.handle_continuous_input()
+                dtime_offset += controller.handle_continuous_input()
                 if (controller.goto_load and isfile(join(GAME_DATA_FOLDER, "save.p"))) or controller.goto_main or controller.goto_restart:
                     break
 
                 result = level.player.loop(dtime) # the player loses health in here during the hot-swap bug
-                if result[1] is not None:
-                    next_level = result[1]
+                if result[0] is not None:
+                    next_level = result[0]
                     break
-                dtime_offset += result[0]
+                dtime_offset += result[1]
+
                 if level.player.hp <= 0 and level.player.cooldowns.get("dead") is not None and level.player.cooldowns["dead"] <= 0:
                     if controller.difficulty >= DifficultyScale.HARDEST:
                         controller.goto_restart = True
@@ -273,7 +269,7 @@ def main(win):
                     if (not isinstance(ent, Actor) and not type(ent) is Block) or (isinstance(ent, Actor) and math.dist(ent.rect.center, (camera.focus_x, camera.focus_y)) < win.get_width() * 1.5):
                         if hasattr(ent, "patrol") and callable(ent.patrol):
                             ent.patrol(dtime)
-                        ent.loop(dtime)
+                        dtime_offset += ent.loop(dtime)
                         if isinstance(ent, NonPlayer) and ent.queued_message is not None:
                             dtime_offset += ent.play_queued_message()
                 level.purge()
@@ -302,6 +298,7 @@ def main(win):
                         cur_time = level.time
                         cur_target_time = level.target_time
                         cur_objectives_collected = level.objectives_collected
+                        cur_objectives_available = level.objectives_available
                         cur_achievements = level.achievements
                         controller.level = level = level.hot_swap_level
                         controller.hud = hud = HUD(level.player, win, retro=level.retro)
@@ -310,8 +307,9 @@ def main(win):
                         level.time += cur_time
                         level.target_time += cur_target_time
                         level.objectives_collected += cur_objectives_collected
+                        level.objectives_available += cur_objectives_available
                         level.achievements.update(cur_achievements)
-                        is_swap = True
+                        controller.activate_objective(level.default_objective, popup=False)
 
             if controller.music is not None:
                 pygame.mixer.music.fadeout(1000)

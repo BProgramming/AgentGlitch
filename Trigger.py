@@ -165,12 +165,12 @@ class Trigger(Entity):
                 return {"state": "" if input.get("state") is None else input["state"], "details": "" if input.get("details") is None else input["details"]}
         return None
 
-    def collide(self, ent: Entity | None) -> list:
+    def collide(self, ent: Entity | None) -> tuple:
         start = time.perf_counter()
 
         next_level = None
         if ((self.fire_once or self.type == TriggerType.CINEMATIC) and self.has_fired) or self.type is None or self.value is None:
-            return [0, next_level]
+            return next_level, 0.0
         self.has_fired = True
 
         match self.type:
@@ -223,7 +223,7 @@ class Trigger(Entity):
                 self.controller.should_scroll_to_point = None
             case TriggerType.SET_DISCORD_STATUS:
                 self.controller.discord.set_status(details=self.value["details"], state=self.value["state"])
-        return [time.perf_counter() - start, next_level]
+        return next_level, time.perf_counter() - start
 
     def draw(self, win, offset_x, offset_y, master_volume) -> None:
         pass

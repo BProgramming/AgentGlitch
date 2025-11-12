@@ -67,7 +67,7 @@ class Objective(Entity):
             self.controller.activate_objective(self.level.default_objective, popup=False)
             if self.trigger is not None:
                 for trigger in self.trigger:
-                    dtime_offset += trigger.collide(self.level.player)[0]
+                    dtime_offset += trigger.collide(self.level.player)[1]
         return dtime_offset
 
     def save(self) -> dict:
@@ -103,9 +103,9 @@ class Objective(Entity):
         self.rect = self.sprite.get_rect(topleft=(self.rect.x, self.rect.y))
         self.mask = pygame.mask.from_surface(self.sprite)
 
-    def loop(self, dtime) -> None:
+    def loop(self, dtime: float) -> float:
         self.animation_count += dtime
-        super().loop(dtime)
+        return super().loop(dtime)
 
     def draw(self, win, offset_x, offset_y, master_volume) -> None:
         adj_x = self.rect.x - offset_x

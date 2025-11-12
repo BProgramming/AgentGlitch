@@ -64,8 +64,9 @@ class Projectile(Entity):
         if abs(math.dist(self.rect.center, self.target)) <= TOLERANCE:
             self.die()
 
-    def loop(self, dtime) -> None:
+    def loop(self, dtime: float) -> float:
         self.move(self.speed * dtime * (0.5 if self.level.player is not None and self.level.player.is_slow_time else 1))
+        return 0.0
 
     def collide(self, ent) -> bool:
         self.die()

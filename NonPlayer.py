@@ -240,7 +240,7 @@ class NonPlayer(Actor):
             adj_y = self.rect.y - (offset_y + self.bark.get_height())
             win.blit(self.bark, (adj_x, adj_y))
 
-    def loop(self, dtime) -> bool:
+    def loop(self, dtime) -> float:
         if self.has_barked and self.cooldowns["bark"] <= 0:
             self.bark = None
             self.cooldowns["bark"] = 0
