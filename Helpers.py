@@ -20,6 +20,9 @@ RETRO_WHITE: tuple[int, int, int, int] = (250, 215, 195, 255)
 NORMAL_BLACK: tuple[int, int, int, int] = (33, 31, 48, 255)
 RETRO_BLACK: tuple[int, int, int, int] = (0, 0, 0, 255)
 TEXT_BOX_BORDER_RADIUS: int = 4
+RUMBLE_EFFECT_HIGH: float = 0.5
+RUMBLE_EFFECT_LOW: float = 0.1
+RUMBLE_EFFECT_DURATION: int = 500
 
 
 class MovementDirection(IntEnum):

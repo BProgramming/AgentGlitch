@@ -5,7 +5,7 @@ from Actor import Actor, MovementState
 from Entity import Entity
 from NonPlayer import NonPlayer
 from Block import BreakableBlock
-from Helpers import MovementDirection, load_sprite_sheets, display_text
+from Helpers import MovementDirection, load_sprite_sheets, display_text, RUMBLE_EFFECT_LOW, RUMBLE_EFFECT_DURATION
 from SimpleVFX.SimpleVFX import VisualEffect, ImageDirection
 
 
@@ -94,6 +94,8 @@ class Player(Actor):
                 return 0.0
             else:
                 self.been_hit_this_level = True
+                if self.controller.gamepad is not None:
+                    self.controller.gamepad.rumble(RUMBLE_EFFECT_LOW, RUMBLE_EFFECT_LOW, RUMBLE_EFFECT_DURATION)
                 return super().get_hit(ent)
 
     def move_left(self) -> None:

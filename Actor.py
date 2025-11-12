@@ -6,7 +6,7 @@ from Entity import Entity
 from Projectile import Projectile
 from Block import Hazard, MovableBlock, MovingBlock
 from Objective import Objective
-from Helpers import load_sprite_sheets, MovementDirection, set_sound_source
+from Helpers import load_sprite_sheets, MovementDirection, set_sound_source, RUMBLE_EFFECT_DURATION, RUMBLE_EFFECT_LOW, RUMBLE_EFFECT_HIGH
 from SimpleVFX.SimpleVFX import VisualEffect, ImageDirection
 
 
@@ -202,6 +202,8 @@ class Actor(Entity):
             self.hp -= self.y_vel * self.y_vel / (18000 * self.size)
             if self.hp < 0:
                 self.die()
+            elif self == self.level.player and self.controller.gamepad is not None:
+                self.controller.gamepad.rumble(RUMBLE_EFFECT_LOW, RUMBLE_EFFECT_LOW, RUMBLE_EFFECT_DURATION)
         self.y_vel = 0.0
         self.jump_count = 0
         self.is_wall_jumping = False
@@ -314,6 +316,8 @@ class Actor(Entity):
         super().die()
         if self.hp <= 0 and self.cooldowns.get('dead') is not None and self.cooldowns['dead'] <= 0:
             self.cooldowns['dead'] = Actor.DEATH_TIME
+            if self == self.level.player and self.controller.gamepad is not None:
+                self.controller.gamepad.rumble(RUMBLE_EFFECT_HIGH, RUMBLE_EFFECT_HIGH, RUMBLE_EFFECT_DURATION)
 
     def update_state(self) -> None:
         old = self.state
