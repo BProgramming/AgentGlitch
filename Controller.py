@@ -1,12 +1,13 @@
 import random
 import time
 import pygame
+import pygame._sdl2.controller
 import sys
 from Menu import Menu, Selector, ButtonType
 from Helpers import display_text, DifficultyScale, load_images, load_level_images, load_picker_sprites, \
     make_image_from_text, NORMAL_WHITE, RETRO_WHITE
 from SaveLoadFunctions import save, save_player_profile
-
+## 3 spots to change here, 1 in HELPERS based on this, for ._sdl2 controller instead of joystick
 
 class Controller:
     KEYBOARD_LAYOUTS = {"ARROW_MOVE": {"keys_quicksave": [pygame.K_F5], "keys_cycle_layout": [pygame.K_F9], "keys_fullscreen_toggle": [pygame.K_F11], "keys_left": [pygame.K_LEFT], "keys_right": [pygame.K_RIGHT], "keys_crouch_uncrouch": [pygame.K_DOWN], "keys_jump": [pygame.K_UP], "keys_teleport_dash": [pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_KP_PLUS], "keys_pause_unpause": [pygame.K_ESCAPE], "keys_attack": [pygame.K_d], "keys_block": [pygame.K_a], "keys_bullet_time": [pygame.K_SPACE, pygame.K_KP0], "keys_grow": [pygame.K_w], "keys_shrink": [pygame.K_s]},
@@ -18,7 +19,8 @@ class Controller:
                         "PS4": {"button_menu_up": 11, "button_menu_down": 12, "button_quicksave": 4, "button_left": 13, "button_right": 14, "axis_horiz": 0, "hat_horiz": None, "button_crouch_uncrouch": 1, "button_jump": 0, "button_teleport_dash": 2, "button_pause_unpause": 6, "axis_attack": 5, "axis_block": 4, "button_bullet_time": 3, "button_grow": 10, "button_shrink": 9},
                         "PS5": {"button_menu_up": None, "button_menu_down": None, "button_quicksave": 8, "button_left": None, "button_right": None, "axis_horiz": 0, "hat_horiz": 0, "button_crouch_uncrouch": 1, "button_jump": 0, "button_teleport_dash": 2, "button_pause_unpause": 9, "axis_attack": 5, "axis_block": 2, "button_bullet_time": 3, "button_grow": 5, "button_shrink": 4},
                         "NONE": {"button_menu_up": None, "button_menu_down": None, "button_quicksave": None, "button_left": None, "button_right": None, "axis_horiz": None, "hat_horiz": None, "button_crouch_uncrouch": None, "button_jump": None, "button_teleport_dash": None, "button_pause_unpause": None, "axis_attack": None, "axis_block": None, "button_bullet_time": None, "button_grow": None, "button_shrink": None}}
-    JOYSTICK_TOLERANCE = 0.1
+    ## CHANGE ABOVE
+    JOYSTICK_TOLERANCE = 2000
 
     def __init__(self, level, win, layout=None, main_menu_music=None, steamworks=None, discord=None):
         self.win = win
@@ -62,7 +64,7 @@ class Controller:
         self.gamepad = None
         self.active_gamepad_layout = None
         self.keyboard_layout_picker = Selector(self, "KEYBOARD LAYOUT", ["This can be cycled with the F9 key."], load_images("Menu", "Keyboards").values(), list(self.KEYBOARD_LAYOUTS.keys()))
-        self.gamepad_layout_picker = Selector(self, "CONTROLLER LAYOUT", ["This is detected when you connect a controller."], load_images("Menu", "Controllers").values(), list(self.GAMEPAD_LAYOUTS.keys()), accept_only=True)
+        self.gamepad_layout_picker = Selector(self, "CONTROLLER LAYOUT", ["This is detected when you connect a controller."], load_images("Menu", "Controllers").values(), list(self.GAMEPAD_LAYOUTS.keys()), accept_only=True) ## CHANGE THIS
         self.music = None
         self.music_index = 0
         self.should_hot_swap_level = False
@@ -93,6 +95,8 @@ class Controller:
     def quit(self):
         self.save_player_profile()
         self.discord.close()
+        if pygame._sdl2.controller.get_init():
+            pygame._sdl2.controller.quit()
         if pygame.get_init():
             pygame.quit()
         sys.exit()
@@ -124,42 +128,48 @@ class Controller:
             for ent in [self.level.player] + self.level.entities:
                 ent.set_difficulty(self.difficulty)
 
-    def get_gamepad(self, notify=True) -> float:
+    def disable_gamepad(self, notify=True) -> float:
         start = time.perf_counter()
-        if pygame.joystick.get_count() > 0:
-            gamepad = pygame.joystick.Joystick(0)
-        else:
-            gamepad = None
-
-        if gamepad != self.gamepad:
-            self.gamepad = gamepad
-
-            if self.gamepad is None:
-                self.set_gamepad_layout("NONE")
-                msg = "Controller disconnected."
-            else:
-                name = self.gamepad.get_name()
-                if name == "Nintendo Switch Pro Controller":
-                    self.set_gamepad_layout("SWITCH PRO")
-                    msg = "Nintendo Switch controller detected."
-                elif name == "Controller (Xbox One For Windows)":
-                    self.set_gamepad_layout("XBOX")
-                    msg = "Xbox controller detected."
-                elif name == "PS4 Controller":
-                    self.set_gamepad_layout("PS4")
-                    msg = "PS4 controller detected."
-                elif name == "Sony Interactive Entertainment Wireless Controller":
-                    self.set_gamepad_layout("PS5")
-                    msg = "PS5 controller detected."
-                elif name == "Wireless Gamepad":
-                    self.set_gamepad_layout("NONE")
-                    msg = ["Nintendo Switch Joy-Con detected.", "Individual Joy-Cons are not supported. Please connect the full controller."]
-                else:
-                    self.set_gamepad_layout("NONE")
-                    msg = "Sorry, this controller type is not supported."
-
+        if self.gamepad is not None:
+            self.gamepad.quit()
+            self.gamepad = None
+            self.set_gamepad_layout("NONE")
             if notify:
-                display_text(msg, self, retro=self.level.retro)
+                display_text("Controller disconnected.", self, retro=self.retro)
+        return time.perf_counter() - start
+
+    def enable_gamepad(self, notify=True) -> float:
+        start = time.perf_counter()
+        if not pygame._sdl2.controller.get_init():
+            pygame._sdl2.controller.init()
+        self.gamepad = pygame._sdl2.controller.Controller(0)
+        #self.gamepad = pygame.joystick.Joystick(0)
+        self.gamepad.init()
+        print(f'connected {self.gamepad.name} with mapping \n{self.gamepad.get_mapping()}')
+        match self.gamepad.name:
+            case "Nintendo Switch Pro Controller":
+                self.set_gamepad_layout("SWITCH PRO")
+                msg = "Nintendo Switch controller detected."
+            case "Controller (Xbox One For Windows)" | "Xbox One Game Controller":
+                self.set_gamepad_layout("XBOX")
+                msg = "Xbox controller detected."
+            case "PS4 Controller":
+                self.set_gamepad_layout("PS4")
+                msg = "PS4 controller detected."
+            case "Sony Interactive Entertainment Wireless Controller":
+                self.set_gamepad_layout("PS5")
+                msg = "PS5 controller detected."
+            case "Wireless Gamepad":
+                self.set_gamepad_layout("NONE")
+                msg = ["Nintendo Switch Joy-Con detected.",
+                       "Individual Joy-Cons are not supported. Please connect the full controller."]
+            case _:
+                self.set_gamepad_layout("NONE")
+                self.gamepad = None
+                msg = "Sorry, this controller type is not supported."
+
+        if notify:
+            display_text(msg, self, retro=self.retro)
         return time.perf_counter() - start
 
     def set_keyboard_layout(self, name) -> None:
@@ -180,7 +190,7 @@ class Controller:
         self.keys_shrink = layout["keys_shrink"]
         self.active_keyboard_layout = name
 
-    def set_gamepad_layout(self, name) -> None:
+    def set_gamepad_layout(self, name) -> None: ## CHANGE THIS WHOLE THING
         layout = Controller.GAMEPAD_LAYOUTS[name]
         self.button_menu_up = layout["button_menu_up"]
         self.button_menu_down = layout["button_menu_down"]
@@ -206,12 +216,26 @@ class Controller:
         selector.clear_retro = clear_retro
         while True:
             for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.save()
-                    self.quit()
-                elif event.type == pygame.KEYDOWN and event.key in self.keys_pause_unpause:
-                    pygame.mouse.set_visible(False)
-                    return False
+                match event.type:
+                    case pygame.QUIT:
+                        self.save()
+                        self.quit()
+                    case pygame.KEYDOWN:
+                        if event.key in self.keys_pause_unpause:
+                            pygame.mouse.set_visible(False)
+                            return False
+                    case pygame.JOYDEVICEADDED:
+                        self.enable_gamepad(notify=True)
+                        if self.gamepad is not None:
+                            pygame.mouse.set_visible(False)
+                    case pygame.JOYDEVICEREMOVED:
+                        self.disable_gamepad(notify=True)
+                        pygame.mouse.set_visible(True)
+                    case pygame.MOUSEMOTION:
+                        if not pygame.mouse.get_visible():
+                            pygame.mouse.set_visible(True)
+                    case _:
+                        pass
 
             selector.draw()
             pygame.display.update()
@@ -254,12 +278,26 @@ class Controller:
         bg_notch = self.volume_menu.buttons[1].value
         while True:
             for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.save()
-                    self.quit()
-                elif event.type == pygame.KEYDOWN and event.key in self.keys_pause_unpause:
-                    pygame.mouse.set_visible(False)
-                    return
+                match event.type:
+                    case pygame.QUIT:
+                        self.save()
+                        self.quit()
+                    case pygame.KEYDOWN:
+                        if event.key in self.keys_pause_unpause:
+                            pygame.mouse.set_visible(False)
+                            return
+                    case pygame.JOYDEVICEADDED:
+                        self.enable_gamepad(notify=True)
+                        if self.gamepad is not None:
+                            pygame.mouse.set_visible(False)
+                    case pygame.JOYDEVICEREMOVED:
+                        self.disable_gamepad(notify=True)
+                        pygame.mouse.set_visible(True)
+                    case pygame.MOUSEMOTION:
+                        if not pygame.mouse.get_visible():
+                            pygame.mouse.set_visible(True)
+                    case _:
+                        pass
 
             if mt_notch != self.volume_menu.buttons[0].value:
                 mt_notch = self.volume_menu.buttons[0].value
@@ -305,12 +343,26 @@ class Controller:
 
         while True:
             for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.save()
-                    self.quit()
-                elif event.type == pygame.KEYDOWN and event.key in self.keys_pause_unpause:
-                    pygame.mouse.set_visible(False)
-                    return
+                match event.type:
+                    case pygame.QUIT:
+                        self.save()
+                        self.quit()
+                    case pygame.KEYDOWN:
+                        if event.key in self.keys_pause_unpause:
+                            pygame.mouse.set_visible(False)
+                            return
+                    case pygame.JOYDEVICEADDED:
+                        self.enable_gamepad(notify=True)
+                        if self.gamepad is not None:
+                            pygame.mouse.set_visible(False)
+                    case pygame.JOYDEVICEREMOVED:
+                        self.disable_gamepad(notify=True)
+                        pygame.mouse.set_visible(True)
+                    case pygame.MOUSEMOTION:
+                        if not pygame.mouse.get_visible():
+                            pygame.mouse.set_visible(True)
+                    case _:
+                        pass
 
             if self.gamepad is not None:
                 self.controls_menu.buttons[1].set_alpha(255)
@@ -348,12 +400,26 @@ class Controller:
         self.settings_menu.clear_retro = clear_retro
         while True:
             for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.save()
-                    self.quit()
-                elif event.type == pygame.KEYDOWN and event.key in self.keys_pause_unpause:
-                    pygame.mouse.set_visible(False)
-                    return
+                match event.type:
+                    case pygame.QUIT:
+                        self.save()
+                        self.quit()
+                    case pygame.KEYDOWN:
+                        if event.key in self.keys_pause_unpause:
+                            pygame.mouse.set_visible(False)
+                            return
+                    case pygame.JOYDEVICEADDED:
+                        self.enable_gamepad(notify=True)
+                        if self.gamepad is not None:
+                            pygame.mouse.set_visible(False)
+                    case pygame.JOYDEVICEREMOVED:
+                        self.disable_gamepad(notify=True)
+                        pygame.mouse.set_visible(True)
+                    case pygame.MOUSEMOTION:
+                        if not pygame.mouse.get_visible():
+                            pygame.mouse.set_visible(True)
+                    case _:
+                        pass
 
             self.settings_menu.draw()
             pygame.display.update()
@@ -386,12 +452,26 @@ class Controller:
         paused = True
         while paused:
             for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.save()
-                    self.quit()
-                elif event.type == pygame.KEYDOWN and event.key in self.keys_pause_unpause:
-                    paused = False
-                    break
+                match event.type:
+                    case pygame.QUIT:
+                        self.save()
+                        self.quit()
+                    case pygame.KEYDOWN:
+                        if event.key in self.keys_pause_unpause:
+                            paused = False
+                            break
+                    case pygame.JOYDEVICEADDED:
+                        self.enable_gamepad(notify=True)
+                        if self.gamepad is not None:
+                            pygame.mouse.set_visible(False)
+                    case pygame.JOYDEVICEREMOVED:
+                        self.disable_gamepad(notify=True)
+                        pygame.mouse.set_visible(True)
+                    case pygame.MOUSEMOTION:
+                        if not pygame.mouse.get_visible():
+                            pygame.mouse.set_visible(True)
+                    case _:
+                        pass
 
             self.pause_menu.draw()
             pygame.display.update()
@@ -437,16 +517,30 @@ class Controller:
 
         while True:
             for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.quit()
-                elif event.type == pygame.USEREVENT and self.main_menu.music is not None:
-                    if "LOOP" in self.main_menu.music[self.main_menu.music_index].upper():
-                        pygame.mixer.music.play(-1)
-                        pygame.mixer.music.set_endevent()
-                    else:
-                        pygame.mixer.music.play()
-                        self.main_menu.cycle_music()
-                        pygame.mixer.music.queue(self.main_menu.music[self.main_menu.music_index])
+                match event.type:
+                    case pygame.QUIT:
+                        self.quit()
+                    case pygame.USEREVENT:
+                        if self.main_menu.music is not None:
+                            if "LOOP" in self.main_menu.music[self.main_menu.music_index].upper():
+                                pygame.mixer.music.play(-1)
+                                pygame.mixer.music.set_endevent()
+                            else:
+                                pygame.mixer.music.play()
+                                self.main_menu.cycle_music()
+                                pygame.mixer.music.queue(self.main_menu.music[self.main_menu.music_index])
+                    case pygame.JOYDEVICEADDED:
+                        self.enable_gamepad(notify=True)
+                        if self.gamepad is not None:
+                            pygame.mouse.set_visible(False)
+                    case pygame.JOYDEVICEREMOVED:
+                        self.disable_gamepad(notify=True)
+                        pygame.mouse.set_visible(True)
+                    case pygame.MOUSEMOTION:
+                        if not pygame.mouse.get_visible():
+                            pygame.mouse.set_visible(True)
+                    case _:
+                        pass
 
             self.main_menu.draw()
             pygame.display.update()
@@ -507,7 +601,8 @@ class Controller:
                 case _:
                     pass
 
-    def cycle_keyboard_layout(self, win) -> int:
+    def cycle_keyboard_layout(self, win) -> float:
+        start = time.time()
         if self.active_keyboard_layout == "ARROW_MOVE":
             self.set_keyboard_layout("WASD_MOVE")
             text = "Control layout changed to WASD movement (left hand move, right hand interact)."
@@ -532,7 +627,7 @@ class Controller:
         pygame.display.update()
         time.sleep(1)
 
-        return 1000
+        return time.perf_counter() - start
 
     def handle_pause_unpause(self, key) -> float:
         if key in self.keys_pause_unpause or (self.gamepad is not None and self.button_pause_unpause is not None and key == self.button_pause_unpause):
@@ -544,8 +639,8 @@ class Controller:
         if any(pygame.key.get_pressed()):
             return True
         elif self.gamepad is not None:
-            for i in range(self.gamepad.get_numbuttons()):
-                if self.gamepad.get_button(i):
+            for event in pygame.event.get():
+                if event.type == pygame.JOYBUTTONDOWN:
                     return True
         return False
 
@@ -581,9 +676,10 @@ class Controller:
         player_is_attacking = False
 
         if self.gamepad is not None:
-            stick = self.gamepad.get_axis(self.axis_horiz)
-            hat = (None if self.hat_horiz is None else self.gamepad.get_hat(self.hat_horiz))
+            stick = self.gamepad.get_axis(pygame.CONTROLLER_AXIS_LEFTX)
+            #hat = (None if self.hat_horiz is None else self.gamepad.get_hat(self.hat_horiz))
             if not player_is_moving and stick is not None:
+                print(f'stick: {stick}')
                 if stick > Controller.JOYSTICK_TOLERANCE:
                     player_is_moving = True
                     self.level.player.move_right()
@@ -591,23 +687,23 @@ class Controller:
                     player_is_moving = True
                     self.level.player.move_left()
 
-            if not player_is_moving and hat is not None:
-                if hat[0] > 0:
-                    player_is_moving = True
-                    self.level.player.move_right()
-                elif hat[0] < 0:
-                    player_is_moving = True
-                    self.level.player.move_left()
+            #if not player_is_moving and hat is not None:
+            #    if hat[0] > 0:
+            #        player_is_moving = True
+            #        self.level.player.move_right()
+            #    elif hat[0] < 0:
+            #        player_is_moving = True
+            #        self.level.player.move_left()
 
             if not player_is_moving and self.button_right is not None and self.button_left is not None:
-                if self.gamepad.get_button(self.button_right) > 0:
+                if self.gamepad.get_button(pygame.CONTROLLER_BUTTON_DPAD_RIGHT):
                     player_is_moving = True
                     self.level.player.move_right()
-                elif self.gamepad.get_button(self.button_left) > 0:
+                elif self.gamepad.get_button(pygame.CONTROLLER_BUTTON_DPAD_LEFT):
                     player_is_moving = True
                     self.level.player.move_left()
 
-            stick = self.gamepad.get_axis(self.axis_attack)
+            stick = self.gamepad.get_axis(pygame.CONTROLLER_AXIS_TRIGGERRIGHT)
             if not player_is_attacking and stick is not None and stick > Controller.JOYSTICK_TOLERANCE:
                 player_is_attacking = True
                 dtime_offset += self.level.player.attack()
@@ -640,7 +736,7 @@ class Controller:
             self.level.player.stop()
 
         if self.gamepad is not None:
-            stick = self.gamepad.get_axis(self.axis_block)
+            stick = self.gamepad.get_axis(pygame.CONTROLLER_AXIS_TRIGGERLEFT)
             if stick is not None and stick > Controller.JOYSTICK_TOLERANCE:
                 self.level.player.block()
         for input_key in self.keys_block:

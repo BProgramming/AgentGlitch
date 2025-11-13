@@ -146,7 +146,9 @@ class Menu:
 
         if self.controller.gamepad is not None:
             self.set_mouse_pos(0)
-        pygame.mouse.set_visible(True)
+            pygame.mouse.set_visible(False)
+        else:
+            pygame.mouse.set_visible(True)
 
         for i in range(32):
             self.set_alpha(8 * i)
@@ -206,9 +208,7 @@ class Menu:
             button.draw()
 
     def loop(self) -> int | None:
-        self.controller.get_gamepad()
         if self.controller.gamepad is not None:
-            pygame.mouse.set_visible(False)
             should_process_event = True
             joystick_movement = 0
             if abs(self.controller.gamepad.get_axis(1)) > Menu.JOYSTICK_TOLERANCE:
@@ -217,12 +217,12 @@ class Menu:
             elif abs(self.controller.gamepad.get_axis(0)) > Menu.JOYSTICK_TOLERANCE:
                 joystick_movement = (self.controller.gamepad.get_axis(0), 0)
                 should_process_event = False
-            elif self.controller.gamepad.get_numhats() > 0 and abs(self.controller.gamepad.get_hat(0)[1]) == 1:
-                joystick_movement = (0, -self.controller.gamepad.get_hat(0)[1])
-                should_process_event = False
-            elif self.controller.gamepad.get_numhats() > 0 and abs(self.controller.gamepad.get_hat(0)[0]) == 1:
-                joystick_movement = (-self.controller.gamepad.get_hat(0)[0], 0)
-                should_process_event = False
+            #elif self.controller.gamepad.get_numhats() > 0 and abs(self.controller.gamepad.get_hat(0)[1]) == 1:
+            #    joystick_movement = (0, -self.controller.gamepad.get_hat(0)[1])
+            #    should_process_event = False
+            #elif self.controller.gamepad.get_numhats() > 0 and abs(self.controller.gamepad.get_hat(0)[0]) == 1:
+            #    joystick_movement = (-self.controller.gamepad.get_hat(0)[0], 0)
+            #    should_process_event = False
             elif self.controller.button_menu_up is not None and self.controller.gamepad.get_button(self.controller.button_menu_up):
                 joystick_movement = (0, -1)
                 should_process_event = False
@@ -234,8 +234,6 @@ class Menu:
                     self.move_mouse_pos_horiz(1 if joystick_movement[0] >= 0 else -1)
                 elif joystick_movement[1] != 0:
                     self.move_mouse_pos_vert(1 if joystick_movement[1] >= 0 else -1)
-        else:
-            pygame.mouse.set_visible(True)
 
         pos = pygame.mouse.get_pos()
         for i, button in enumerate(self.buttons):

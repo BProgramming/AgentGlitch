@@ -1,6 +1,5 @@
 import pygame
 
-
 class Logger:
     def __init__(self, file):
         self.file = file
@@ -25,11 +24,20 @@ def test_gamepad():
     pygame.display.update()
 
     # Start the log.
-    log = Logger("C:\\[YOUR FILE PATH HERE]\\controller_log.txt") # <-- PUT YOUR FILE PATH HERE.
+    log = Logger("C:\\Users\\brent\\Desktop\\controller_log.txt") # <-- PUT YOUR FILE PATH HERE.
 
     if pygame.joystick.get_count() <= 0:
         log.log("ERROR: No controller detected.")
     else:
+        print("Connect a controller.\nPress [SPACE BAR] to continue")
+        wait = True
+        while wait:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    exit()
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                    wait = False
         # Read from the first connected controller (in case you have more than one).
         gamepad = pygame.joystick.Joystick(0)
 
@@ -84,4 +92,20 @@ def test_gamepad():
     log.export()
 
 # Run the function.
-test_gamepad()
+#test_gamepad()
+
+import pygame._sdl2.controller as pg_sdl2_controller
+pygame.init()
+pg_sdl2_controller.init()
+gamepad = pg_sdl2_controller.Controller(0)
+print(f'{gamepad.name} controller detected, mapping:\n{gamepad.get_mapping()}')
+
+loop = True
+while loop:
+    for event in pygame.event.get():
+        if event.type == pygame.JOYDEVICEADDED:
+            gamepad = pg_sdl2_controller.Controller(0)
+            print(f'{gamepad.name} controller detected, mapping:\n{gamepad.get_mapping()}')
+
+pg_sdl2_controller.quit()
+pygame.quit()

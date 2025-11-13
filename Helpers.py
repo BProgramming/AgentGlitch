@@ -22,7 +22,7 @@ RETRO_BLACK: tuple[int, int, int, int] = (0, 0, 0, 255)
 TEXT_BOX_BORDER_RADIUS: int = 4
 RUMBLE_EFFECT_HIGH: float = 0.5
 RUMBLE_EFFECT_LOW: float = 0.1
-RUMBLE_EFFECT_DURATION: int = 500
+RUMBLE_EFFECT_DURATION: int = 500 # if this is 0, it will rumble until stop_rumble() is called (so don't set it to 0!)
 
 
 class MovementDirection(IntEnum):
@@ -368,7 +368,7 @@ def process_text(line: str, controller) -> tuple[str, bool, bool]:
                 keys_out += controller.KEYBOARD_LAYOUTS[controller.active_keyboard_layout][key_partial]
             elif controller.active_gamepad_layout is not None and controller.GAMEPAD_LAYOUTS[
                 controller.active_gamepad_layout].get(key_partial) is not None:
-                keys_out += controller.GAMEPAD_LAYOUTS[controller.active_gamepad_layout][key_partial]
+                keys_out += controller.GAMEPAD_LAYOUTS[controller.active_gamepad_layout][key_partial] ## CHANGE HERE
             elif i == 0:
                 keys_out = ['KEY NOT FOUND']
             if len(keys_out) > 2:
@@ -437,12 +437,15 @@ def display_text(output: list | str, controller, should_type_text=False, min_pau
                         pause_dtime: float = 0.0
                         while pause_dtime < min_pause_time:
                             for event in pygame.event.get():
-                                if event.type == pygame.QUIT:
-                                    controller.quit()
-                                elif event.type == pygame.KEYDOWN:
-                                    pause_dtime += controller.handle_pause_unpause(event.key)
-                                elif event.type == pygame.JOYBUTTONDOWN:
-                                    pause_dtime += controller.handle_pause_unpause(event.button)
+                                match event.type:
+                                    case pygame.QUIT:
+                                        controller.quit()
+                                    case pygame.KEYDOWN:
+                                        pause_dtime += controller.handle_pause_unpause(event.key)
+                                    case pygame.JOYBUTTONDOWN:
+                                        pause_dtime += controller.handle_pause_unpause(event.button)
+                                    case _:
+                                        pass
                             if controller.goto_load or controller.goto_main:
                                 return
                             time.sleep(0.01)

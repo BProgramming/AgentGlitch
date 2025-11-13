@@ -1,5 +1,4 @@
 import pygame
-
 from Block import Block
 from SteamworksConnection import SteamworksConnection
 from Helpers import load_json_dict, load_object_dicts, load_levels, load_audios, display_text, DifficultyScale, \
@@ -9,12 +8,11 @@ from DiscordConnection import DiscordConnection
 from SimpleVFX.SimpleVFX import VisualEffectsManager
 
 # This stuff happens in the middle of imports because some classes require pygame display available before they can be imported
-# And steam is initialized first because it doesn't work having it after pygame.init for... reasons?
+pygame.init()
 steamworks = SteamworksConnection()
 discord = DiscordConnection()
 discord.set_status(details="In the menu:", state="Gathering intel")
 
-pygame.init()
 WIDTH, HEIGHT = 1920, 1080
 FPS_TARGET = 1000 # In practice this doesn't do anything, but clock.tick doesn't seem to always return a non-zero value if it isn't specified
 
@@ -50,7 +48,6 @@ def main(win):
     meta_dict = load_json_dict("ReferenceDicts", "meta.agd")
 
     controller = Controller(None, win, main_menu_music=(None if meta_dict.get("MAIN_MENU") is None or meta_dict["MAIN_MENU"].get("music") is None else list(meta_dict["MAIN_MENU"]["music"].split(' '))), steamworks=steamworks, discord=discord)
-    controller.get_gamepad(notify=False)
     controller.has_dlc.update(steamworks.has_dlc())
     controller.start_level = meta_dict["MAIN_MENU"]["start_level"]
 
@@ -82,6 +79,9 @@ def main(win):
         title_screen_retro_file = title_screen_file
 
     camera = Camera(win)
+
+    if pygame.joystick.get_count() > 0:
+        controller.enable_gamepad(notify=False)
 
     while True:
         if len(load_player_profile(controller)) == 0:
@@ -172,7 +172,6 @@ def main(win):
             if should_load:
                 load_part2(load_data, controller.level, controller)
             controller.save()
-            controller.get_gamepad()
 
             win.fill((0, 0, 0))
             win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
@@ -226,26 +225,33 @@ def main(win):
                 while len(level.cinematics.queued) > 0:
                     dtime_offset += level.cinematics.play_queue(win)
 
-                dtime_offset += controller.get_gamepad()
+                #dtime_offset += controller.get_gamepad()
 
                 for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        controller.save()
-                        controller.quit()
-                    elif event.type == pygame.KEYDOWN:
-                        dtime_offset += controller.handle_single_input(event.key, win)
-                    elif event.type == pygame.KEYUP:
-                        # DEV ONLY if event.key == pygame.K_F2:
-                        # DEV ONLY    level.gen_background()
-                        level.player.stop()
-                    elif event.type == pygame.JOYBUTTONDOWN:
-                        dtime_offset += controller.handle_single_input(event.button, win)
-                    elif event.type == pygame.JOYBUTTONUP:
-                        level.player.stop()
-                    elif event.type == pygame.USEREVENT:
-                        pygame.mixer.music.play()
-                        if "LOOP" not in controller.music[controller.music_index].upper():
-                            controller.cycle_music()
+                    match event.type:
+                        case pygame.QUIT:
+                            controller.save()
+                            controller.quit()
+                        case pygame.JOYDEVICEADDED:
+                            dtime_offset += controller.enable_gamepad(notify=True)
+                        case pygame.JOYDEVICEREMOVED:
+                            dtime_offset += controller.disable_gamepad(notify=True)
+                        case pygame.KEYDOWN:
+                            dtime_offset += controller.handle_single_input(event.key, win)
+                        case pygame.KEYUP:
+                            # DEV ONLY if event.key == pygame.K_F2:
+                            # DEV ONLY    level.gen_background()
+                            level.player.stop()
+                        case pygame.JOYBUTTONDOWN:
+                            dtime_offset += controller.handle_single_input(event.button, win)
+                        case pygame.JOYBUTTONUP:
+                            level.player.stop()
+                        case pygame.USEREVENT:
+                            pygame.mixer.music.play()
+                            if "LOOP" not in controller.music[controller.music_index].upper():
+                                controller.cycle_music()
+                        case _:
+                            pass
                 dtime_offset += controller.handle_continuous_input()
                 if (controller.goto_load and isfile(join(GAME_DATA_FOLDER, "save.p"))) or controller.goto_main or controller.goto_restart:
                     break
