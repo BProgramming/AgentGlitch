@@ -52,7 +52,7 @@ class Controller:
         difficulty_images = [make_image_from_text(256, 128, "EASIEST", ["Agent is much stronger", "Agent can survive huge falls", "Enemies are much weaker", "Enemy sight ranges are visible"], border=5), make_image_from_text(256, 128, "EASY", ["Agent is stronger", "Agent can survive big falls", "Enemies are weaker", "Enemy sight ranges are visible"], border=5), make_image_from_text(256, 128, "MEDIUM", ["Agent is normal strength", "Agent can survive moderate falls", "Enemies are normal strength", "Enemy sight ranges are not visible"], border=5), make_image_from_text(256, 128, "HARD", ["Agent is weaker", "Agent can survive small falls", "Enemies are stronger", "Enemy sight ranges are not visible"], border=5), make_image_from_text(256, 128, "HARDEST", ["Agent is much weaker", "Agent can survive tiny falls", "Enemies are much stronger", "Enemy sight ranges are not visible"], border=5)]
         self.difficulty_picker = Selector(self, "CHOOSE DIFFICULTY", ["You can change this at any time."], difficulty_images, [DifficultyScale.EASIEST, DifficultyScale.EASY, DifficultyScale.MEDIUM, DifficultyScale.HARD, DifficultyScale.HARDEST], index=2)
         sprite_images, sprite_values = load_picker_sprites("Sprites")
-        self.sprite_picker = Selector(self, "CHOOSE PLAYER", ["This is a visual choice only.", "Anyone can be an Agent."], sprite_images, sprite_values, index=2 * random.randrange(0, len(sprite_images) // 2))
+        self.sprite_picker = Selector(self, "CHOOSE PLAYER", ["This is a visual choice only.", "Anyone can be an Agent."], sprite_images, sprite_values, index=2 * random.randrange(0, len(sprite_images['normal']) // 2))
         self.level_selected = None
         level_images, level_values = load_level_images("LevelImages")
         self.level_picker = Selector(self, "CHOOSE LEVEL", None, level_images, level_values)
@@ -158,14 +158,13 @@ class Controller:
                 msg = "PS5 controller detected."
             case "Wireless Gamepad":
                 self.set_gamepad_layout("NONE")
-                msg = ["Nintendo Switch Joy-Con detected.",
-                       "Individual Joy-Cons are not supported. Please connect the full controller."]
+                msg = "Nintendo Switch Joy-Con detected.\nIndividual Joy-Cons are not supported. Please connect the full controller."
             case _:
                 self.set_gamepad_layout("XBOX")
                 msg = "Unrecognized controller. Using default XBOX controller mapping."
 
         if notify:
-            display_text(msg, self, retro=self.retro)
+            display_text([msg, 'Changing controllers during gameplay can confuse the system.', 'If controls behave strangely, try restarting with the controller connected.'], self, retro=self.retro)
         return time.perf_counter() - start
 
     def set_keyboard_layout(self, name) -> None:
