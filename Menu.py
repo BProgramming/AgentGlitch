@@ -86,7 +86,7 @@ class Bar(Button):
 
 
 class Menu:
-    JOYSTICK_TOLERANCE = 0.25
+    JOYSTICK_TOLERANCE = 3500
 
     def __init__(self, controller, header, buttons: list[dict], music=None, should_glitch=True):
         self.controller = controller
@@ -119,6 +119,7 @@ class Menu:
             else:
                 button = None
             self.buttons.append(button)
+        self.joystick_movement = (0, 0)
 
         self.music = (None if music is None else validate_file_list("Music", music, "mp3"))
         self.music_index = 0
@@ -210,30 +211,30 @@ class Menu:
     def loop(self) -> int | None:
         if self.controller.gamepad is not None:
             should_process_event = True
-            joystick_movement = 0
-            if abs(self.controller.gamepad.get_axis(1)) > Menu.JOYSTICK_TOLERANCE:
-                joystick_movement = (0, self.controller.gamepad.get_axis(1))
+            gamepad = self.controller.gamepad
+            layout = self.controller.GAMEPAD_LAYOUTS[self.controller.active_gamepad_layout]
+            if abs(gamepad.get_axis(layout['axis_vert'])) > Menu.JOYSTICK_TOLERANCE:
+                self.joystick_movement = (0, 1 if gamepad.get_axis(layout['axis_vert']) > 0 else -1)
                 should_process_event = False
-            elif abs(self.controller.gamepad.get_axis(0)) > Menu.JOYSTICK_TOLERANCE:
-                joystick_movement = (self.controller.gamepad.get_axis(0), 0)
+            elif abs(gamepad.get_axis(layout['axis_horiz'])) > Menu.JOYSTICK_TOLERANCE:
+                self.joystick_movement = (1 if gamepad.get_axis(layout['axis_horiz']) > 0 else -1, 0)
                 should_process_event = False
-            #elif self.controller.gamepad.get_numhats() > 0 and abs(self.controller.gamepad.get_hat(0)[1]) == 1:
-            #    joystick_movement = (0, -self.controller.gamepad.get_hat(0)[1])
-            #    should_process_event = False
-            #elif self.controller.gamepad.get_numhats() > 0 and abs(self.controller.gamepad.get_hat(0)[0]) == 1:
-            #    joystick_movement = (-self.controller.gamepad.get_hat(0)[0], 0)
-            #    should_process_event = False
-            elif self.controller.button_menu_up is not None and self.controller.gamepad.get_button(self.controller.button_menu_up):
-                joystick_movement = (0, -1)
+            elif gamepad.get_button(layout['button_up']):
+                self.joystick_movement = (0, -1)
                 should_process_event = False
-            elif self.controller.button_menu_down is not None and self.controller.gamepad.get_button(self.controller.button_menu_down):
-                joystick_movement = (0, 1)
+            elif gamepad.get_button(layout['button_down']):
+                self.joystick_movement = (0, 1)
                 should_process_event = False
-            if should_process_event and abs(joystick_movement) > Menu.JOYSTICK_TOLERANCE:
-                if joystick_movement[0] != 0:
-                    self.move_mouse_pos_horiz(1 if joystick_movement[0] >= 0 else -1)
-                elif joystick_movement[1] != 0:
-                    self.move_mouse_pos_vert(1 if joystick_movement[1] >= 0 else -1)
+            elif gamepad.get_button(layout['button_right']):
+                self.joystick_movement = (1, 0)
+                should_process_event = False
+            elif gamepad.get_button(layout['button_left']):
+                self.joystick_movement = (-1, 0)
+                should_process_event = False
+            if self.joystick_movement != (0, 0) and should_process_event:
+                self.move_mouse_pos_horiz(self.joystick_movement[0])
+                self.move_mouse_pos_vert(self.joystick_movement[1])
+                self.joystick_movement = (0, 0)
 
         pos = pygame.mouse.get_pos()
         for i, button in enumerate(self.buttons):
@@ -257,8 +258,10 @@ class Menu:
                         else:
                             button.value = min(button.range[-1], max(button.range[0], pct * button.range[-1]))
                 for event in pygame.event.get():
-                    if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1) or (event.type == pygame.JOYBUTTONDOWN and event.button == 0):
+                    if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1) or (event.type == pygame.JOYBUTTONDOWN and event.button == self.controller.GAMEPAD_LAYOUTS[self.controller.active_gamepad_layout]['button_jump']):
                         return i
+                    elif event.type == pygame.JOYBUTTONDOWN and event.button == self.controller.GAMEPAD_LAYOUTS[self.controller.active_gamepad_layout]['button_crouch_uncrouch']:
+                        return -1
         return None
 
     def set_mouse_pos(self, i) -> None:
@@ -266,28 +269,34 @@ class Menu:
         pygame.mouse.set_pos(rect.x + (rect.width * 0.75), rect.y + (rect.height / 2))
 
     def move_mouse_pos_vert(self, direction) -> None:
+        if direction == 0 or len(self.buttons) == 1:
+            return
+        if pygame.mouse.get_visible():
+            pygame.mouse.set_visible(False)
         for i, button in enumerate(self.buttons):
             if button.rect.collidepoint(pygame.mouse.get_pos()):
-                if (direction > 0 and i < len(self.buttons) - 1) or (direction < 0 and i > 0):
+                if isinstance(self, Selector) and ((direction > 0 and i < len(self.buttons) // 2) or (direction < 0 and i > (len(self.buttons) // 2) - 1)) or not isinstance(self, Selector) and ((direction > 0 and i < len(self.buttons) - 1) or (direction < 0 and i > 0)):
                     cur = pygame.mouse.get_pos()
-                    pygame.mouse.set_pos(cur[0], cur[1] + direction * button.rect.height)
+                    pygame.mouse.set_pos(cur[0], cur[1] + (direction * button.rect.height))
+                    break
 
     def move_mouse_pos_horiz(self, direction) -> None:
-        if len(self.buttons) == 1:
+        if direction == 0 or len(self.buttons) == 1 or not isinstance(self, Selector):
             return
-        else:
-            for i, button in enumerate(self.buttons):
-                if button.rect.collidepoint(pygame.mouse.get_pos()):
-                    if isinstance(button, Bar):
-                        if len(button.range) == 2 and button.range[0] == 0 and button.range[1] == 100:
-                            for j, val in enumerate(button.range):
-                                if button.value == val and ((j < len(button.range) - 1 and direction > 0) or (j > 0 and direction < 0)):
-                                    button.value = max(button.range[0], min(button.range[-1], button.pct_val * (button.range[-1] - button.range[0]) + button.range[0]))
-                                    break
-                    elif (direction > 0 and i % 2 == 0) or (direction < 0 and i % 2 == 1):
-                        cur = pygame.mouse.get_pos()
-                        pygame.mouse.set_pos(cur[0] + direction * button.rect.width, cur[1])
-                    break
+        if pygame.mouse.get_visible():
+            pygame.mouse.set_visible(False)
+        for i, button in enumerate(self.buttons):
+            if button.rect.collidepoint(pygame.mouse.get_pos()):
+                if isinstance(button, Bar):
+                    if len(button.range) == 2 and button.range[0] == 0 and button.range[1] == 100:
+                        for j, val in enumerate(button.range):
+                            if button.value == val and ((j < len(button.range) - 1 and direction > 0) or (j > 0 and direction < 0)):
+                                button.value = max(button.range[0], min(button.range[-1], button.pct_val * (button.range[-1] - button.range[0]) + button.range[0]))
+                                break
+                elif (direction > 0 and i % 2 == 0) or (direction < 0 and i % 2 == 1):
+                    cur = pygame.mouse.get_pos()
+                    pygame.mouse.set_pos(cur[0] + direction * button.rect.width, cur[1])
+                break
 
 class Selector(Menu):
     def __init__(self, controller, header, note, images, values, index=0, music=None, should_glitch=True, accept_only=False):
@@ -366,6 +375,7 @@ class Selector(Menu):
             x = self.controller.win.get_width() // 2 - (button_width * (1 - i % 2))
             y = self.rect.y + self.rect.height - (button_height * ((len(loop_range) - i + 1) // 2))
             self.buttons.append(Button(self.controller, x, y, button_width, button_height, i, img_normal=normal, img_mouseover=mouseover, label_normal=label, label_mouseover=label))
+        self.joystick_movement = (0, 0)
 
         self.music = (None if music is None else validate_file_list("Music", music, "mp3"))
         self.music_index = 0
@@ -374,6 +384,23 @@ class Selector(Menu):
         self.glitches = None
         self.cycle_images(0)
 
+    def move_mouse_pos_horiz(self, direction) -> None:
+        if direction == 0 or len(self.buttons) == 1:
+            return
+        if pygame.mouse.get_visible():
+            pygame.mouse.set_visible(False)
+        for i, button in enumerate(self.buttons):
+            if button.rect.collidepoint(pygame.mouse.get_pos()):
+                if isinstance(button, Bar):
+                    if len(button.range) == 2 and button.range[0] == 0 and button.range[1] == 100:
+                        for j, val in enumerate(button.range):
+                            if button.value == val and ((j < len(button.range) - 1 and direction > 0) or (j > 0 and direction < 0)):
+                                button.value = max(button.range[0], min(button.range[-1], button.pct_val * (button.range[-1] - button.range[0]) + button.range[0]))
+                                break
+                elif (direction > 0 and i % 2 == 0) or (direction < 0 and i % 2 == 1):
+                    cur = pygame.mouse.get_pos()
+                    pygame.mouse.set_pos(cur[0] + direction * button.rect.width, cur[1])
+                break
     def set_index(self, index: int) -> None:
         self.image_index = index
         self.image_selected = self.images["retro" if self.controller.retro else "normal"][index]
@@ -388,7 +415,7 @@ class Selector(Menu):
         elif self.image_index < 0:
             self.image_index = len(self.images["retro" if self.controller.retro else "normal"]) - 1
         self.image_selected = self.images["retro" if self.controller.retro else "normal"][self.image_index].copy()
-        self.img_rect = pygame.Rect(self.rect.x + (self.rect.width - self.image_selected.get_width()) // 2, self.rect.y + self.rect.height - (self.buttons[0].normal.get_height() * len(self.buttons) // 2) - self.image_selected.get_height(), self.image_selected.get_width(), self.image_selected.get_height())
+        self.img_rect = pygame.Rect(self.rect.x + (self.rect.width - self.image_selected.get_width()) // 2, self.rect.y + self.rect.height - (self.buttons[0].normal.get_height() * max(1, len(self.buttons) // 2)) - self.image_selected.get_height(), self.image_selected.get_width(), self.image_selected.get_height())
 
     def set_alpha(self, alpha: int) -> None:
         self.image_selected.set_alpha(alpha)

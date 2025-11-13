@@ -368,7 +368,7 @@ def process_text(line: str, controller) -> tuple[str, bool, bool]:
                 keys_out += controller.KEYBOARD_LAYOUTS[controller.active_keyboard_layout][key_partial]
             elif controller.active_gamepad_layout is not None and controller.GAMEPAD_LAYOUTS[
                 controller.active_gamepad_layout].get(key_partial) is not None:
-                keys_out += controller.GAMEPAD_LAYOUTS[controller.active_gamepad_layout][key_partial] ## CHANGE HERE
+                keys_out += controller.GAMEPAD_LAYOUTS[controller.active_gamepad_layout][key_partial]
             elif i == 0:
                 keys_out = ['KEY NOT FOUND']
             if len(keys_out) > 2:
