@@ -1,9 +1,8 @@
 import cv2
 import pygame
-import sys
 import time
 from enum import Enum
-from Helpers import glitch, handle_exception, ASSETS_FOLDER
+from Helpers import glitch, handle_exception, ASSETS_FOLDER, retroify_image, NORMAL_WHITE, RETRO_WHITE, RETRO_BLACK, NORMAL_BLACK
 from os.path import join, isfile, abspath
 
 
@@ -26,9 +25,9 @@ class CinematicsManager:
                 path = join(ASSETS_FOLDER, "Cinematics", file["file"])
                 if isfile(path):
                     if file["type"].upper() == "SLIDE":
-                        self.cinematics[file["name"]] = Cinematic(self.__load_slide__(path), CinematicType.SLIDE, controller, pause_key=(None if file.get("pause_key") is None else file["pause_key"]), text=(None if file.get("text") is None else file["text"]), should_glitch=(False if file.get("should_glitch") is None or file["should_glitch"].upper() == "FALSE" else True), should_fade_in=(True if file.get("should_fade_in") is None or file["should_fade_in"].upper() == "TRUE" else False), should_fade_out=(True if file.get("should_fade_out") is None or file["should_fade_out"].upper() == "TRUE" else False))
+                        self.cinematics[file["name"]] = Cinematic(self.__load_slide__(path), CinematicType.SLIDE, controller, pause_key=(None if file.get("pause_key") is None else file["pause_key"]), text=(None if file.get("text") is None else file["text"]), should_glitch=(False if file.get("should_glitch") is None or file["should_glitch"].upper() == "FALSE" else True), should_fade_in=(True if file.get("should_fade_in") is None or file["should_fade_in"].upper() == "TRUE" else False), should_fade_out=(True if file.get("should_fade_out") is None or file["should_fade_out"].upper() == "TRUE" else False), can_scale_up=(True if file.get("can_scale_up") is None or file["can_scale_up"].upper() == "TRUE" else False), can_scale_down=(True if file.get("can_scale_down") is None or file["can_scale_down"].upper() == "TRUE" else False))
                     elif file["type"].upper() == "VIDEO":
-                        self.cinematics[file["name"]] = Cinematic(self.__load_video__(path), CinematicType.VIDEO, controller, pause_key=(None if file.get("pause_key") is None else file["pause_key"]), text=(None if file.get("text") is None else file["text"]), should_glitch=(False if file.get("should_glitch") is None or file["should_glitch"].upper() == "FALSE" else True), should_fade_in=(True if file.get("should_fade_in") is None or file["should_fade_in"].upper() == "TRUE" else False), should_fade_out=(True if file.get("should_fade_out") is None or file["should_fade_out"].upper() == "TRUE" else False))
+                        self.cinematics[file["name"]] = Cinematic(self.__load_video__(path), CinematicType.VIDEO, controller, pause_key=(None if file.get("pause_key") is None else file["pause_key"]), text=(None if file.get("text") is None else file["text"]), should_glitch=(False if file.get("should_glitch") is None or file["should_glitch"].upper() == "FALSE" else True), should_fade_in=(True if file.get("should_fade_in") is None or file["should_fade_in"].upper() == "TRUE" else False), should_fade_out=(True if file.get("should_fade_out") is None or file["should_fade_out"].upper() == "TRUE" else False), can_scale_up=(True if file.get("can_scale_up") is None or file["can_scale_up"].upper() == "TRUE" else False), can_scale_down=(True if file.get("can_scale_down") is None or file["can_scale_down"].upper() == "TRUE" else False))
                 else:
                     handle_exception(f'File {FileNotFoundError(abspath(path))} not found.')
 
@@ -60,7 +59,7 @@ class CinematicsManager:
         return dtime / 1000
 
 class Cinematic:
-    def __init__(self, ent: pygame.Surface | cv2.VideoCapture, cinematic_type: CinematicType, controller, pause_key: int | list[int] | tuple[int] | None=None, text: str | None=None, should_glitch: bool=False, should_fade_in: bool=True, should_fade_out: bool=True):
+    def __init__(self, ent: pygame.Surface | cv2.VideoCapture, cinematic_type: CinematicType, controller, pause_key: int | list[int] | tuple[int] | None=None, text: str | None=None, should_glitch: bool=False, should_fade_in: bool=True, should_fade_out: bool=True, can_scale_up: bool=True, can_scale_down: bool=True) -> None:
         self.controller = controller
         self.type = cinematic_type
         self.cinematic = ent
@@ -69,29 +68,49 @@ class Cinematic:
         self.should_glitch = should_glitch
         self.should_fade_in = should_fade_in
         self.should_fade_out = should_fade_out
+        self.can_scale_up = can_scale_up
+        self.can_scale_down = can_scale_down
 
     def play(self, win: pygame.Surface) -> float:
         start = time.perf_counter()
         pygame.mixer.pause()
         if self.type == CinematicType.SLIDE:
-            self.__play_slide__(self.cinematic, self.controller, win, text=self.text, should_glitch=self.should_glitch, pause_key=self.pause_key, should_fade_in=self.should_fade_in, should_fade_out=self.should_fade_out)
+            self.__play_slide__(self.cinematic, self.controller, win, text=self.text, should_glitch=self.should_glitch, pause_key=self.pause_key, should_fade_in=self.should_fade_in, should_fade_out=self.should_fade_out, can_scale_up=self.can_scale_up, can_scale_down=self.can_scale_down)
         elif self.type == CinematicType.VIDEO:
-            self.__play_video__(self.cinematic, self.controller, win, text=self.text, should_glitch=self.should_glitch, pause_key=self.pause_key, should_fade_in=self.should_fade_in, should_fade_out=self.should_fade_out)
+            self.__play_video__(self.cinematic, self.controller, win, text=self.text, should_glitch=self.should_glitch, pause_key=self.pause_key, should_fade_in=self.should_fade_in, should_fade_out=self.should_fade_out, can_scale_up=self.can_scale_up, can_scale_down=self.can_scale_down)
         pygame.mixer.unpause()
         return time.perf_counter() - start
+
     @staticmethod
-    def __play_slide__(slide: pygame.Surface, controller, win: pygame.Surface, text: str | None=None, should_glitch: bool=False, pause_key: int | list[int] | tuple[int] | None=None, should_fade_in: bool=True, should_fade_out: bool=True) -> None:
+    def __play_slide__(slide: pygame.Surface, controller, win: pygame.Surface, text: str | None=None, should_glitch: bool=False, pause_key: int | list[int] | tuple[int] | None=None, should_fade_in: bool=True, should_fade_out: bool=True, can_scale_up: bool=True, can_scale_down: bool=True) -> None:
+        scale_factor = min(win.get_width() / slide.get_width(), win.get_height() / slide.get_height())
+        if (can_scale_up and scale_factor > 1) or (can_scale_down and scale_factor < 1):
+            slide = pygame.transform.scale_by(slide, scale_factor)
         og_slide = slide
+
+        if controller.retro:
+            slide = retroify_image(slide)
+            colour_white = RETRO_WHITE
+            colour_black = RETRO_BLACK
+        else:
+            colour_white = NORMAL_WHITE
+            colour_black = NORMAL_BLACK
+        text_colour = colour_black
+        for e in slide.get_at((slide.get_width() // 5, slide.get_height() // 5))[:3]:
+            if e < 255 // 2:
+                text_colour = colour_white
+                break
+
         if text is not None:
             for i in range(len(text)):
-                text_line = pygame.font.SysFont("courier", 32).render(text[i], True, (0, 0, 0))
+                text_line = pygame.font.SysFont("courier", 32).render(text[i], True, text_colour)
                 slide.blit(text_line, (slide.get_width() // 5, (slide.get_height() // 5) + (i * text_line.get_height())))
 
         slide_x = (win.get_width() - slide.get_width()) // 2
         slide_y = (win.get_height() - slide.get_height()) // 2
 
         black = pygame.Surface((win.get_width(), win.get_height()), pygame.SRCALPHA)
-        black.fill((0, 0, 0))
+        black.fill(colour_black)
 
         if should_fade_in:
             for i in range(64):
@@ -168,33 +187,37 @@ class Cinematic:
             slide.blit(og_slide, (0, 0))
 
     @staticmethod
-    def __play_video__(video: cv2.VideoCapture, controller, win: pygame.Surface, text: str | None=None, should_glitch: bool=False, pause_key: int | list[int] | tuple[int] | None=None, should_fade_in: bool=True, should_fade_out: bool=True) -> None:
+    def __play_video__(video: cv2.VideoCapture, controller, win: pygame.Surface, text: str | None=None, should_glitch: bool=False, pause_key: int | list[int] | tuple[int] | None=None, should_fade_in: bool=True, should_fade_out: bool=True, can_scale_up: bool=True, can_scale_down: bool=True) -> None:
         if not video.isOpened():
             raise IOError(f'Video file {str(video)} could not be opened.')
+        if controller.retro:
+            colour_white = RETRO_WHITE
+            colour_black = RETRO_BLACK
+        else:
+            colour_white = NORMAL_WHITE
+            colour_black = NORMAL_BLACK
+        text_colour = colour_white
 
         ret, frame = video.read()
         if ret:
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             pygame_frame = pygame.surfarray.make_surface(frame_rgb.swapaxes(0, 1))
 
-            rescale_width_factor = win.get_width() / pygame_frame.get_width()
-            rescale_height_factor = win.get_height() / pygame_frame.get_height()
-            rescale_factor = 1
-            if rescale_width_factor < 1 or rescale_height_factor < 1:
-                rescale_factor = min(rescale_width_factor, rescale_height_factor)
-                pygame_frame = pygame.transform.scale(pygame_frame, (int(pygame_frame.get_width() * rescale_factor), int(pygame_frame.get_height() * rescale_factor)))
+            scale_factor = min(win.get_width() / pygame_frame.get_width(), win.get_height() / pygame_frame.get_height())
+            if (can_scale_up and scale_factor > 1) or (can_scale_down and scale_factor < 1):
+                pygame_frame = pygame.transform.scale(pygame_frame, (int(pygame_frame.get_width() * scale_factor), int(pygame_frame.get_height() * scale_factor)))
 
             pygame_frame_x = (win.get_width() - pygame_frame.get_width()) // 2
             pygame_frame_y = (win.get_height() - pygame_frame.get_height()) // 2
 
             black = pygame.Surface((win.get_width(), win.get_height()), pygame.SRCALPHA)
-            black.fill((0, 0, 0))
+            black.fill(colour_black)
 
             if should_fade_in:
                 for i in range(64):
                     #if text is not None:
                     #    for i in range(len(text)):
-                    #        text_line = pygame.font.SysFont("courier", 32).render(text[i], True, (0, 0, 0))
+                    #        text_line = pygame.font.SysFont("courier", 32).render(text[i], True, text_colour)
                     #        pygame_frame.blit(text_line, (pygame_frame.get_width() // 5, (pygame_frame.get_height() // 5) + (i * text_line.get_height())))
                     win.blit(pygame_frame, (pygame_frame_x, pygame_frame_y))
                     black.set_alpha(255 - (4 * i))
@@ -214,7 +237,7 @@ class Cinematic:
                 win.blit(black, (0, 0))
                 if text is not None:
                     for i in range(len(text)):
-                        text_line = pygame.font.SysFont("courier", 32).render(text[i], True, (0, 0, 0))
+                        text_line = pygame.font.SysFont("courier", 32).render(text[i], True, text_colour)
                         pygame_frame.blit(text_line, (pygame_frame.get_width() // 5, (pygame_frame.get_height() // 5) + (i * text_line.get_height())))
                 win.blit(pygame_frame, (pygame_frame_x, pygame_frame_y))
                 pygame.display.update()
@@ -230,8 +253,8 @@ class Cinematic:
                 if ret:
                     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     pygame_frame = pygame.surfarray.make_surface(frame_rgb.swapaxes(0, 1))
-                    if rescale_factor < 1:
-                        pygame_frame = pygame.transform.scale(pygame_frame, (int(pygame_frame.get_width() * rescale_factor), int(pygame_frame.get_height() * rescale_factor)))
+                    if (can_scale_up and scale_factor > 1) or (can_scale_down and scale_factor < 1):
+                        pygame_frame = pygame.transform.scale(pygame_frame, (int(pygame_frame.get_width() * scale_factor), int(pygame_frame.get_height() * scale_factor)))
                 else:
                     break
 
@@ -260,7 +283,7 @@ class Cinematic:
                 for i in range(64):
                     #if text is not None:
                     #    for i in range(len(text)):
-                    #        text_line = pygame.font.SysFont("courier", 32).render(text[i], True, (0, 0, 0))
+                    #        text_line = pygame.font.SysFont("courier", 32).render(text[i], True, text_colour)
                     #        pygame_frame.blit(text_line, (pygame_frame.get_width() // 5, (pygame_frame.get_height() // 5) + (i * text_line.get_height())))
                     win.blit(pygame_frame, (pygame_frame_x, pygame_frame_y))
                     black.set_alpha(4 * i)
