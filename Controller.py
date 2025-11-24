@@ -26,7 +26,7 @@ class Controller:
         self.steamworks = steamworks.connection
         self.discord = discord
         self.should_store_steam_stats = False
-        self.player_sprite_selected = [None, None]
+        self.player_sprite_selected = None
         self.start_level: str | None = None
         self.difficulty = DifficultyScale.MEDIUM
         self.hud = None
@@ -534,7 +534,7 @@ class Controller:
                     self.main_menu.fade_out()
                     while True:
                         if self.pick_from_selector(self.sprite_picker, clear_normal=self.main_menu.clear_normal, clear_retro=self.main_menu.clear_retro):
-                            self.player_sprite_selected = [self.sprite_picker.values[self.sprite_picker.image_index][0], self.sprite_picker.values[self.sprite_picker.image_index][1]]
+                            self.player_sprite_selected = self.sprite_picker.values[self.sprite_picker.image_index]
                             if self.pick_from_selector(self.difficulty_picker, clear_normal=self.main_menu.clear_normal, clear_retro=self.main_menu.clear_retro):
                                 self.difficulty = self.difficulty_picker.values[self.difficulty_picker.image_index]
                                 pygame.mouse.set_visible(False)

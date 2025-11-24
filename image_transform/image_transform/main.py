@@ -119,8 +119,22 @@ def convert_all(base):
             target = 'brown'
         else:
             target = 'white'
-        run_conversion(f'{dir}UnarmedAgent{i}', base, target)
-        #run_conversion(f'{dir}RetroPlayer{i}', base, target)
+        try:
+            run_conversion(f'{dir}Player{i}', base, target)
+        except:
+            pass
+        try:
+            run_conversion(f'{dir}RetroPlayer{i}', base, target)
+        except:
+            pass
+        try:
+            run_conversion(f'{dir}JanitorPlayer{i}', base, target)
+        except:
+            pass
+        try:
+            run_conversion(f'{dir}PrisonPlayer{i}', base, target)
+        except:
+            pass
 
 convert_all('white')
 
@@ -130,8 +144,8 @@ def recolour_icons(path):
         im = Image.open(filepath)
         data = []
         for pixel in im.getdata():
-            if pixel == (0, 0, 0, 255):
-                data.append((255, 255, 255, 255))
+            if pixel == (63, 113, 120, 255):
+                data.append((236, 127, 53, 255))
             else:
                 data.append(pixel)
 
@@ -139,4 +153,4 @@ def recolour_icons(path):
         new.putdata(data)
         new.save(filepath)
 
-#recolour_icons('C:\\Users\\brent\\PycharmProjects\\AgentGlitch\\Assets\\Icons\\Timer')
+#recolour_icons('C:\\Users\\brent\\PycharmProjects\\AgentGlitch\\Assets\\Sprites\\PrisonPlayer1')

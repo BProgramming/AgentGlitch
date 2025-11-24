@@ -373,7 +373,12 @@ class Level:
                             case _:
                                 pass
 
-        player = Player(level, controller, player_start[0], player_start[1], sprite_master, player_audios, controller.difficulty, block_size, sprite=(player_sprite if player_sprite is not None else controller.player_sprite_selected[0]), retro_sprite=(player_sprite if player_sprite is not None else controller.player_sprite_selected[1]))
+        if player_sprite is not None:
+            selected_sprite = selected_retro_sprite = f'{player_sprite}Player{controller.player_sprite_selected}'
+        else:
+            selected_sprite = f'Player{controller.player_sprite_selected}'
+            selected_retro_sprite = f'RetroPlayer{controller.player_sprite_selected}'
+        player = Player(level, controller, player_start[0], player_start[1], sprite_master, player_audios, controller.difficulty, block_size, sprite=selected_sprite, retro_sprite=selected_retro_sprite)
 
         to_link = [ent for ent in [player] + blocks + hazards + enemies + objectives if hasattr(ent, 'trigger')]
         for i, ent in enumerate(to_link):

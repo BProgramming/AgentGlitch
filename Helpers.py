@@ -103,7 +103,7 @@ def load_picker_sprites(dir) -> tuple | None:
     if isdir(path):
         folders = [f for f in listdir(path) if isdir(join(path, f))]
         for folder in folders:
-            if str(folder).upper()[:6] == "PLAYER":
+            if folder[:6] == "Player":
                 lower_path = join(path, folder, "picker.png")
                 if isfile(lower_path):
                     asset = pygame.transform.smoothscale_by(pygame.image.load(lower_path).convert_alpha(), 4)
@@ -111,7 +111,7 @@ def load_picker_sprites(dir) -> tuple | None:
                     rect = pygame.Rect(0, 0, asset.get_width(), asset.get_height())
                     surface.blit(asset, (0, 0), rect)
                     images["normal"].append(surface)
-                    values.append([folder])
+                    values.append(folder[-1])
                     retro_path = join(path, f'Retro{folder}', "picker.png")
                     if isfile(retro_path):
                         asset = retroify_image(pygame.transform.smoothscale_by(pygame.image.load(retro_path).convert_alpha(), 4))
@@ -119,10 +119,8 @@ def load_picker_sprites(dir) -> tuple | None:
                         rect = pygame.Rect(0, 0, asset.get_width(), asset.get_height())
                         surface.blit(asset, (0, 0), rect)
                         images["retro"].append(surface)
-                        values[-1].append(f'Retro{folder}')
                     else:
                         images["retro"].append(None)
-                        values[-1].append(None)
         if len(images) == 0:
             handle_exception(f'No sprite images found in {FileNotFoundError(abspath(path))}.')
         return images, values
