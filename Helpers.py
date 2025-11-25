@@ -526,8 +526,8 @@ def set_property(triggering_entity, prop_to_set) -> None:
                 prop = property[i]
                 val = value[i]
                 if isinstance(val, str):
-                    if val.upper() in ("TRUE", "FALSE"):
-                        val = bool(val.upper() == "TRUE")
+                    if val.casefold() in ("true", "false"):
+                        val = bool(val.casefold() == "true")
                     elif val.isnumeric():
                         val = float(val)
                         if val == int(val):

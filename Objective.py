@@ -36,8 +36,8 @@ class Objective(Entity):
             self.update_sprite()
             self.update_geo()
         self.audios = audios
-        self.sound = None if sound == "none" else sound
-        self.text = None if text == "none" or text is None else text
+        self.sound = sound
+        self.text = text
         self.trigger = trigger
         self.achievement = achievement
         self.name = name
