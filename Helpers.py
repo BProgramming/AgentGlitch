@@ -514,11 +514,11 @@ def load_path(path_in, i, j, block_size) -> list:
 def set_property(triggering_entity, prop_to_set) -> None:
     if prop_to_set is not None:
         target, property, value = prop_to_set["target"], prop_to_set["property"], prop_to_set["value"]
-        if isinstance(target, str):
+        if not isinstance(target, list):
             target = [target]
-        if isinstance(property, str):
+        if not isinstance(property, list):
             property = [property]
-        if isinstance(value, str):
+        if not isinstance(value, list):
             value = [value]
         if len(target) == len(property) == len(value):
             for i in range(len(target)):
