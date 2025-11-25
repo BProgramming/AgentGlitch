@@ -438,11 +438,9 @@ class Controller:
                     case pygame.KEYDOWN:
                         if event.key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]['keys_pause_unpause']:
                             paused = False
-                            break
                     case pygame.JOYBUTTONDOWN:
                         if event.button == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]['button_pause_unpause']:
                             paused = False
-                            break
                     case pygame.JOYDEVICEADDED:
                         self.enable_gamepad(notify=True)
                         if self.gamepad is not None:
@@ -455,6 +453,9 @@ class Controller:
                             pygame.mouse.set_visible(True)
                     case _:
                         pass
+
+            if not paused:
+                break
 
             self.pause_menu.draw()
             pygame.display.update()
