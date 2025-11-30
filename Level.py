@@ -7,7 +7,8 @@ from NonPlayer import NonPlayer
 from Objective import Objective
 from Trigger import Trigger, TriggerType
 from ParticleEffect import *
-from Helpers import load_path, validate_file_list, display_text, ASSETS_FOLDER, NORMAL_WHITE, RETRO_WHITE
+from Helpers import load_path, validate_file_list, display_text, ASSETS_FOLDER, NORMAL_WHITE, RETRO_WHITE, \
+    MovementDirection
 
 
 class Level:
@@ -263,6 +264,7 @@ class Level:
         height = len(layout) * block_size
         level_bounds = ((0, 0), (width, height))
         player_start = (0, 0)
+        player_face_left = False
 
         blocks = []
         doors = {}
@@ -300,6 +302,7 @@ class Level:
                         match entry["type"].upper():
                             case "PLAYER":
                                 player_start = ((j * block_size), (i * block_size))
+                                player_face_left = False if data.get('face_left') is None else data['face_left']
                             case "OBJECTIVE":
                                 objectives.append(Objective(level, controller, j * block_size, i * block_size, block_size, block_size, sprite_master, block_audios, is_active=(False if data.get("is_active") is None else data["is_active"]), sprite=(None if data.get("sprite") is None else data["sprite"]), sound=("objective" if data.get("sound") is None else data["sound"].lower()), text=(None if data.get("text") is None else data["text"]), trigger=(None if data.get("trigger") is None else data["trigger"]), is_blocking=(False if data.get("is_blocking") is None else data["is_blocking"]), achievement=(None if data.get("achievement") is None else data["achievement"]),  name=(element if data.get("name") is None else data["name"])))
                             case "BLOCK":
@@ -379,6 +382,8 @@ class Level:
             selected_sprite = f'Player{controller.player_sprite_selected}'
             selected_retro_sprite = f'RetroPlayer{controller.player_sprite_selected}'
         player = Player(level, controller, player_start[0], player_start[1], sprite_master, player_audios, controller.difficulty, block_size, sprite=selected_sprite, retro_sprite=selected_retro_sprite)
+        if player_face_left:
+            player.direction = player.facing = MovementDirection.LEFT
 
         to_link = [ent for ent in [player] + blocks + hazards + enemies + objectives if hasattr(ent, 'trigger')]
         for i, ent in enumerate(to_link):
