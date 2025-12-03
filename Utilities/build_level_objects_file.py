@@ -2,10 +2,12 @@ import re
 from os.path import isfile
 
 def gen_ents(file):
-    pin = f'C:\\Users\\brent\\PycharmProjects\\AgentGlitch\\Assets\\Levels\\'
+    pin = 'C:\\Users\\brent\\PycharmProjects\\AgentGlitch\\Assets\\Levels\\'
     pout = 'C:\\Users\\brent\\PycharmProjects\\AgentGlitch\\Assets\\ReferenceDicts\\GameObjects\\'
     if isfile(f'{pout}{file}.agd'):
-        print(f'ERROR: file {pout}{file}.agd already exists')
+        print(f'ERROR: File {pout}{file}.agd already exists')
+    elif not isfile(f'{pin}{file}.agl'):
+        print(f'ERROR: File {pin}{file}.agl does not exist')
     else:
         with (open(f'{pin}{file}.agl', 'r', newline='') as fin, open(f'{pout}{file}.agd', 'w', newline='') as fout):
             values = sorted(list(set(re.split(r'[\s,]+', fin.read()))))
@@ -17,7 +19,6 @@ def gen_ents(file):
                 output = f'  "{value}' + '": {\n    "type": "",\n    "data": {\n      \n    }\n  }' + f'{(',' if i < len(values) - 1 else '')}\n'
                 fout.write(output)
             fout.write('}')
-            print(f'file {pout}{file}.agd created')
+            print(f'File {pout}{file}.agd created')
 
-gen_ents('level1')
-gen_ents('level2')
+gen_ents('level3')
