@@ -298,6 +298,8 @@ class Level:
                 for element in [str(i) for i in layout[i][j].split(' ')]:
                     if len(element) > 0 and objects_dict.get(element) is not None:
                         entry = objects_dict[element]
+                        if entry.get("data") is None or entry.get("type") is None:
+                            continue
                         data = entry["data"]
                         match entry["type"].upper():
                             case "PLAYER":
