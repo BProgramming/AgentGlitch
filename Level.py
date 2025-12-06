@@ -5,7 +5,9 @@ from Cinematics import CinematicsManager
 from Player import Player
 from NonPlayer import NonPlayer
 from Objective import Objective
-from Trigger import Trigger, TriggerType
+from Trigger import Trigger, TextTrigger, SoundTrigger, SpawnTrigger, RevertTrigger, SaveTrigger, \
+    ChangeLevelTrigger, PropertyTrigger, CinematicTrigger, AchievementTrigger, ObjectiveTrigger, SwapLevelTrigger, \
+    CameraToPointTrigger, CameraToPlayerTrigger, DiscordStatusTrigger
 from ParticleEffect import *
 from Helpers import load_path, validate_file_list, display_text, ASSETS_FOLDER, NORMAL_WHITE, RETRO_WHITE, \
     MovementDirection
@@ -374,7 +376,51 @@ class Level:
                                     path = load_path([int(i) for i in data["path"].split(' ')], i, j, block_size)
                                 enemies.append(Boss(level, controller, j * block_size, i * block_size, sprite_master, enemy_audios, controller.difficulty, block_size, music=(None if data.get("music") is None else data["music"]), trigger=(None if data.get("trigger") is None else data["trigger"]), path=path, hp=data["hp"], show_health_bar=(True if data.get("show_health_bar") is None else data["show_health_bar"]), can_shoot=(False if data.get("can_shoot") is None else data["can_shoot"]), sprite=data["sprite"], proj_sprite=(None if data.get("proj_sprite") is None else data["proj_sprite"]), name=(element if data.get("name") is None else data["name"])))
                             case "TRIGGER":
-                                triggers.append(Trigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, win, objects_dict, sprite_master, enemy_audios, block_audios, message_audios, image_master, block_size, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), type=(TriggerType(data["type"]) if isinstance(data["type"], int) else TriggerType.convert_string(data["type"])), input=(None if data.get("input") is None else data["input"]), name=(element if data.get("name") is None else data["name"])))
+                                packed_input = (None if data.get("input") is None else data["input"])
+                                triggers.append(Trigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"])))
+                            case "TEXTTRIGGER":
+                                packed_input = {'ref': message_audios, 'input': (None if data.get("input") is None else data["input"])}
+                                triggers.append(TextTrigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"])))
+                            case "SOUNDTRIGGER":
+                                packed_input = (None if data.get("input") is None else data["input"])
+                                triggers.append(SoundTrigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"])))
+                            case "SPAWNTRIGGER":
+                                all_refs = {'objects_dict': objects_dict, 'sprite_master': sprite_master, 'enemy_audios': enemy_audios, 'block_audios': block_audios, 'message_audios': message_audios, 'image_master': image_master, 'block_size': block_size}
+                                packed_input = {'ref': all_refs, 'input': (None if data.get("input") is None else data["input"])}
+                                triggers.append(SpawnTrigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"])))
+                            case "REVERTTRIGGER":
+                                packed_input = (None if data.get("input") is None else data["input"])
+                                triggers.append(RevertTrigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"])))
+                            case "SAVETRIGGER":
+                                packed_input = (None if data.get("input") is None else data["input"])
+                                triggers.append(SaveTrigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"])))
+                            case "CHANGELEVELTRIGGER":
+                                packed_input = (None if data.get("input") is None else data["input"])
+                                triggers.append(ChangeLevelTrigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"])))
+                            case "PROPERTYTRIGGER":
+                                packed_input = (None if data.get("input") is None else data["input"])
+                                triggers.append(PropertyTrigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"])))
+                            case "CINEMATICTRIGGER":
+                                packed_input = (None if data.get("input") is None else data["input"])
+                                triggers.append(CinematicTrigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"])))
+                            case "ACHIEVEMENTTRIGGER":
+                                packed_input = (None if data.get("input") is None else data["input"])
+                                triggers.append(AchievementTrigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"])))
+                            case "OBJECTIVETRIGGER":
+                                packed_input = (None if data.get("input") is None else data["input"])
+                                triggers.append(ObjectiveTrigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"])))
+                            case "SWAPLEVELTRIGGER":
+                                packed_input = (None if data.get("input") is None else data["input"])
+                                triggers.append(SwapLevelTrigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"])))
+                            case "CAMERATOPOINTTRIGGER":
+                                packed_input = {'ref': block_size, 'input': (None if data.get("input") is None else data["input"])}
+                                triggers.append(CameraToPointTrigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"])))
+                            case "CAMERATOPLAYERTRIGGER":
+                                packed_input = (None if data.get("input") is None else data["input"])
+                                triggers.append(CameraToPlayerTrigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"])))
+                            case "DISCORDSTATUSTRIGGER":
+                                packed_input = (None if data.get("input") is None else data["input"])
+                                triggers.append(DiscordStatusTrigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"])))
                             case _:
                                 pass
 

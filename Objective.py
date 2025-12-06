@@ -67,7 +67,7 @@ class Objective(Entity):
             self.controller.activate_objective(self.level.default_objective, popup=False)
             if self.trigger is not None:
                 for trigger in self.trigger:
-                    dtime_offset += trigger.collide(self.level.player)[1]
+                    dtime_offset += trigger.collide(self.level.player)
         return dtime_offset
 
     def save(self) -> dict:

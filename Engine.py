@@ -256,11 +256,9 @@ def main(win):
                 if (controller.goto_load and isfile(join(GAME_DATA_FOLDER, "save.p"))) or controller.goto_main or controller.goto_restart:
                     break
 
-                result = level.player.loop(dtime) # the player loses health in here during the hot-swap bug
-                if result[0] is not None:
-                    next_level = result[0]
+                dtime_offset += level.player.loop(dtime) # the player loses health in here during the hot-swap bug
+                if controller.next_level is not None:
                     break
-                dtime_offset += result[1]
 
                 if level.player.hp <= 0 and level.player.cooldowns.get("dead") is not None and level.player.cooldowns["dead"] <= 0:
                     if controller.difficulty >= DifficultyScale.HARDEST:
@@ -339,7 +337,7 @@ def main(win):
                 controller.level = None
                 controller.hud = None
                 break
-            elif next_level is not None:
+            elif controller.next_level is not None:
                 if level.end_message is not None:
                     display_text(load_text_from_file(level.end_message), controller, should_type_text=True, retro=level.retro)
                 controller.save_player_profile()
@@ -350,7 +348,8 @@ def main(win):
                 for cinematic in recap_cinematics:
                     cinematics.cinematics[cinematic["name"]].text = ["Mission successful."] + level.get_recap_text()
                     cinematics.play(cinematic["name"], win)
-                cur_level = next_level
+                cur_level = controller.next_level
+                controller.next_level = None
 
         if not controller.goto_main:
             for cinematic in end_cinematics:

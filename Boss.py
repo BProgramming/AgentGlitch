@@ -27,7 +27,7 @@ class Boss(NonPlayer):
         self.level.boss_hp_pct = 0
         if self.trigger is not None:
             for trigger in self.trigger:
-                dtime_offset += trigger.collide(self.level.player)[1]
+                dtime_offset += trigger.collide(self.level.player)
 
     def __update_onscreen_presence__(self) -> None:
         if self.level.boss_hp_pct is None and math.dist((self.level.player.rect.x, self.level.player.rect.y), (self.rect.x, self.rect.y)) <= self.spot_range:

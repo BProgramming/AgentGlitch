@@ -178,19 +178,16 @@ class Player(Actor):
                         active_audio_channel.play(self.audios["BULLET_TIME"][random.randrange(len(self.audios["BULLET_TIME"]))])
                         active_audio_channel.set_volume(self.controller.master_volume["player"])
 
-    def get_triggers(self) -> tuple[str, int]:
+    def get_triggers(self) -> float:
         dtime_offset: float = 0.0
-        next_level = None
         for trigger in self.level.triggers:
             if pygame.sprite.collide_rect(self, trigger):
-                result = trigger.collide(self)
-                next_level = result[0]
-                dtime_offset += result[1]
+                dtime_offset += trigger.collide(self)
                 if trigger.fire_once:
                     self.level.queue_purge(trigger)
-        return next_level, dtime_offset
+        return dtime_offset
 
-    def loop(self, dtime: float) -> tuple[str, float]:
+    def loop(self, dtime: float) -> float:
         dtime_offset: float = 0.0
         if self.teleport_distance != 0:
             self.animation_count += dtime
@@ -204,5 +201,4 @@ class Player(Actor):
             if self.is_slow_time and self.cooldowns["bullet_time_active"] <= 0:
                 self.is_slow_time = False
             dtime_offset += super().loop(dtime)
-        triggers = self.get_triggers()
-        return triggers[0], triggers[1] + dtime_offset
+        return dtime_offset + self.get_triggers()
