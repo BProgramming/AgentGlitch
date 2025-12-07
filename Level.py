@@ -288,11 +288,11 @@ class Level:
 
         for i in range(len(layout)):
             win.fill((0, 0, 0))
+            win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
             bar = pygame.Surface((int(win.get_width() * ((i + 1) / len(layout))), 10), pygame.SRCALPHA)
             bar.fill(bar_colour)
             win.blit(bar, (0, win.get_height() - 12))
             pct = 100 * (i + 1)//len(layout)
-            win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
             display_text(f'Building level... {" " if pct < 100 else ""}{" " if pct < 10 else ""}{pct}%', controller, min_pause_time=0, should_sleep=False, retro=level.retro, background=True)
             static_blocks.append([])
             for j in range(len(layout[i])):
@@ -436,11 +436,11 @@ class Level:
         to_link = [ent for ent in [player] + blocks + hazards + enemies + objectives if hasattr(ent, 'trigger')]
         for i, ent in enumerate(to_link):
             win.fill((0, 0, 0))
+            win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
             bar = pygame.Surface((int(win.get_width() * ((i + 1) / len(to_link))), 10), pygame.SRCALPHA)
             bar.fill(bar_colour)
             win.blit(bar, (0, win.get_height() - 12))
             pct = 100 * (i + 1) // len(to_link)
-            win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
             display_text(f'Linking game objects... {" " if pct < 100 else ""}{" " if pct < 10 else ""}{pct}%', controller, min_pause_time=0, should_sleep=False, retro=level.retro, background=True)
             ent.link_triggers(triggers)
 

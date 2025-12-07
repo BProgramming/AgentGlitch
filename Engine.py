@@ -129,6 +129,8 @@ def main(win):
             loading_screen = list(loading_screens.values())[random.randint(0, len(loading_screens) - 1)]
             if controller.retro:
                 loading_screen = retroify_image(loading_screen)
+            scale_factor = min(win.get_width() / loading_screen.get_width(), win.get_height() / loading_screen.get_height())
+            loading_screen = pygame.transform.scale_by(loading_screen, scale_factor)
             win.fill((0, 0, 0))
             win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
             display_text("Loading mission... [1/3]", controller, min_pause_time=0, should_sleep=False, retro=controller.retro, background=True)
