@@ -57,7 +57,7 @@ def save(level, hud, controller):
             hud.save_icon_timer = 1.0
 
         data = {"level": level.name, "time": level.time, "objective": controller.active_objective}
-        for ent in [level.player] + level.entities + level.objectives_collected:
+        for ent in level.entities + level.objectives_collected:
             ent_data = ent.save()
             if ent_data is not None:
                 data.update(ent_data)
@@ -84,7 +84,7 @@ def load_part2(data, level, controller):
     else:
         level.time = 0 if data.get("time") is None else data["time"]
         controller.active_objective = None if data.get("objective") is None else data["objective"]
-        for ent in [level.player] + level.entities:
+        for ent in level.entities:
             ent_data = data.get(ent.name)
             if ent_data is not None:
                 if hasattr(ent, "has_fired") and ent.has_fired:

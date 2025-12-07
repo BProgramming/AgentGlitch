@@ -127,7 +127,7 @@ class Level:
 
     @property
     def entities(self) -> list:
-        return self.triggers + self.blocks + self.hazards + self.enemies + self.objectives
+        return [self.player] + self.triggers + self.blocks + self.hazards + self.enemies + self.objectives
 
     def get_entities_in_range(self, point, dist_x=(1, 1), dist_y=(1, 1), blocks_only=False, include_doors=True, include_hazards=False) -> list:
         x = int(point[0] / self.block_size)
@@ -209,7 +209,7 @@ class Level:
 
     def gen_image(self) -> None:
         img = pygame.Surface((self.level_bounds[1][0], self.level_bounds[1][1]), pygame.SRCALPHA)
-        for ent in self.entities + [self.player]:
+        for ent in self.entities:
             img.blit(ent.sprite, (ent.rect.x, ent.rect.y))
         pygame.image.save(img, join(ASSETS_FOLDER, "Misc", self.name + ".png"))
 

@@ -532,7 +532,7 @@ def set_property(triggering_entity, prop_to_set) -> None:
                         val = float(val)
                         if val == int(val):
                             val = int(val)
-                for ent in [triggering_entity.level.player] + triggering_entity.level.entities:
+                for ent in triggering_entity.level.entities:
                     if ent.name.casefold().startswith(targ.casefold()):
                         if hasattr(ent, prop):
                             setattr(ent, prop, val)

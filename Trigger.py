@@ -9,11 +9,11 @@ from NonPlayer import NonPlayer
 from Boss import Boss
 
 class Trigger(Entity):
-    def __init__(self, level, controller, x, y, width, height, input, fire_once=True, name="Trigger"):
+    def __init__(self, level, controller, x, y, width, height, value, fire_once=True, name="Trigger"):
         super().__init__(level, controller, x, y, width, height, name=name)
         self.fire_once = fire_once
         self.has_fired = False
-        self.value = self.__load_input__(input)
+        self.value = self.__load_input__(value)
 
     def save(self) -> dict | None:
         if self.has_fired:
@@ -25,11 +25,11 @@ class Trigger(Entity):
         self.has_fired = ent["has_fired"]
 
     @staticmethod
-    def __unpack_input__(input: dict) -> tuple:
-        return input['ref'], input['input']
+    def __unpack_input__(value: dict) -> tuple:
+        return value['ref'], value['input']
 
-    def __load_input__(self, input):
-        return input
+    def __load_input__(self, value) -> object:
+        return value
 
     def collide(self, ent: Entity | None) -> float:
         return 0.0
@@ -37,25 +37,9 @@ class Trigger(Entity):
     def draw(self, win, offset_x, offset_y, master_volume) -> None:
         pass
 
-class TextTrigger(Trigger):
-    def __init__(self, level, controller, x, y, width, height, input, fire_once=True, name="TextTrigger"):
-        super().__init__(level, controller, x, y, width, height, input, fire_once=fire_once, name=name)
-
-    def __load_input__(self, input) -> dict[str, list | None] | None:
-        message_audios, input_unpacked = self.__unpack_input__(input)
-        audio = None
-        if input_unpacked.get("audio") is not None:
-            if message_audios.get(input_unpacked["audio"]) is None:
-                handle_exception(f'Audio file {input_unpacked["audio"]} not found.')
-                return None
-            else:
-                audio = message_audios.get(input_unpacked["audio"])
-        if input_unpacked.get("type") is None:
-            should_type = True
-        else:
-            should_type = input_unpacked["type"]
-        text = load_text_from_file(input_unpacked["file"])
-        return {"text": text, "should_type": should_type, "audio": audio}
+class AchievementTrigger(Trigger):
+    def __init__(self, level, controller, x, y, width, height, value, fire_once=True, name="AchievementTrigger"):
+        super().__init__(level, controller, x, y, width, height, value, fire_once=fire_once, name=name)
 
     def collide(self, ent: Entity | None) -> float:
         if self.fire_once and self.has_fired:
@@ -63,16 +47,155 @@ class TextTrigger(Trigger):
         else:
             start = time.perf_counter()
             self.has_fired = True
-            display_text(self.value["text"], self.controller, audio=self.value["audio"], should_type_text=self.value["should_type"], retro=self.level.retro)
+            if self.controller.steamworks is not None and not self.controller.steamworks.UserStats.GetAchievement(self.value):
+                self.controller.steamworks.UserStats.SetAchievement(self.value)
+                self.controller.should_store_steam_stats = True
+            return time.perf_counter() - start
+
+class CameraToPlayerTrigger(Trigger):
+    def __init__(self, level, controller, x, y, width, height, value, fire_once=True, name="CameraToPlayerTrigger"):
+        super().__init__(level, controller, x, y, width, height, value, fire_once=fire_once, name=name)
+
+    def collide(self, ent: Entity | None) -> float:
+        if self.fire_once and self.has_fired:
+            return 0.0
+        else:
+            start = time.perf_counter()
+            self.has_fired = True
+            self.controller.should_scroll_to_point = None
+            return time.perf_counter() - start
+
+class CameraToPointTrigger(Trigger):
+    def __init__(self, level, controller, x, y, width, height, value, fire_once=True, name="CameraToPointTrigger"):
+        super().__init__(level, controller, x, y, width, height, value, fire_once=fire_once, name=name)
+
+    def __load_input__(self, value) -> dict[str, int | float]:
+        block_size, input_unpacked = self.__unpack_input__(value)
+        txt = input_unpacked["coords"].split(' ')
+        return {"coords": (int(txt[0]) * block_size, int(txt[1]) * block_size), "time": (0.0 if input_unpacked.get("time") is None else input_unpacked["time"])}
+
+    def collide(self, ent: Entity | None) -> float:
+        if self.fire_once and self.has_fired:
+            return 0.0
+        else:
+            start = time.perf_counter()
+            self.has_fired = True
+            self.controller.should_scroll_to_point = self.value
+            return time.perf_counter() - start
+
+class ChangeLevelTrigger(Trigger):
+    def __init__(self, level, controller, x, y, width, height, value, fire_once=True, name="ChangeLevelTrigger"):
+        super().__init__(level, controller, x, y, width, height, value, fire_once=fire_once, name=name)
+
+    def collide(self, ent: Entity | None) -> float:
+        if self.fire_once and self.has_fired:
+            return 0.0
+        else:
+            start = time.perf_counter()
+            self.has_fired = True
+            if isinstance(self.value, str):
+                self.controller.next_level = self.value.upper()
+            return time.perf_counter() - start
+
+class CinematicTrigger(Trigger):
+    def __init__(self, level, controller, x, y, width, height, value, fire_once=True, name="CinematicTrigger"):
+        super().__init__(level, controller, x, y, width, height, value, fire_once=fire_once, name=name)
+
+    def collide(self, ent: Entity | None) -> float:
+        if self.fire_once and self.has_fired:
+            return 0.0
+        else:
+            start = time.perf_counter()
+            self.has_fired = True
+            if self.level.cinematics is not None and self.level.cinematics.get(self.value) is not None:
+                self.level.cinematics.queue(self.value)
+            return time.perf_counter() - start
+
+class DiscordStatusTrigger(Trigger):
+    def __init__(self, level, controller, x, y, width, height, value, fire_once=True, name="DiscordStatusTrigger"):
+        super().__init__(level, controller, x, y, width, height, value, fire_once=fire_once, name=name)
+
+    def __load_input__(self, value) -> dict[str, str]:
+        return {"state": "" if value.get("state") is None else value["state"], "details": "" if value.get("details") is None else value["details"]}
+
+    def collide(self, ent: Entity | None) -> float:
+        if self.fire_once and self.has_fired:
+            return 0.0
+        else:
+            start = time.perf_counter()
+            self.has_fired = True
+            if isinstance(self.value, dict):
+                self.controller.discord.set_status(details=self.value["details"], state=self.value["state"])
+            return time.perf_counter() - start
+
+class ObjectiveTrigger(Trigger):
+    def __init__(self, level, controller, x, y, width, height, value, fire_once=True, name="ObjectiveTrigger"):
+        super().__init__(level, controller, x, y, width, height, value, fire_once=fire_once, name=name)
+
+    def __load_input__(self, value) -> dict[str, str | bool]:
+        return {"target": value["target"], "value": value["value"]}
+
+    def collide(self, ent: Entity | None) -> float:
+        if self.fire_once and self.has_fired:
+            return 0.0
+        else:
+            start = time.perf_counter()
+            self.has_fired = True
+            text = None
+            for objective in self.level.objectives:
+                if isinstance(self.value, dict) and self.value["target"] == objective.name:
+                    objective.is_active = self.value["value"]
+                    if text is None and objective.text is not None:
+                        text = objective.text
+            self.controller.activate_objective(text)
+            return time.perf_counter() - start
+
+class PropertyTrigger(Trigger):
+    def __init__(self, level, controller, x, y, width, height, value, fire_once=True, name="PropertyTrigger"):
+        super().__init__(level, controller, x, y, width, height, value, fire_once=fire_once, name=name)
+
+    def collide(self, ent: Entity | None) -> float:
+        if self.fire_once and self.has_fired:
+            return 0.0
+        else:
+            start = time.perf_counter()
+            self.has_fired = True
+            set_property(self, self.value)
+            return time.perf_counter() - start
+
+class RevertTrigger(Trigger):
+    def __init__(self, level, controller, x, y, width, height, value, fire_once=True, name="RevertTrigger"):
+        super().__init__(level, controller, x, y, width, height, value, fire_once=fire_once, name=name)
+
+    def collide(self, ent: Entity | None) -> float:
+        if self.fire_once and self.has_fired:
+            return 0.0
+        else:
+            start = time.perf_counter()
+            self.has_fired = True
+            self.level.player.revert()
+            return time.perf_counter() - start
+
+class SaveTrigger(Trigger):
+    def __init__(self, level, controller, x, y, width, height, value, fire_once=True, name="SaveTrigger"):
+        super().__init__(level, controller, x, y, width, height, value, fire_once=fire_once, name=name)
+
+    def collide(self, ent: Entity | None) -> float:
+        if self.fire_once and self.has_fired:
+            return 0.0
+        else:
+            start = time.perf_counter()
+            self.has_fired = True
+            self.level.player.save()
             return time.perf_counter() - start
 
 class SoundTrigger(Trigger):
-    def __init__(self, level, controller, x, y, width, height, input, fire_once=True, name="SoundTrigger"):
-        super().__init__(level, controller, x, y, width, height, input, fire_once=fire_once, name=name)
+    def __init__(self, level, controller, x, y, width, height, value, fire_once=True, name="SoundTrigger"):
+        super().__init__(level, controller, x, y, width, height, value, fire_once=fire_once, name=name)
 
-    def __load_input__(self, input) -> pygame.mixer.Sound | None:
-        path = join(ASSETS_FOLDER, "SoundEffects", "triggers", input)
-        if not isfile(path) or len(input) < 4 or (input[-4:] != ".wav" and input[-4:] != ".mp3"):
+    def __load_input__(self, value) -> pygame.mixer.Sound | None:
+        path = join(ASSETS_FOLDER, "SoundEffects", "triggers", value)
+        if not isfile(path) or len(value) < 4 or (value[-4:] != ".wav" and value[-4:] != ".mp3"):
             return None
         else:
             return pygame.mixer.Sound(path)
@@ -83,16 +206,16 @@ class SoundTrigger(Trigger):
         else:
             start = time.perf_counter()
             self.has_fired = True
-            if self.value is not None:
+            if self.value is not None and isinstance(self.value, pygame.mixer.Sound):
                 pygame.mixer.find_channel(force=True).play(self.value)
             return time.perf_counter() - start
 
 class SpawnTrigger(Trigger):
-    def __init__(self, level, controller, x, y, width, height, input, fire_once=True, name="SpawnTrigger"):
-        super().__init__(level, controller, x, y, width, height, input, fire_once=fire_once, name=name)
+    def __init__(self, level, controller, x, y, width, height, value, fire_once=True, name="SpawnTrigger"):
+        super().__init__(level, controller, x, y, width, height, value, fire_once=fire_once, name=name)
 
-    def __load_input__(self, input) -> Entity | None:
-        refs, input_unpacked = self.__unpack_input__(input)
+    def __load_input__(self, value) -> Entity | None:
+        refs, input_unpacked = self.__unpack_input__(value)
         objects_dict = refs['objects_dict']
         sprite_master = refs['sprite_master']
         enemy_audios = refs['enemy_audios']
@@ -225,112 +348,9 @@ class SpawnTrigger(Trigger):
                     self.level.blocks.append(self.value)
             return time.perf_counter() - start
 
-class RevertTrigger(Trigger):
-    def __init__(self, level, controller, x, y, width, height, input, fire_once=True, name="RevertTrigger"):
-        super().__init__(level, controller, x, y, width, height, input, fire_once=fire_once, name=name)
-
-    def collide(self, ent: Entity | None) -> float:
-        if self.fire_once and self.has_fired:
-            return 0.0
-        else:
-            start = time.perf_counter()
-            self.has_fired = True
-            self.level.player.revert()
-            return time.perf_counter() - start
-
-class SaveTrigger(Trigger):
-    def __init__(self, level, controller, x, y, width, height, input, fire_once=True, name="SaveTrigger"):
-        super().__init__(level, controller, x, y, width, height, input, fire_once=fire_once, name=name)
-
-    def collide(self, ent: Entity | None) -> float:
-        if self.fire_once and self.has_fired:
-            return 0.0
-        else:
-            start = time.perf_counter()
-            self.has_fired = True
-            self.level.player.save()
-            return time.perf_counter() - start
-
-class ChangeLevelTrigger(Trigger):
-    def __init__(self, level, controller, x, y, width, height, input, fire_once=True, name="ChangeLevelTrigger"):
-        super().__init__(level, controller, x, y, width, height, input, fire_once=fire_once, name=name)
-
-    def collide(self, ent: Entity | None) -> float:
-        if self.fire_once and self.has_fired:
-            return 0.0
-        else:
-            start = time.perf_counter()
-            self.has_fired = True
-            self.controller.next_level = self.value.upper()
-            return time.perf_counter() - start
-
-class PropertyTrigger(Trigger):
-    def __init__(self, level, controller, x, y, width, height, input, fire_once=True, name="PropertyTrigger"):
-        super().__init__(level, controller, x, y, width, height, input, fire_once=fire_once, name=name)
-
-    def collide(self, ent: Entity | None) -> float:
-        if self.fire_once and self.has_fired:
-            return 0.0
-        else:
-            start = time.perf_counter()
-            self.has_fired = True
-            set_property(self, self.value)
-            return time.perf_counter() - start
-
-class CinematicTrigger(Trigger):
-    def __init__(self, level, controller, x, y, width, height, input, fire_once=True, name="CinematicTrigger"):
-        super().__init__(level, controller, x, y, width, height, input, fire_once=fire_once, name=name)
-
-    def collide(self, ent: Entity | None) -> float:
-        if self.fire_once and self.has_fired:
-            return 0.0
-        else:
-            start = time.perf_counter()
-            self.has_fired = True
-            if self.level.cinematics is not None and self.level.cinematics.get(self.value) is not None:
-                self.level.cinematics.queue(self.value)
-            return time.perf_counter() - start
-
-class AchievementTrigger(Trigger):
-    def __init__(self, level, controller, x, y, width, height, input, fire_once=True, name="AchievementTrigger"):
-        super().__init__(level, controller, x, y, width, height, input, fire_once=fire_once, name=name)
-
-    def collide(self, ent: Entity | None) -> float:
-        if self.fire_once and self.has_fired:
-            return 0.0
-        else:
-            start = time.perf_counter()
-            self.has_fired = True
-            if self.controller.steamworks is not None and not self.controller.steamworks.UserStats.GetAchievement(self.value):
-                self.controller.steamworks.UserStats.SetAchievement(self.value)
-                self.controller.should_store_steam_stats = True
-            return time.perf_counter() - start
-
-class ObjectiveTrigger(Trigger):
-    def __init__(self, level, controller, x, y, width, height, input, fire_once=True, name="ObjectiveTrigger"):
-        super().__init__(level, controller, x, y, width, height, input, fire_once=fire_once, name=name)
-
-    def __load_input__(self, input) -> dict[str, str | bool]:
-        return {"target": input["target"], "value": input["value"]}
-
-    def collide(self, ent: Entity | None) -> float:
-        if self.fire_once and self.has_fired:
-            return 0.0
-        else:
-            start = time.perf_counter()
-            self.has_fired = True
-            text = None
-            for objective in self.level.objectives:
-                if self.value["target"] == objective.name:
-                    objective.is_active = self.value["value"]
-                    if text is None and objective.text is not None:
-                        text = objective.text
-            self.controller.activate_objective(text)
-            return time.perf_counter() - start
-
 class SwapLevelTrigger(Trigger):
-    def __init__(self, level, controller, x, y, width, height, input, fire_once=True, name="SwapLevelTrigger"):
-        super().__init__(level, controller, x, y, width, height, input, fire_once=fire_once, name=name)
+    def __init__(self, level, controller, x, y, width, height, value, fire_once=True, name="SwapLevelTrigger"):
+        super().__init__(level, controller, x, y, width, height, value, fire_once=fire_once, name=name)
 
     def collide(self, ent: Entity | None) -> float:
         if self.fire_once and self.has_fired:
@@ -341,14 +361,25 @@ class SwapLevelTrigger(Trigger):
             self.controller.should_hot_swap_level = True
             return time.perf_counter() - start
 
-class CameraToPointTrigger(Trigger):
-    def __init__(self, level, controller, x, y, width, height, input, fire_once=True, name="CameraToPointTrigger"):
-        super().__init__(level, controller, x, y, width, height, input, fire_once=fire_once, name=name)
+class TextTrigger(Trigger):
+    def __init__(self, level, controller, x, y, width, height, value, fire_once=True, name="TextTrigger"):
+        super().__init__(level, controller, x, y, width, height, value, fire_once=fire_once, name=name)
 
-    def __load_input__(self, input) -> dict[str, int | float]:
-        block_size, input_unpacked = self.__unpack_input__(input)
-        txt = input_unpacked["coords"].split(' ')
-        return {"coords": (int(txt[0]) * block_size, int(txt[1]) * block_size), "time": (0.0 if input_unpacked.get("time") is None else input_unpacked["time"])}
+    def __load_input__(self, value) -> dict[str, list | None] | None:
+        message_audios, input_unpacked = self.__unpack_input__(value)
+        audio = None
+        if input_unpacked.get("audio") is not None:
+            if message_audios.get(input_unpacked["audio"]) is None:
+                handle_exception(f'Audio file {input_unpacked["audio"]} not found.')
+                return None
+            else:
+                audio = message_audios.get(input_unpacked["audio"])
+        if input_unpacked.get("type") is None:
+            should_type = True
+        else:
+            should_type = input_unpacked["type"]
+        text = load_text_from_file(input_unpacked["file"])
+        return {"text": text, "should_type": should_type, "audio": audio}
 
     def collide(self, ent: Entity | None) -> float:
         if self.fire_once and self.has_fired:
@@ -356,34 +387,6 @@ class CameraToPointTrigger(Trigger):
         else:
             start = time.perf_counter()
             self.has_fired = True
-            self.controller.should_scroll_to_point = self.value
-            return time.perf_counter() - start
-
-class CameraToPlayerTrigger(Trigger):
-    def __init__(self, level, controller, x, y, width, height, input, fire_once=True, name="CameraToPlayerTrigger"):
-        super().__init__(level, controller, x, y, width, height, input, fire_once=fire_once, name=name)
-
-    def collide(self, ent: Entity | None) -> float:
-        if self.fire_once and self.has_fired:
-            return 0.0
-        else:
-            start = time.perf_counter()
-            self.has_fired = True
-            self.controller.should_scroll_to_point = None
-            return time.perf_counter() - start
-
-class DiscordStatusTrigger(Trigger):
-    def __init__(self, level, controller, x, y, width, height, input, fire_once=True, name="DiscordStatusTrigger"):
-        super().__init__(level, controller, x, y, width, height, input, fire_once=fire_once, name=name)
-
-    def __load_input__(self, input) -> dict[str, str]:
-        return {"state": "" if input.get("state") is None else input["state"], "details": "" if input.get("details") is None else input["details"]}
-
-    def collide(self, ent: Entity | None) -> float:
-        if self.fire_once and self.has_fired:
-            return 0.0
-        else:
-            start = time.perf_counter()
-            self.has_fired = True
-            self.controller.discord.set_status(details=self.value["details"], state=self.value["state"])
+            if isinstance(self.value, dict):
+                display_text(self.value["text"], self.controller, audio=self.value["audio"], should_type_text=self.value["should_type"], retro=self.level.retro)
             return time.perf_counter() - start

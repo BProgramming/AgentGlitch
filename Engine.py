@@ -253,11 +253,7 @@ def main(win):
                         case _:
                             pass
                 dtime_offset += controller.handle_continuous_input()
-                if (controller.goto_load and isfile(join(GAME_DATA_FOLDER, "save.p"))) or controller.goto_main or controller.goto_restart:
-                    break
-
-                dtime_offset += level.player.loop(dtime) # the player loses health in here during the hot-swap bug
-                if controller.next_level is not None:
+                if (controller.goto_load and isfile(join(GAME_DATA_FOLDER, "save.p"))) or controller.goto_main or controller.goto_restart or (controller.next_level is not None):
                     break
 
                 if level.player.hp <= 0 and level.player.cooldowns.get("dead") is not None and level.player.cooldowns["dead"] <= 0:
