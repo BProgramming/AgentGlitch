@@ -186,7 +186,8 @@ class SaveTrigger(Trigger):
         else:
             start = time.perf_counter()
             self.has_fired = True
-            self.level.player.save()
+            self.controller.save()
+            self.controller.save_player_profile()
             return time.perf_counter() - start
 
 class SoundTrigger(Trigger):

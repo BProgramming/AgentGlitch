@@ -104,10 +104,10 @@ def run_conversion(path, base, target):
         filepath = join(path, file)
         print(filepath)
         convert(Image.open(filepath), base, target, lips=True).save(filepath)
-run_conversion('/Assets/Sprites/UnarmedAgent1', 'black', 'white')
+#run_conversion('/Assets/Sprites/UnarmedAgent1', 'black', 'white')
 
 def convert_all(base):
-    dir = "/Assets/Sprites\\"
+    dir = "C:\\Users\\brent\\PycharmProjects\\AgentGlitch\\Assets\\Sprites\\"
     for i in range(8):
         if i in (0, 1):
             target = 'white'
@@ -148,7 +148,7 @@ def convert_all(base):
         except:
             pass
 
-#convert_all('white')
+convert_all('white')
 
 def recolour(path):
     for file in listdir(path):

@@ -84,6 +84,8 @@ def load_part2(data, level, controller):
     else:
         level.time = 0 if data.get("time") is None else data["time"]
         controller.active_objective = None if data.get("objective") is None else data["objective"]
+        if controller.active_objective is not None:
+            controller.activate_objective()
         for ent in level.entities:
             ent_data = data.get(ent.name)
             if ent_data is not None:

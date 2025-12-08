@@ -587,7 +587,7 @@ class Controller:
                     pass
 
     def cycle_keyboard_layout(self, win) -> float:
-        start = time.time()
+        start = time.perf_counter()
         if self.active_keyboard_layout == "ARROW_MOVE":
             self.set_keyboard_layout("WASD_MOVE")
             text = "Control layout changed to WASD movement (left hand move, right hand interact)."
@@ -601,16 +601,10 @@ class Controller:
             self.set_keyboard_layout("ARROW_MOVE")
             text = "Control layout changed to arrow movement (right hand move, left hand interact)."
         else:
-            text = ""
+            text = None
 
-        text_output = pygame.font.SysFont("courier", 18).render(text, True, (0, 0, 0))
-        text_box = pygame.Surface((text_output.get_width() + 10, text_output.get_height() + 10), pygame.SRCALPHA)
-        box_colour = RETRO_WHITE if self.retro else NORMAL_WHITE
-        text_box.fill((box_colour[0], box_colour[1], box_colour[2], 128))
-        win.blit(text_box, ((win.get_width() - text_box.get_width()) // 2, 3 * (win.get_height() - text_box.get_height()) // 4))
-        win.blit(text_output, (((win.get_width() - text_box.get_width()) // 2) + 5, (3 * (win.get_height() - text_box.get_height()) // 4) + 5))
-        pygame.display.update()
-        time.sleep(1)
+        if text is not None:
+            display_text(text, self, retro=self.retro)
 
         return time.perf_counter() - start
 
