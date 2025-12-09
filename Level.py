@@ -4,7 +4,7 @@ from Boss import Boss
 from Cinematics import CinematicsManager
 from Player import Player
 from NonPlayer import NonPlayer
-from Objective import Objective
+from Objectives import Objective
 from Trigger import Trigger, TextTrigger, SoundTrigger, SpawnTrigger, RevertTrigger, SaveTrigger, \
     ChangeLevelTrigger, PropertyTrigger, CinematicTrigger, AchievementTrigger, ObjectiveTrigger, SwapLevelTrigger, \
     CameraToPointTrigger, CameraToPlayerTrigger, DiscordStatusTrigger

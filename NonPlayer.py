@@ -107,6 +107,10 @@ class NonPlayer(Actor):
                 return True
         return False
 
+    def die(self) -> None:
+        self.level.player.kills_this_level += 1
+        super().die()
+
     def play_queued_message(self) -> float:
         start = time.perf_counter()
         if type(self.queued_message) == dict and self.queued_message.get("text") is not None and self.queued_message.get("audio") is not None:

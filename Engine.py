@@ -202,8 +202,10 @@ def main(win):
                 display_text(load_text_from_file(level.start_message), controller, should_type_text=True, retro=level.retro)
 
             camera.draw(controller.master_volume, glitches=None)
-            controller.activate_objective(level.default_objective if controller.active_objective is None else None)
-    
+            if controller.active_objective is None:
+                controller.activate_objective(None, True)
+            else:
+                controller.activate_objective(controller.active_objective, True)
             dtime_offset: float = 0.0
             glitch_timer = 0
             glitches = None
@@ -299,6 +301,11 @@ def main(win):
                     if level.hot_swap_level is not None:
                         cur_time = level.time
                         cur_target_time = level.target_time
+                        cur_deaths = level.player.deaths_this_level
+                        cur_kills = level.player.kills_this_level
+                        cur_been_hit = level.player.been_hit_this_level
+                        cur_been_seen = level.player.been_seen_this_level
+                        cur_enemies_available = level.enemies_available
                         cur_objectives_collected = level.objectives_collected
                         cur_objectives_available = level.objectives_available
                         cur_achievements = level.achievements
@@ -308,10 +315,15 @@ def main(win):
                         camera.prepare(level, hud)
                         level.time += cur_time
                         level.target_time += cur_target_time
+                        level.player.deaths_this_level += cur_deaths
+                        level.player_kills_this_level += cur_kills
+                        level.player.been_hit_this_level = bool(cur_been_hit or level.player.been_hit_this_level)
+                        level.player.been_seen_this_level = bool(cur_been_seen or level.player.been_seen_this_level)
+                        level.enemies_available += cur_enemies_available
                         level.objectives_collected += cur_objectives_collected
                         level.objectives_available += cur_objectives_available
                         level.achievements.update(cur_achievements)
-                        controller.activate_objective(level.default_objective, popup=False)
+                        controller.activate_objective(None, True, popup=False)
 
             if controller.music is not None:
                 pygame.mixer.music.fadeout(1000)

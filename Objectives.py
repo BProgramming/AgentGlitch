@@ -64,7 +64,7 @@ class Objective(Entity):
                 alive.append(objective)
         dtime_offset: float = time.perf_counter() - start
         if len(alive) == 0:
-            self.controller.activate_objective(self.level.default_objective, popup=False)
+            self.controller.activate_objective(None, True, popup=False)
             if self.trigger is not None:
                 for trigger in self.trigger:
                     dtime_offset += trigger.collide(self.level.player)

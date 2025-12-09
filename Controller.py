@@ -6,6 +6,7 @@ import sys
 from Menu import Menu, Selector, ButtonType
 from Helpers import display_text, DifficultyScale, load_images, load_level_images, load_picker_sprites, \
     make_image_from_text, NORMAL_WHITE, RETRO_WHITE
+from Objectives import Objective
 from SaveLoadFunctions import save, save_player_profile
 
 
@@ -71,12 +72,23 @@ class Controller:
         self.should_scroll_to_point = None
         self.active_objective: str | None = None
 
-    def activate_objective(self, text: str | None, popup: bool=True) -> None:
+    def activate_objective(self, name: str | None, value: bool, popup: bool=True) -> None:
+        self.active_objective = name
+
+        if name is not None:
+            text = None
+            for objective in self.level.objectives:
+                if name.casefold() == objective.name.casefold():
+                    objective.is_active = value
+                    if text is None and objective.text is not None:
+                        text = objective.text
+        else:
+            text = self.level.default_objective
+
         if text is not None and self.hud is not None:
             if popup:
                 display_text(f'New objective: {text}', self, retro=self.retro)
-            self.active_objective = text
-        self.hud.activate_objective(self.active_objective)
+            self.hud.activate_objective(text)
 
     def refresh_selector_images(self) -> None:
         for sel in [self.difficulty_picker, self.sprite_picker, self.level_picker, self.keyboard_layout_picker, self.gamepad_layout_picker]:

@@ -4,7 +4,7 @@ from os.path import join, isfile
 from Helpers import display_text, load_text_from_file, load_path, set_property, ASSETS_FOLDER, handle_exception
 from Entity import Entity
 from Block import Block, BreakableBlock, MovableBlock, Hazard, MovingBlock, MovingHazard, Door, FallingHazard
-from Objective import Objective
+from Objectives import Objective
 from NonPlayer import NonPlayer
 from Boss import Boss
 
@@ -141,13 +141,8 @@ class ObjectiveTrigger(Trigger):
         else:
             start = time.perf_counter()
             self.has_fired = True
-            text = None
-            for objective in self.level.objectives:
-                if isinstance(self.value, dict) and self.value["target"] == objective.name:
-                    objective.is_active = self.value["value"]
-                    if text is None and objective.text is not None:
-                        text = objective.text
-            self.controller.activate_objective(text)
+            if self.value is not None and isinstance(self.value, dict) and isinstance(self.value["target"], str) and isinstance(self.value["value"], bool):
+                self.controller.activate_objective(self.value["target"], self.value["value"])
             return time.perf_counter() - start
 
 class PropertyTrigger(Trigger):
