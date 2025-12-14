@@ -316,7 +316,7 @@ def main(win):
                         level.time += cur_time
                         level.target_time += cur_target_time
                         level.player.deaths_this_level += cur_deaths
-                        level.player_kills_this_level += cur_kills
+                        level.player.kills_this_level += cur_kills
                         level.player.been_hit_this_level = bool(cur_been_hit or level.player.been_hit_this_level)
                         level.player.been_seen_this_level = bool(cur_been_seen or level.player.been_seen_this_level)
                         level.enemies_available += cur_enemies_available
