@@ -12,12 +12,12 @@ class CinematicType(Enum):
 
 
 class CinematicsManager:
-    def __init__(self, files: dict[str, str] | list[dict[str, str]] | tuple[dict[str, str]], controller):
+    def __init__(self, files: dict[str, str] | list[dict[str, str]] | tuple[dict[str, str]], controller, player_sprites: dict[str, pygame.Surface] | None=None):
         self.cinematics = {}
         self.queued = []
-        self.load(files, controller)
+        self.load(files, controller, player_sprites)
 
-    def load(self, files: dict[str, str] | list[dict[str, str]] | tuple[dict[str, str]], controller) -> None:
+    def load(self, files: dict[str, str] | list[dict[str, str]] | tuple[dict[str, str]], controller, player_sprites) -> None:
         if type(files) not in [list, tuple]:
             files = [files]
         for file in files:
@@ -25,9 +25,9 @@ class CinematicsManager:
                 path = join(ASSETS_FOLDER, "Cinematics", file["file"])
                 if isfile(path):
                     if file["type"].upper() == "SLIDE":
-                        self.cinematics[file["name"]] = Cinematic(self.__load_slide__(path), CinematicType.SLIDE, controller, pause_key=(None if file.get("pause_key") is None else file["pause_key"]), text=(None if file.get("text") is None else file["text"]), should_glitch=(False if file.get("should_glitch") is None else file["should_glitch"]), should_fade_in=(True if file.get("should_fade_in") is None else file["should_fade_in"]), should_fade_out=(True if file.get("should_fade_out") is None else file["should_fade_out"]), can_scale_up=(True if file.get("can_scale_up") is None else file["can_scale_up"]), can_scale_down=(True if file.get("can_scale_down") is None else file["can_scale_down"]), stretch=(False if file.get("stretch") is None else file["stretch"]))
+                        self.cinematics[file["name"]] = Cinematic(self.__load_slide__(path), CinematicType.SLIDE, controller, player_sprites, player_blit=(None if file.get("player_blit") is None else file["player_blit"]), pause_key=(None if file.get("pause_key") is None else file["pause_key"]), text=(None if file.get("text") is None else file["text"]), should_glitch=(False if file.get("should_glitch") is None else file["should_glitch"]), should_fade_in=(True if file.get("should_fade_in") is None else file["should_fade_in"]), should_fade_out=(True if file.get("should_fade_out") is None else file["should_fade_out"]), can_scale_up=(True if file.get("can_scale_up") is None else file["can_scale_up"]), can_scale_down=(True if file.get("can_scale_down") is None else file["can_scale_down"]), stretch=(False if file.get("stretch") is None else file["stretch"]), delete_after_play=(False if file.get("delete") is None else file["delete"]))
                     elif file["type"].upper() == "VIDEO":
-                        self.cinematics[file["name"]] = Cinematic(self.__load_video__(path), CinematicType.VIDEO, controller, pause_key=(None if file.get("pause_key") is None else file["pause_key"]), text=(None if file.get("text") is None else file["text"]), should_glitch=(False if file.get("should_glitch") is None else file["should_glitch"]), should_fade_in=(True if file.get("should_fade_in") is None else file["should_fade_in"]), should_fade_out=(True if file.get("should_fade_out") is None else file["should_fade_out"]), can_scale_up=(True if file.get("can_scale_up") is None else file["can_scale_up"]), can_scale_down=(True if file.get("can_scale_down") is None else file["can_scale_down"]), stretch=(False if file.get("stretch") is None else file["stretch"]))
+                        self.cinematics[file["name"]] = Cinematic(self.__load_video__(path), CinematicType.VIDEO, controller, player_sprites, player_blit=None, pause_key=(None if file.get("pause_key") is None else file["pause_key"]), text=(None if file.get("text") is None else file["text"]), should_glitch=(False if file.get("should_glitch") is None else file["should_glitch"]), should_fade_in=(True if file.get("should_fade_in") is None else file["should_fade_in"]), should_fade_out=(True if file.get("should_fade_out") is None else file["should_fade_out"]), can_scale_up=(True if file.get("can_scale_up") is None else file["can_scale_up"]), can_scale_down=(True if file.get("can_scale_down") is None else file["can_scale_down"]), stretch=(False if file.get("stretch") is None else file["stretch"]), delete_after_play=(False if file.get("delete") is None else file["delete"]))
                 else:
                     handle_exception(f'File {FileNotFoundError(abspath(path))} not found.')
 
@@ -43,34 +43,54 @@ class CinematicsManager:
         self.queued = []
 
     def queue(self, name: str) -> None:
-        self.queued.append(self.cinematics[name])
+        self.queued.append(name)
 
-    def play(self, name: str, win: pygame.Surface) -> int:
+    def play(self, name: str, win: pygame.Surface) -> float:
         if self.cinematics.get(name) is not None:
-            return self.cinematics[name].play(win)
+            cinematic = self.cinematics[name]
+            dtime = cinematic.play(win)
+            if cinematic.delete_after_play:
+                del self.cinematics[name]
+            return dtime
         else:
             return 0
 
-    def play_queue(self, win: pygame.Surface) -> int:
+    def play_queue(self, win: pygame.Surface) -> float:
         dtime = 0
-        for cinematic in self.queued:
-            dtime += cinematic.play(win)
+        for name in self.queued:
+            dtime += self.play(name, win)
         self.queued = []
-        return dtime / 1000
+        return dtime
 
 class Cinematic:
-    def __init__(self, ent: pygame.Surface | cv2.VideoCapture, cinematic_type: CinematicType, controller, pause_key: int | list[int] | tuple[int] | None=None, text: str | None=None, should_glitch: bool=False, should_fade_in: bool=True, should_fade_out: bool=True, can_scale_up: bool=True, can_scale_down: bool=True, stretch: bool=False) -> None:
+    def __init__(self, ent: pygame.Surface | cv2.VideoCapture, cinematic_type: CinematicType, controller, player_sprites, player_blit: list[dict] | None=None, pause_key: int | list[int] | tuple[int] | None=None, text: str | None=None, should_glitch: bool=False, should_fade_in: bool=True, should_fade_out: bool=True, can_scale_up: bool=True, can_scale_down: bool=True, stretch: bool=False, delete_after_play: bool=True) -> None:
         self.controller = controller
         self.type = cinematic_type
         self.cinematic = ent
+        if player_sprites is not None and player_blit is not None: # This is only supported for slides, not for videos
+            for blit in player_blit:
+                if blit.get("animation") is not None and isinstance(blit["animation"], str) \
+                    and blit.get("facing") is not None and isinstance(blit["facing"], str) \
+                    and blit.get("frame") is not None and isinstance(blit["frame"], int) \
+                    and blit.get("coord") is not None and isinstance(blit["coord"], list) and len(blit["coord"]) == 2 \
+                        and isinstance(blit["coord"][0], int) and isinstance(blit["coord"][1], int):
+                    anim = f'{blit["animation"]}_{blit["facing"]}'.upper()
+                    frame = blit["frame"]
+                    coord = blit["coord"]
+                    if coord[0] < 0:
+                        coord[0] += self.cinematic.get_width()
+                    if coord[1] < 0:
+                        coord[1] += self.cinematic.get_height()
+                    self.cinematic.blit(player_sprites[anim][frame], coord)
         self.pause_key = pause_key
         self.text = text
-        self.should_glitch = should_glitch
-        self.should_fade_in = should_fade_in
-        self.should_fade_out = should_fade_out
-        self.can_scale_up = can_scale_up
-        self.can_scale_down = can_scale_down
-        self.stretch = stretch
+        self.should_glitch: bool = should_glitch
+        self.should_fade_in: bool = should_fade_in
+        self.should_fade_out: bool = should_fade_out
+        self.can_scale_up: bool = can_scale_up
+        self.can_scale_down: bool = can_scale_down
+        self.stretch: bool = stretch
+        self.delete_after_play: bool = delete_after_play
 
     def play(self, win: pygame.Surface) -> float:
         start = time.perf_counter()

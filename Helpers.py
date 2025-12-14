@@ -501,14 +501,17 @@ def glitch(odds, screen) -> list:
     return glitches
 
 
-def load_path(path_in, i, j, block_size) -> list:
-    path = []
-    for k in range(0, len(path_in), 2):
-        if k >= 2 and path_in[k] == path_in[k - 2] and path_in[k + 1] == path_in[k - 1]:
-            path[-1].append(True)
-        else:
-            path.append([(path_in[k] + j) * block_size, (path_in[k + 1] + i) * block_size])
-    return path
+def load_path(path_in, i, j, block_size) -> list | None:
+    if not isinstance(path_in, list) and not isinstance(path_in, tuple):
+        return None
+    else:
+        path = []
+        for k in range(len(path_in)):
+            if k > 0 and path_in[k] == path_in[k - 1]:
+                path[-1].append(True)
+            else:
+                path.append([(path_in[k][0] + j) * block_size, (path_in[k][1] + i) * block_size])
+        return path
 
 
 def set_property(triggering_entity, prop_to_set) -> None:

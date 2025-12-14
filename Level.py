@@ -43,11 +43,11 @@ class Level:
             self.music = validate_file_list("Music", list(meta_dict[name]["retro_music"].split(' ')), "mp3")
         else:
             self.music = (None if meta_dict[name].get("music") is None else validate_file_list("Music", list(meta_dict[name]["music"].split(' ')), "mp3"))
-        if self._retro and meta_dict[name].get("retro_cinematics") is not None:
-            self.cinematics = CinematicsManager(meta_dict[name]["retro_cinematics"], controller)
-        else:
-            self.cinematics = (None if meta_dict[name].get("cinematics") is None else CinematicsManager(meta_dict[name]["cinematics"], controller))
         self.level_bounds, self._player, self.triggers, self.blocks, self.dynamic_blocks, self.doors, self.static_blocks, self.hazards, self.falling_hazards, self.enemies, self.objectives = self.build_level(self, levels[self.name], sprite_master, image_master, objects_dict[self.name], player_audios, enemy_audios, block_audios, message_audios, win, controller, None if meta_dict[name].get("player_sprite") is None else meta_dict[name]["player_sprite"], self.block_size, loading_screen)
+        if self._retro and meta_dict[name].get("retro_cinematics") is not None:
+            self.cinematics = CinematicsManager(meta_dict[name]["retro_cinematics"], controller, player_sprites=self._player.sprites)
+        else:
+            self.cinematics = (None if meta_dict[name].get("cinematics") is None else CinematicsManager(meta_dict[name]["cinematics"], controller, player_sprites=self._player.sprites))
         self.particle_effects: list[ParticleEffect] = []
         if meta_dict[name].get("particle_effect") is not None:
             self.particle_effects.append(self.gen_particle_effect(meta_dict[name]["particle_effect"].upper(), win))
@@ -326,10 +326,7 @@ class Level:
                                 blocks.append(block)
                                 static_blocks[-1][-1] = block
                             case "MOVINGBLOCK":
-                                if data["path"] is None:
-                                    path = None
-                                else:
-                                    path = load_path([int(i) for i in data["path"].split(' ')], i, j, block_size)
+                                path = None if data["path"] is None else load_path(data["path"], i, j, block_size)
                                 is_stacked = False
                                 block = MovingBlock(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, is_enabled=(True if data.get("is_enabled") is None else data["is_enabled"]), hold_for_collision=(False if data.get("hold_for_collision") is None else data["hold_for_collision"]), speed=data["speed"], path=path, coord_x=__convert_coords__(data["coord_x"]), coord_y=__convert_coords__(data["coord_y"]), is_blocking=(True if data.get("is_blocking") is None else data["is_blocking"]), name=(element if data.get("name") is None else data["name"]))
                                 blocks.append(block)
@@ -350,10 +347,7 @@ class Level:
                             case "HAZARD":
                                 hazards.append(Hazard(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, block_audios, controller.difficulty, hit_sides=("UDLR" if data.get("hit_sides") is None else data["hit_sides"].upper()), sprite=data["sprite"], coord_x=__convert_coords__(data["coord_x"]), coord_y=__convert_coords__(data["coord_y"]), name=(element if data.get("name") is None else data["name"])))
                             case "MOVINGHAZARD":
-                                if data["path"] is None:
-                                    path = None
-                                else:
-                                    path = load_path([int(i) for i in data["path"].split(' ')], i, j, block_size)
+                                path = None if data["path"] is None else load_path(data["path"], i, j, block_size)
                                 is_stacked = False
                                 hazards.append(MovingHazard(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, block_audios, controller.difficulty, is_stacked, speed=data["speed"], path=path, hit_sides=("UDLR" if data.get("hit_sides") is None else data["hit_sides"].upper()), sprite=data["sprite"], coord_x=__convert_coords__(data["coord_x"]), coord_y=__convert_coords__(data["coord_y"]), name=(element if data.get("name") is None else data["name"])))
                             case "FALLINGHAZARD":
@@ -364,16 +358,10 @@ class Level:
                                 else:
                                     falling_hazards[j].append(falling_hazard)
                             case "ENEMY":
-                                if data["path"] is None:
-                                    path = None
-                                else:
-                                    path = load_path([int(i) for i in data["path"].split(' ')], i, j, block_size)
+                                path = None if data["path"] is None else load_path(data["path"], i, j, block_size)
                                 enemies.append(NonPlayer(level, controller, j * block_size, i * block_size, sprite_master, enemy_audios, controller.difficulty, block_size, path=path, kill_at_end=(False if data.get("kill_at_end") is None else data["kill_at_end"]), is_hostile=(True if data.get("is_hostile") is None else data["is_hostile"]), collision_message=(None if data.get("collision_message") is None else data["collision_message"]), bark=(None if data.get("bark") is None else data["bark"]), hp=data["hp"], can_shoot=(False if data.get("can_shoot") is None else data["can_shoot"]), sprite=data["sprite"], proj_sprite=(None if data.get("proj_sprite") is None else data["proj_sprite"]), name=(element if data.get("name") is None else data["name"])))
                             case "BOSS":
-                                if data["path"] is None:
-                                    path = None
-                                else:
-                                    path = load_path([int(i) for i in data["path"].split(' ')], i, j, block_size)
+                                path = None if data["path"] is None else load_path(data["path"], i, j, block_size)
                                 enemies.append(Boss(level, controller, j * block_size, i * block_size, sprite_master, enemy_audios, controller.difficulty, block_size, music=(None if data.get("music") is None else data["music"]), trigger=(None if data.get("trigger") is None else data["trigger"]), path=path, hp=data["hp"], show_health_bar=(True if data.get("show_health_bar") is None else data["show_health_bar"]), can_shoot=(False if data.get("can_shoot") is None else data["can_shoot"]), sprite=data["sprite"], proj_sprite=(None if data.get("proj_sprite") is None else data["proj_sprite"]), name=(element if data.get("name") is None else data["name"])))
                             case "TRIGGER":
                                 packed_input = (None if data.get("input") is None else data["input"])
