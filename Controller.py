@@ -5,8 +5,7 @@ import pygame._sdl2.controller
 import sys
 from Menu import Menu, Selector, ButtonType
 from Helpers import display_text, DifficultyScale, load_images, load_level_images, load_picker_sprites, \
-    make_image_from_text, NORMAL_WHITE, RETRO_WHITE
-from Objectives import Objective
+    make_image_from_text
 from SaveLoadFunctions import save, save_player_profile
 
 

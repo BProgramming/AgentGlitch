@@ -238,7 +238,7 @@ class Actor(Entity):
                 self.die()
         return 0.0
 
-    def get_collisions(self) -> tuple[bool, float]:
+    def get_collisions(self) -> float:
         collided = False
         dtime_offset: float = 0.0
         if self == self.level.player:
@@ -310,7 +310,7 @@ class Actor(Entity):
             check_blocks = len(self.level.get_entities_in_range((self.rect.x, self.rect.y), dist_x=dist_x, blocks_only=True, include_doors=False))
             if check_blocks == 0:
                 self.is_wall_jumping = False
-        return collided, dtime_offset
+        return dtime_offset
 
     def die(self) -> None:
         super().die()
@@ -480,10 +480,7 @@ class Actor(Entity):
             self.push_y = 0
 
             self.should_move_vert = True
-            result = self.get_collisions()
-            collided = result[0]
-            dtime_offset += result[1]
-            dtime -= dtime_offset
+            dtime_offset += self.get_collisions()
 
             if self.cooldowns["resize_delay"] <= 0:
                 if self.size != self.size_target:
@@ -522,8 +519,6 @@ class Actor(Entity):
                     self.move((self.x_vel + self.push_x) * dtime, (self.y_vel + self.push_y) * dtime)
             else:
                 self.move(self.push_x * dtime, self.push_y * dtime)
-        else:
-            collided = False
 
         self.cache()
         self.update_state()

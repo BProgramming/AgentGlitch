@@ -88,7 +88,8 @@ def main(win):
             pygame.display.toggle_fullscreen()
         if not controller.goto_main:
             for cinematic in start_cinematics:
-                cinematics.play(cinematic["name"], win)
+                if cinematic is not None:
+                    cinematics.play(cinematic["name"], win)
         controller.refresh_selector_images()
         pygame.mixer.music.set_volume(controller.master_volume["background"])
         new_game = False
@@ -186,9 +187,10 @@ def main(win):
             controller.discord.set_status(details="On a mission:", state=controller.level.display_name)
 
             # FROM HERE, THE LEVEL ACTUALLY STARTS: #
-            if not should_load and level.start_cinematic is not None:
+            if not should_load and level.cinematics is not None and level.start_cinematic is not None:
                 for cinematic in level.start_cinematic:
-                    level.cinematics.play(cinematic, win)
+                    if cinematic is not None:
+                        level.cinematics.play(cinematic, win)
 
             if level.music is not None:
                 controller.queue_track_list()
@@ -219,17 +221,15 @@ def main(win):
                 level.time += dtime
 
                 if hud.save_icon_timer > 0:
-                    hud.save_icon_timer -= dtime / 0.25
+                    hud.save_icon_timer -= dtime
                 if glitch_timer > 0:
-                    glitch_timer -= dtime / 0.25
+                    glitch_timer -= dtime
                     if glitch_timer <= 0:
                         glitch_timer = 0
                         glitches = None
 
-                while len(level.cinematics.queued) > 0:
+                while level.cinematics is not None and len(level.cinematics.queued) > 0:
                     dtime_offset += level.cinematics.play_queue(win)
-
-                #dtime_offset += controller.get_gamepad()
 
                 for event in pygame.event.get():
                     match event.type:
@@ -283,7 +283,7 @@ def main(win):
 
                 if level.can_glitch and glitch_timer <= 0 and random.randint(0, 100) / 100 > level.player.hp / level.player.max_hp:
                     glitches = glitch((1 - max(level.player.hp / level.player.max_hp, 0)) / 2, win)
-                    glitch_timer = 0.5
+                    glitch_timer = 0.1
 
                 camera.draw(controller.master_volume, glitches=glitches)
                 pygame.display.update()
@@ -352,9 +352,10 @@ def main(win):
                     display_text(load_text_from_file(level.end_message), controller, should_type_text=True, retro=level.retro)
                 controller.save_player_profile()
                 camera.fade_out(controller)
-                if level.end_cinematic is not None:
+                if level.cinematics is not None and level.end_cinematic is not None:
                     for cinematic in level.end_cinematic:
-                        level.cinematics.play(cinematic, win)
+                        if cinematic is not None:
+                            level.cinematics.play(cinematic, win)
                 for cinematic in recap_cinematics:
                     cinematics.cinematics[cinematic["name"]].text = ["Mission successful."] + level.get_recap_text()
                     cinematics.play(cinematic["name"], win)
@@ -363,7 +364,8 @@ def main(win):
 
         if not controller.goto_main:
             for cinematic in end_cinematics:
-                cinematics.play(cinematic["name"], win)
+                if cinematic is not None:
+                    cinematics.play(cinematic["name"], win)
 
 
 if __name__ == "__main__":
