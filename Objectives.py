@@ -54,24 +54,13 @@ class Objective(Entity):
             self.is_active = False
             self.die()
             self.play_sound(self.sound)
-            self.__collect__()
 
             if self.achievement is not None and self.controller.steamworks is not None and not self.controller.steamworks.UserStats.GetAchievement(self.achievement):
                 self.controller.steamworks.UserStats.SetAchievement(self.achievement)
                 self.controller.should_store_steam_stats = True
 
-            alive = []
-            for objective in self.level.objectives:
-                if objective.hp > 0 and objective.name.casefold().split(" ")[0] == self.name.casefold().split(" ")[0]:
-                    alive.append(objective)
             dtime_offset: float = time.perf_counter() - start
-            if len(alive) == 0:
-                self.controller.activate_objective(None, True, popup=False)
-                if self.trigger is not None:
-                    for trigger in self.trigger:
-                        dtime_offset += trigger.collide(self.level.player)
-
-            return dtime_offset
+            return dtime_offset + self.__collect__()
         else:
             return 0
 
@@ -84,8 +73,20 @@ class Objective(Entity):
             self.__collect__()
             self.level.queue_purge(self)
 
-    def __collect__(self) -> None:
+    def __collect__(self) -> float:
+        start = time.perf_counter()
         self.level.objectives_collected.append(self)
+        alive = []
+        for objective in self.level.objectives:
+            if objective.hp > 0 and objective.name.casefold().split(" ")[0] == self.name.casefold().split(" ")[0]:
+                alive.append(objective)
+        dtime_offset: float = time.perf_counter() - start
+        if len(alive) == 0:
+            self.controller.activate_objective(None, True, popup=False)
+            if self.trigger is not None:
+                for trigger in self.trigger:
+                    dtime_offset += trigger.collide(self.level.player)
+        return dtime_offset
 
     def play_sound(self, name) -> None:
         if self.sound is not None and self.audios.get(name.upper()) is not None:

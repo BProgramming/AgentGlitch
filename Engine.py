@@ -14,7 +14,7 @@ discord = DiscordConnection()
 discord.set_status(details="In the menu:", state="Gathering intel")
 
 WIDTH, HEIGHT = 1920, 1080
-FPS_TARGET = 1000 # In practice this doesn't do anything, but clock.tick doesn't seem to always return a non-zero value if it isn't specified
+FPS_TARGET = 150
 
 icon = join(ASSETS_FOLDER, "Icons", "icon_small.png")
 if isfile(icon):

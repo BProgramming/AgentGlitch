@@ -63,8 +63,9 @@ class Actor(Entity):
         self.is_hostile = False
         self.patrol_path = None
         self.x_vel = self.y_vel = 0.0
+        self.x_accel_time: float = 0.0
+        self.x_accel_max_time: float = 0.0
         self.target_vel = Actor.VELOCITY_TARGET
-        self.drag_vel = 0.0
         self.push_x = self.push_y = 0.0
         self.should_move_horiz = False
         self.should_move_vert = True
@@ -116,7 +117,7 @@ class Actor(Entity):
             projectiles.append(proj.save())
         return {self.name: {"hp": self.hp, "cached x y": (self.cached_x, self.cached_y), "cooldowns": self.cached_cooldowns, "size": self.size, "size_target": self.size, "projectiles": projectiles}}
 
-    def load(self, data) -> None:
+    def load(self, data: dict) -> None:
         self.rect.x, self.rect.y = self.cached_x, self.cached_y = data["cached x y"]
         self.cooldowns = self.cached_cooldowns = data["cooldowns"]
         self.load_attribute(data, "hp")
@@ -152,7 +153,7 @@ class Actor(Entity):
         if self.hp > 0 and self.abilities["can_resize"] and self.cooldowns["resize"] <= 0:
             self.resize(max(self.size_target / Actor.RESIZE_SCALE_LIMIT, 1 / Actor.RESIZE_SCALE_LIMIT))
 
-    def move(self, dx, dy) -> None:
+    def move(self, dx: float, dy: float) -> None:
         if dx != 0:
             if self.rect.left + dx < self.level.level_bounds[0][0] - (self.rect.width // 5):
                 self.rect.left = -self.rect.width // 5
@@ -211,7 +212,7 @@ class Actor(Entity):
     def hit_head(self) -> None:
         self.y_vel *= -0.5
 
-    def play_attack_audio(self, attack_type) -> None:
+    def play_attack_audio(self, attack_type: str) -> None:
         if attack_type in self.audios:
             active_audio_channel = pygame.mixer.find_channel()
             if active_audio_channel is not None:
@@ -221,7 +222,7 @@ class Actor(Entity):
                 else:
                     set_sound_source(self.rect, self.level.player.rect, self.controller.master_volume["non-player"], active_audio_channel)
 
-    def shoot_at_target(self, target) -> None:
+    def shoot_at_target(self, target: Entity) -> None:
         if self.hp > 0 and self.cooldowns["launch_projectile"] <= 0:
             self.is_attacking = True
             proj = Projectile(self.level, self.controller, self.rect.centerx, self.rect.centery, (target[0], self.rect.centery), Actor.MAX_SHOOT_DISTANCE, self.attack_damage, self.difficulty, sprite=self.proj_sprite, name=f'{self.name}\'s projectile #{(len(self.active_projectiles) + 1)}')
@@ -229,7 +230,7 @@ class Actor(Entity):
             self.cooldowns["launch_projectile"] = Actor.LAUNCH_PROJECTILE_COOLDOWN
             self.play_attack_audio("ATTACK_RANGE")
 
-    def get_hit(self, ent) -> float:
+    def get_hit(self, ent: Entity) -> float:
         self.cooldowns["get_hit"] = Actor.GET_HIT_COOLDOWN
         self.cooldowns["heal"] = Actor.HEAL_DELAY * self.difficulty
         if ent.attack_damage is not None:
@@ -501,8 +502,13 @@ class Actor(Entity):
                     self.level.visual_effects_manager.spawn(VisualEffect(self, self.level.visual_effects_manager.image_master, image_name="RESIZEBURST", alpha=128, scale=(self.rect.width * scale_factor, self.rect.height * scale_factor), linked_to_source=True), time=Actor.RESIZE_EFFECT)
 
                 if self.should_move_horiz:
-                    self.x_vel = self.direction * min(self.target_vel, (abs(self.x_vel) * self.drag_vel) + (self.target_vel * (1 - self.drag_vel)))
+                    if self.x_accel_time < self.x_accel_max_time and abs(self.x_vel) < self.target_vel:
+                        self.x_accel_time += dtime
+                        self.x_vel = self.direction * self.target_vel * math.sqrt(self.x_accel_time / self.x_accel_max_time)
+                    else:
+                        self.x_vel = self.direction * self.target_vel
                 else:
+                    self.x_accel_time = 0.0
                     self.x_vel = 0.0
 
                 if self.should_move_vert:

@@ -12,7 +12,7 @@ from SimpleVFX.SimpleVFX import VisualEffect, ImageDirection
 class Player(Actor):
     ATTACK_PUSHBACK = 200
     VELOCITY_TARGET = 500
-    VELOCITY_DRAG_PCT = 0.93
+    ACCEL_MAX_TIME = 0.5
     MULTIPLIER_TELEPORT = 0.432
     TELEPORT_COOLDOWN = 3
     TELEPORT_DELAY = 0.35
@@ -33,7 +33,7 @@ class Player(Actor):
         self.cooldowns.update({"teleport": 0.0, "teleport_delay": 0.0, "teleport_effect_trail": 0.0, "block": 0.0, "block_attempt": 0.0, "blocking_effect": 0.0, "bullet_time": 0.0, "bullet_time_active": 0.0, "dead": 0.0})
         self.cached_cooldowns = self.cooldowns.copy()
         self.target_vel = Player.VELOCITY_TARGET
-        self.drag_vel = Player.VELOCITY_DRAG_PCT
+        self.x_accel_max_time = Player.ACCEL_MAX_TIME
         self.is_blocking = False
         self.is_slow_time = False
         self.attack_damage *= 2
