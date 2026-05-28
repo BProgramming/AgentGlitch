@@ -144,7 +144,7 @@ class Level:
                 if self.doors.get(x + i) is not None:
                     in_range += self.doors[x + i]
 
-        if include_hazards:
+        if blocks_only and include_hazards:
             for ent in self.hazards:
                 if ent.rect.x - (self.block_size * dist_x[0]) <= point[0] <= ent.rect.x + (self.block_size * dist_x[1]) and ent.rect.y - (self.block_size * dist_y[0]) <= point[1] <= ent.rect.y + (self.block_size * dist_y[1]):
                     in_range.append(ent)

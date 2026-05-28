@@ -190,8 +190,9 @@ class NonPlayer(Actor):
         )
         if dist <= self.__adj_spot_range__() and (facing_toward or self.cooldowns["get_hit"] > 0):
             half_w = self.rect.width // 2
-            cx, cy = self.rect.centerx, self.rect.y
-            for i in range(round(dist)):
+            cx, cy = self.rect.centerx, self.rect.centery
+            step = max(1, self.level.block_size // 2)
+            for i in range(0, round(dist), step):
                 probe_x = cx + (self.facing * (half_w + i))
                 for ent in self.level.get_entities_in_range((probe_x, cy), blocks_only=True):
                     if ent.rect.collidepoint(probe_x, cy):
