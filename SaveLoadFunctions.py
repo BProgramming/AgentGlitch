@@ -1,32 +1,41 @@
 import pygame
 import pickle
-from os.path import join, isfile
+from pathlib import Path
 from Actor import Actor
 from Block import BreakableBlock
 from Helpers import GAME_DATA_FOLDER
 
 
 def save_player_profile(controller, level):
-    profile_file = join(GAME_DATA_FOLDER, "profile.p")
+    profile_file = Path(GAME_DATA_FOLDER) / "profile.p"
 
     if level is not None:
         cur_level = level.name
     else:
         cur_level = controller.start_level
-        if isfile(profile_file):
+        if profile_file.is_file():
             with open(profile_file, "rb") as f:
-                data = pickle.load(open(profile_file, "rb"))
+                data = pickle.load(f)
             if data is not None and data.get("level") is not None:
                 cur_level = data["level"]
 
-    data = {"level": cur_level, "master volume": controller.master_volume, "keyboard layout": controller.active_keyboard_layout, "gamepad layout": controller.active_gamepad_layout, "is fullscreen": pygame.display.is_fullscreen(), "difficulty": controller.difficulty, "selected sprite": controller.player_sprite_selected, "force retro": controller.force_retro}
+    data = {
+        "level":           cur_level,
+        "master volume":   controller.master_volume,
+        "keyboard layout": controller.active_keyboard_layout,
+        "gamepad layout":  controller.active_gamepad_layout,
+        "is fullscreen":   pygame.display.is_fullscreen(),
+        "difficulty":      controller.difficulty,
+        "selected sprite": controller.player_sprite_selected,
+        "force retro":     controller.force_retro,
+    }
     with open(profile_file, "wb") as f:
         pickle.dump(data, f)
 
 
 def load_player_profile(controller):
-    profile_file = join(GAME_DATA_FOLDER, "profile.p")
-    if isfile(profile_file):
+    profile_file = Path(GAME_DATA_FOLDER) / "profile.p"
+    if profile_file.is_file():
         with open(profile_file, "rb") as f:
             data = pickle.load(f)
         if data.get("master volume") is not None:
@@ -38,7 +47,11 @@ def load_player_profile(controller):
         if data.get("selected sprite") is not None:
             controller.player_sprite_selected = data["selected sprite"]
         if data.get("force retro") is not None:
-            controller.force_retro = controller.has_dlc.get("gumshoe") is not None and controller.has_dlc["gumshoe"] and data["force retro"]
+            controller.force_retro = (
+                controller.has_dlc.get("gumshoe") is not None
+                and controller.has_dlc["gumshoe"]
+                and data["force retro"]
+            )
         if data.get("is fullscreen") is not None and not data["is fullscreen"]:
             pygame.display.toggle_fullscreen()
         if data.get("level") is not None:
@@ -52,22 +65,24 @@ def load_player_profile(controller):
 def save(level, hud, controller):
     if level is None:
         return
-    else:
-        if hud is not None:
-            hud.save_icon_timer = 1.0
 
-        data = {"level": level.name, "time": level.time, "objective": controller.active_objective}
-        for ent in level.entities + level.objectives_collected:
-            ent_data = ent.save()
-            if ent_data is not None:
-                data.update(ent_data)
-        with open(join(GAME_DATA_FOLDER, "save.p"), "wb") as f:
-            pickle.dump(data, f)
+    if hud is not None:
+        hud.save_icon_timer = 1.0
+
+    data = {"level": level.name, "time": level.time, "objective": controller.active_objective}
+    for ent in level.entities + level.objectives_collected:
+        ent_data = ent.save()
+        if ent_data is not None:
+            data.update(ent_data)
+
+    save_file = Path(GAME_DATA_FOLDER) / "save.p"
+    with open(save_file, "wb") as f:
+        pickle.dump(data, f)
 
 
 def load_part1():
-    save_file = join(GAME_DATA_FOLDER, "save.p")
-    if isfile(save_file):
+    save_file = Path(GAME_DATA_FOLDER) / "save.p"
+    if save_file.is_file():
         with open(save_file, "rb") as f:
             data = pickle.load(f)
         if data is None:

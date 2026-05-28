@@ -3,17 +3,18 @@ import sys
 import time
 import traceback
 import re
+from pathlib import Path
+
 import pygame
 import csv
 import json
 from tkinter import messagebox
-from os import listdir
-from os.path import isfile, isdir, join, abspath
 from enum import Enum, IntEnum
 
 
-ASSETS_FOLDER: str = "Assets"
-GAME_DATA_FOLDER: str = "GameData"
+ASSETS_FOLDER: Path = Path(__file__).parent / "Assets"
+GAME_DATA_FOLDER: Path = Path.home() / ".agentglitch"
+GAME_DATA_FOLDER.mkdir(parents=True, exist_ok=True)
 DLC_APP_ID: int = 0
 NORMAL_WHITE: tuple[int, int, int, int] = (255, 255, 255, 255)
 RETRO_WHITE: tuple[int, int, int, int] = (250, 215, 195, 255)
@@ -53,7 +54,7 @@ def handle_exception(msg) -> None:
     cur_time = time.gmtime(time.time())
     filename_time = time.strftime("%Y%m%d_%H%M%S", cur_time)
     printable_time = time.strftime("%Y-%m-%d, %H:%M:%S", cur_time)
-    log_file = abspath(join(GAME_DATA_FOLDER, f'glitch_{filename_time}.log'))
+    log_file = Path(Path(GAME_DATA_FOLDER) / f'glitch_{filename_time}.log').resolve()
     with open(log_file, "w") as log:
         print(f'Error encountered at GMT {printable_time}:', file=log)
         traceback.print_exc(file=log)
@@ -74,12 +75,12 @@ def link_trigger(to_link, to_be_linked) -> list | None:
         return None if len(triggers) == 0 else triggers
 
 
-def validate_file_list(dir, lst, ext=None) -> list | None:
+def validate_file_list(directory, lst, ext=None) -> list | None:
     out = []
     for name in lst:
         if ext is None or name[-len(ext):].upper() == ext.upper():
-            file = join(ASSETS_FOLDER, dir, name)
-            if isfile(file):
+            file = Path(ASSETS_FOLDER) / directory / name
+            if Path(file).is_file():
                 out.append(file)
     if len(out) > 0:
         return out
@@ -96,24 +97,24 @@ def retroify_image(image: pygame.Surface) -> pygame.Surface:
     return image
 
 
-def load_picker_sprites(dir) -> tuple | None:
+def load_picker_sprites(directory) -> tuple | None:
     images = {"normal": [], "retro": []}
     values = []
-    path = join(ASSETS_FOLDER, dir)
-    if isdir(path):
-        folders = [f for f in listdir(path) if isdir(join(path, f))]
+    path = Path(ASSETS_FOLDER) / directory
+    if path.is_dir():
+        folders = [f for f in path.iterdir() if Path(Path(path) / f).is_dir()]
         for folder in folders:
-            if folder[:6] == "Player":
-                lower_path = join(path, folder, "picker.png")
-                if isfile(lower_path):
+            if folder.name[:6] == "Player":
+                lower_path = Path(path) / folder / "picker.png"
+                if Path(lower_path).is_file():
                     asset = pygame.transform.smoothscale_by(pygame.image.load(lower_path).convert_alpha(), 4)
                     surface = pygame.Surface((asset.get_width(), asset.get_height()), pygame.SRCALPHA)
                     rect = pygame.Rect(0, 0, asset.get_width(), asset.get_height())
                     surface.blit(asset, (0, 0), rect)
                     images["normal"].append(surface)
-                    values.append(folder[-1])
-                    retro_path = join(path, f'Retro{folder}', "picker.png")
-                    if isfile(retro_path):
+                    values.append(folder.name[-1])
+                    retro_path = Path(path) / f'Retro{folder}' / "picker.png"
+                    if Path(retro_path).is_file():
                         asset = retroify_image(pygame.transform.smoothscale_by(pygame.image.load(retro_path).convert_alpha(), 4))
                         surface = pygame.Surface((asset.get_width(), asset.get_height()), pygame.SRCALPHA)
                         rect = pygame.Rect(0, 0, asset.get_width(), asset.get_height())
@@ -122,31 +123,31 @@ def load_picker_sprites(dir) -> tuple | None:
                     else:
                         images["retro"].append(None)
         if len(images) == 0:
-            handle_exception(f'No sprite images found in {FileNotFoundError(abspath(path))}.')
+            handle_exception(f'No sprite images found in {FileNotFoundError(path.resolve())}.')
         return images, values
     else:
-        handle_exception(f'File {FileNotFoundError(abspath(path))} not found.')
+        handle_exception(f'File {FileNotFoundError(path.resolve())} not found.')
         return None
 
 
-def load_level_images(dir) -> tuple | None:
+def load_level_images(directory) -> tuple | None:
     images = []
     values = []
-    path = join(ASSETS_FOLDER, dir)
-    if isdir(path):
-        files = [f for f in listdir(path) if isfile(join(path, f)) and f[-4:].lower()==".png"]
+    path = Path(ASSETS_FOLDER) / directory
+    if path.is_dir():
+        files = [f for f in path.iterdir() if Path(Path(path) / f).is_file() and f.suffix == ".png"]
         for file in sorted(files):
-            asset = pygame.transform.smoothscale_by(pygame.image.load(join(path, file)).convert_alpha(), 4)
+            asset = pygame.transform.smoothscale_by(pygame.image.load(Path(path) / file).convert_alpha(), 4)
             surface = pygame.Surface((asset.get_width(), asset.get_height()), pygame.SRCALPHA)
             rect = pygame.Rect(0, 0, asset.get_width(), asset.get_height())
             surface.blit(asset, (0, 0), rect)
             images.append(surface)
-            values.append(file.replace(".png", "").upper())
+            values.append(file.stem.upper())
         if len(images) == 0:
-            handle_exception(f'No level images found in {FileNotFoundError(abspath(path))}.')
+            handle_exception(f'No level images found in {FileNotFoundError(path.resolve())}.')
         return images, values
     else:
-        handle_exception(f'File {FileNotFoundError(abspath(path))} not found.')
+        handle_exception(f'File {FileNotFoundError(path.resolve())} not found.')
         return None
 
 
@@ -170,21 +171,21 @@ def make_image_from_text(width, height, header, body, border=5, retro=False) -> 
 
 
 def load_images(dir1, dir2) -> dict | None:
-    path = join(ASSETS_FOLDER, dir1, dir2) if dir2 is not None else join(ASSETS_FOLDER, dir1)
-    if isdir(path):
-        images = [f for f in listdir(path) if isfile(join(path, f)) and f[-4:].lower()==".png"]
+    path = Path(ASSETS_FOLDER) / dir1 / dir2 if dir2 is not None else Path(ASSETS_FOLDER) / dir1
+    if path.is_dir():
+        images = [f for f in path.iterdir() if Path(Path(path) / f).is_file() and f.suffix == ".png"]
 
         all_images = {}
         for image in images:
-            asset = pygame.image.load(join(path, image)).convert_alpha()
+            asset = pygame.image.load(Path(path) / image).convert_alpha()
             surface = pygame.Surface((asset.get_width(), asset.get_height()), pygame.SRCALPHA)
             rect = pygame.Rect(0, 0, asset.get_width(), asset.get_height())
             surface.blit(asset, (0, 0), rect)
-            all_images[str.upper(image.replace(".png", ""))] = surface
+            all_images[image.stem.upper()] = surface
 
         return all_images
     else:
-        handle_exception(f'File {FileNotFoundError(abspath(path))} not found.')
+        handle_exception(f'File {FileNotFoundError(path.resolve())} not found.')
         return None
 
 
@@ -194,25 +195,25 @@ def flip(sprites) -> list:
 
 def load_sprite_sheets(dir1, dir2, sprite_master, direction=False, retro=False) -> dict:
     if sprite_master.get(dir2) is None:
-        path = join(ASSETS_FOLDER, dir1, dir2)
+        path = Path(ASSETS_FOLDER) / dir1 / dir2
 
-        if not isdir(path):
+        if not path.is_dir():
             options = []
-            for dir in listdir(join(ASSETS_FOLDER, dir1)):
-                if len(dir2) < len(dir) and dir2.upper() == dir[:len(dir2)].upper():
-                    options.append(dir)
+            for directory in Path(Path(ASSETS_FOLDER) / dir1).iterdir():
+                if len(dir2) < len(directory.name) and dir2.upper() == directory.name[:len(dir2)].upper():
+                    options.append(directory)
             if len(options) > 0:
                 i = random.randint(0, len(options) - 1)
                 dir2 = options[i]
-                path = join(ASSETS_FOLDER, dir1, dir2)
+                path = Path(ASSETS_FOLDER) / dir1 / dir2
             else:
-                handle_exception(f'File {FileNotFoundError(abspath(path))} not found.')
+                handle_exception(f'File {FileNotFoundError(path.resolve())} not found.')
 
-        images = [f for f in listdir(path) if isfile(join(path, f))]
+        images = [f for f in path.iterdir() if Path(Path(path) / f).is_file()]
 
         all_sprites = {}
         for image in images:
-            sprite_sheet = pygame.image.load(join(path, image)).convert_alpha()
+            sprite_sheet = pygame.image.load(Path(path) / image).convert_alpha()
             if retro:
                 sprite_sheet = retroify_image(sprite_sheet)
             width = height = sprite_sheet.get_height()
@@ -225,16 +226,16 @@ def load_sprite_sheets(dir1, dir2, sprite_master, direction=False, retro=False) 
                 sprites.append(pygame.transform.scale2x(surface))
 
             if direction:
-                all_sprites[str.upper(image.replace(".png", "")) + "_RIGHT"] = sprites
-                all_sprites[str.upper(image.replace(".png", "")) + "_LEFT"] = flip(sprites)
+                all_sprites[f"{image.stem.upper()}_RIGHT"] = sprites
+                all_sprites[f"{image.stem.upper()}_LEFT"] = flip(sprites)
             else:
-                all_sprites[str.upper(image.replace(".png", ""))] = sprites
+                all_sprites[image.stem.upper()] = sprites
         sprite_master[dir2] = all_sprites
     return sprite_master[dir2]
 
 
-def load_json_dict(dir, file) -> dict | None:
-    path = join(ASSETS_FOLDER, dir, file)
+def load_json_dict(directory, file) -> dict | None:
+    path = Path(ASSETS_FOLDER) / directory / file
     try:
         with open(path, "r") as file:
             ref = json.loads(file.read())
@@ -243,64 +244,66 @@ def load_json_dict(dir, file) -> dict | None:
         else:
             return {}
     except FileNotFoundError:
-        handle_exception(f'File {FileNotFoundError(abspath(path))} not found.')
+        handle_exception(f'File {FileNotFoundError(path.resolve())} not found.')
         return None
 
 
-def load_object_dicts(dir) -> dict | None:
-    path = join(ASSETS_FOLDER, dir)
-    if isdir(path):
-        files = [f for f in listdir(path) if isfile(join(path, f)) and f.endswith(".agd")]
+def load_object_dicts(directory) -> dict | None:
+    path = Path(ASSETS_FOLDER) / directory
+    if path.is_dir():
+        files = [f for f in path.iterdir() if Path(Path(path) / f).is_file() and f.suffix == ".agd"]
         dicts = {}
         for f in files:
-            dicts[str.upper(f.replace(".agd", ""))] = load_json_dict(dir, f)
+            dicts[f.stem.upper()] = load_json_dict(directory, f)
         return dicts
     else:
-        handle_exception(f'File or folder {FileNotFoundError(abspath(path))} not found.')
+        handle_exception(f'File or folder {FileNotFoundError(path.resolve())} not found.')
         return None
 
 
-def load_levels(dir) -> dict | None:
-    path = join(ASSETS_FOLDER, dir)
-    if isdir(path):
-        files = [f for f in listdir(path) if isfile(join(path, f)) and f.endswith(".agl")]
+def load_levels(directory) -> dict | None:
+    path = Path(ASSETS_FOLDER) / directory
+    if path.is_dir():
+        files = [f for f in path.iterdir() if Path(Path(path) / f).is_file() and f.suffix == ".agl"]
         files.sort()
 
         levels = {}
         for f in files:
-            with open(join(path, f)) as level:
+            with open(Path(path) / f) as level:
                 reader = csv.reader(level, delimiter=",", quotechar='"')
-                levels[str.upper(f.replace(".agl", ""))] = [row for row in reader]
+                levels[f.stem.upper()] = [row for row in reader]
 
         return levels
     else:
-        handle_exception(f'File or folder {FileNotFoundError(abspath(path))} not found.')
+        handle_exception(f'File or folder {FileNotFoundError(path.resolve())} not found.')
         return None
 
 
 def __load_single_audio__(dir1, dir2) -> dict | None:
-    path = join(ASSETS_FOLDER, "SoundEffects", dir1, dir2)
-    if isdir(path):
+    path = Path(ASSETS_FOLDER) / "SoundEffects" / dir1 / dir2
+    if path.is_dir():
         sounds = {}
-        for file in [f for f in listdir(path) if isfile(join(path, f))]:
-            if sounds.get(dir2.upper()) is None:
-                sounds[dir2.upper()] = []
-            sounds[dir2.upper()].append(f'{path}\\{file}')
+        for file in [f for f in path.iterdir() if f.is_file() and f.suffix.lower() in ('.mp3', '.wav', '.wave')]:
+            if sounds.get(dir2.stem.upper()) is None:
+                sounds[dir2.stem.upper()] = []
+            sounds[dir2.stem.upper()].append(str(path / file))
         return sounds
     else:
-        handle_exception(f'File {FileNotFoundError(abspath(path))} not found.')
+        handle_exception(f'File {FileNotFoundError(path.resolve())} not found.')
         return None
 
 
-def load_audios(dir, dir2=None, suppress_error=False) -> dict | None:
+def load_audios(dir1, dir2=None, suppress_error=False) -> dict | None:
     if dir2 is None:
-        path = join(ASSETS_FOLDER, "SoundEffects", dir)
+        path = Path(ASSETS_FOLDER) / "SoundEffects" / dir1
     else:
-        path = join(ASSETS_FOLDER, "SoundEffects", dir, dir2)
-    if isdir(path):
+        path = Path(ASSETS_FOLDER) / "SoundEffects" / dir1 / dir2
+    if path.is_dir():
         sounds = {}
-        for sub_dir in [d for d in listdir(path) if isdir(path)]:
-            sounds.update(__load_single_audio__(dir, sub_dir))
+        for sub_dir in [d for d in path.iterdir() if Path(Path(path) / d).is_dir()]:
+            audio = __load_single_audio__(dir1, sub_dir)
+            if audio:
+                sounds.update(audio)
 
         sound_master = {}
         for key in sounds:
@@ -312,7 +315,7 @@ def load_audios(dir, dir2=None, suppress_error=False) -> dict | None:
 
         return sounds
     elif dir2 is not None and not suppress_error:
-        handle_exception(f'File {FileNotFoundError(abspath(path))} not found.')
+        handle_exception(f'File {FileNotFoundError(path.resolve())} not found.')
     return None
 
 
@@ -333,15 +336,15 @@ def set_sound_source(source_rect, player_rect, sound_type, channel) -> None:
 
 
 def load_text_from_file(file) -> list | None:
-    path = join(ASSETS_FOLDER, "Text", file)
-    if isfile(path):
+    path = Path(ASSETS_FOLDER) / "Text" / file
+    if path.is_file():
         text = []
         with open(path, "r") as file:
             for line in file:
                 text.append(line.replace("\n", ""))
         return text
     else:
-        handle_exception(f'File {FileNotFoundError(abspath(path))} not found.')
+        handle_exception(f'File {FileNotFoundError(path.resolve())} not found.')
         return None
 
 

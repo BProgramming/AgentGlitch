@@ -17,6 +17,7 @@ class Button:
         self._normal = {'normal': self.__make__(img_normal, label_normal), 'mouseover': self.__make__(img_mouseover, label_mouseover)}
         self._retro = {key: retroify_image(value) for key, value in self._normal.items()}
         self.is_mouseover = False
+        self.is_focused: bool = False
         self.is_enabled = True
 
     def __make__(self, image: pygame.Surface | None, label: pygame.Surface | None) -> pygame.Surface:
@@ -53,7 +54,11 @@ class Button:
         return self.__get_image__('mouseover')
 
     def draw(self) -> None:
-        self.controller.win.blit(self.mouseover if self.is_mouseover and self.is_enabled else self.normal, (self.rect.x, self.rect.y))
+        active = (self.is_mouseover or self.is_focused) and self.is_enabled
+        self.controller.win.blit(
+            self.mouseover if active else self.normal,
+            (self.rect.x, self.rect.y),
+        )
 
 
 class Bar(Button):
@@ -92,6 +97,9 @@ class Menu:
         self.controller = controller
         self.clear_normal = None
         self.clear_retro = None
+        self.focused_index: int = 0
+        self._joy_held: tuple[int, int] = (0, 0)   # (horiz, vert) direction held
+        self._joy_repeat_timer: float = 0.0   # time until next auto-repeat move
         button_assets = {key: pygame.transform.smoothscale_by(value, 0.5) for key, value in load_images("Menu", "Buttons").items()}
         button_width = button_assets["BUTTON_NORMAL"].get_width()
         button_height = button_assets["BUTTON_NORMAL"].get_height()
@@ -209,94 +217,151 @@ class Menu:
             button.draw()
 
     def loop(self) -> int | None:
-        if self.controller.gamepad is not None:
-            should_process_event = True
-            gamepad = self.controller.gamepad
-            layout = self.controller.GAMEPAD_LAYOUTS[self.controller.active_gamepad_layout]
-            if abs(gamepad.get_axis(layout['axis_vert'])) > Menu.JOYSTICK_TOLERANCE:
-                self.joystick_movement = (0, 1 if gamepad.get_axis(layout['axis_vert']) > 0 else -1)
-                should_process_event = False
-            elif abs(gamepad.get_axis(layout['axis_horiz'])) > Menu.JOYSTICK_TOLERANCE:
-                self.joystick_movement = (1 if gamepad.get_axis(layout['axis_horiz']) > 0 else -1, 0)
-                should_process_event = False
-            elif gamepad.get_button(layout['button_up']):
-                self.joystick_movement = (0, -1)
-                should_process_event = False
-            elif gamepad.get_button(layout['button_down']):
-                self.joystick_movement = (0, 1)
-                should_process_event = False
-            elif gamepad.get_button(layout['button_right']):
-                self.joystick_movement = (1, 0)
-                should_process_event = False
-            elif gamepad.get_button(layout['button_left']):
-                self.joystick_movement = (-1, 0)
-                should_process_event = False
-            if self.joystick_movement != (0, 0) and should_process_event:
-                self.move_mouse_pos_horiz(self.joystick_movement[0])
-                self.move_mouse_pos_vert(self.joystick_movement[1])
-                self.joystick_movement = (0, 0)
+        layout = (
+            self.controller.GAMEPAD_LAYOUTS[self.controller.active_gamepad_layout]
+            if self.controller.gamepad is not None and self.controller.active_gamepad_layout
+            else None
+        )
+        gamepad = self.controller.gamepad
 
+        # ── Analogue / D-pad input → move focus index ─────────────────────
+        raw_dir = (0, 0)
+        if gamepad is not None and layout is not None:
+            vert = gamepad.get_axis(layout['axis_vert'])
+            horiz = gamepad.get_axis(layout['axis_horiz'])
+            if abs(vert) > Menu.JOYSTICK_TOLERANCE:
+                raw_dir = (0, 1 if vert > 0 else -1)
+            elif abs(horiz) > Menu.JOYSTICK_TOLERANCE:
+                raw_dir = (1 if horiz > 0 else -1, 0)
+            elif gamepad.get_button(layout['button_up']):
+                raw_dir = (0, -1)
+            elif gamepad.get_button(layout['button_down']):
+                raw_dir = (0, 1)
+            elif gamepad.get_button(layout['button_right']):
+                raw_dir = (1, 0)
+            elif gamepad.get_button(layout['button_left']):
+                raw_dir = (-1, 0)
+
+        # Initial press or auto-repeat after hold delay.
+        now = time.monotonic()
+        HOLD_DELAY = 0.40  # seconds before auto-repeat starts
+        HOLD_REPEAT = 0.12  # seconds between auto-repeat steps
+        if raw_dir != (0, 0):
+            if self._joy_held == (0, 0):
+                # Fresh press — move immediately and start hold timer.
+                self._apply_focus_move(raw_dir)
+                self._joy_repeat_timer = now + HOLD_DELAY
+                self._joy_held = raw_dir
+            elif raw_dir == self._joy_held and now >= self._joy_repeat_timer:
+                self._apply_focus_move(raw_dir)
+                self._joy_repeat_timer = now + HOLD_REPEAT
+            elif raw_dir != self._joy_held:
+                # Direction changed mid-hold — treat as new press.
+                self._apply_focus_move(raw_dir)
+                self._joy_repeat_timer = now + HOLD_DELAY
+                self._joy_held = raw_dir
+        else:
+            self._joy_held = (0, 0)
+
+        # ── Mouse hover updates focus ──────────────────────────────────────
         pos = pygame.mouse.get_pos()
         for i, button in enumerate(self.buttons):
+            if button.is_enabled and button.rect.collidepoint(pos):
+                self.focused_index = i
+                break
+
+        # Clamp to enabled buttons.
+        self.focused_index = max(0, min(self.focused_index, len(self.buttons) - 1))
+
+        # Update visual state.
+        for i, button in enumerate(self.buttons):
+            button.is_focused = (i == self.focused_index)
             button.is_mouseover = (button.is_enabled and button.rect.collidepoint(pos))
 
-            if button.is_mouseover:
-                if pygame.mouse.get_pressed()[0]:
-                    if isinstance(button, Bar):
-                        pct = (pos[0] - button.bar_rect.x) / button.bar_rect.width
-                        if button.snap:
-                            dec = pct * button.range[-1]
-                            if dec < button.range[0]:
-                                button.value = button.range[0]
-                            elif dec > button.range[-1]:
-                                button.value = button.range[-1]
-                            else:
-                                for val in button.range:
-                                    if val >= dec:
-                                        button.value = val
-                                        break
-                        else:
-                            button.value = min(button.range[-1], max(button.range[0], pct * button.range[-1]))
-                for event in pygame.event.get():
-                    if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1) or (event.type == pygame.JOYBUTTONDOWN and event.button == self.controller.GAMEPAD_LAYOUTS[self.controller.active_gamepad_layout]['button_jump']):
+        # ── Sliders: drag with mouse ───────────────────────────────────────
+        focused_btn = self.buttons[self.focused_index]
+        if isinstance(focused_btn, Bar) and pygame.mouse.get_pressed()[0]:
+            pct = (pos[0] - focused_btn.bar_rect.x) / focused_btn.bar_rect.width
+            if focused_btn.snap:
+                dec = pct * focused_btn.range[-1]
+                dec = max(focused_btn.range[0], min(focused_btn.range[-1], dec))
+                for val in focused_btn.range:
+                    if val >= dec:
+                        focused_btn.value = val
+                        break
+            else:
+                focused_btn.value = min(
+                    focused_btn.range[-1],
+                    max(focused_btn.range[0], pct * focused_btn.range[-1]),
+                )
+
+        # ── Event-driven confirmation ──────────────────────────────────────
+        for event in pygame.event.get():
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                # Click confirms whichever button the mouse is over.
+                for i, button in enumerate(self.buttons):
+                    if button.is_enabled and button.rect.collidepoint(pos):
+                        if isinstance(button, Bar):
+                            return self._handle_bar_confirm(i, button)
                         return i
-                    elif event.type == pygame.JOYBUTTONDOWN and event.button == self.controller.GAMEPAD_LAYOUTS[self.controller.active_gamepad_layout]['button_crouch_uncrouch']:
-                        return -1
+
+            elif event.type == pygame.KEYDOWN:
+                kl = self.controller.KEYBOARD_LAYOUTS[self.controller.active_keyboard_layout]
+                if event.key in kl['keys_crouch_uncrouch'] + kl.get('keys_down', []):
+                    self._apply_focus_move((0, 1))
+                elif event.key in kl['keys_jump'] + kl.get('keys_up', []):
+                    self._apply_focus_move((0, -1))
+                elif event.key in kl['keys_right']:
+                    self._apply_focus_move((1, 0))
+                elif event.key in kl['keys_left']:
+                    self._apply_focus_move((-1, 0))
+                elif event.key in kl['keys_pause_unpause']:
+                    return -1
+                elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+                    if isinstance(focused_btn, Bar):
+                        return self._handle_bar_confirm(self.focused_index, focused_btn)
+                    return self.focused_index
+
+            elif event.type == pygame.JOYBUTTONDOWN and layout is not None:
+                if event.button == layout['button_jump']:
+                    if isinstance(focused_btn, Bar):
+                        return self._handle_bar_confirm(self.focused_index, focused_btn)
+                    return self.focused_index
+                elif event.button == layout['button_crouch_uncrouch']:
+                    return -1
+
         return None
 
-    def set_mouse_pos(self, i) -> None:
-        rect = self.buttons[i].rect
-        pygame.mouse.set_pos(rect.x + (rect.width * 0.75), rect.y + (rect.height / 2))
+    def _apply_focus_move(self, direction: tuple[int, int]) -> None:
+        """Move self.focused_index by one step in the given direction."""
+        _, vert = direction
+        horiz, _ = direction
+        if isinstance(self, Selector):
+            half = len(self.buttons) // 2
+            if vert > 0 and self.focused_index < half - 1:
+                self.focused_index += 1
+            elif vert < 0 and self.focused_index > 0:
+                self.focused_index -= 1
+            elif horiz != 0:
+                # Left/right navigates between the two columns of a Selector.
+                other = self.focused_index + (1 if horiz > 0 else -1)
+                if 0 <= other < len(self.buttons):
+                    self.focused_index = other
+        else:
+            if vert > 0 and self.focused_index < len(self.buttons) - 1:
+                self.focused_index += 1
+            elif vert < 0 and self.focused_index > 0:
+                self.focused_index -= 1
 
-    def move_mouse_pos_vert(self, direction) -> None:
-        if direction == 0 or len(self.buttons) == 1:
-            return
-        if pygame.mouse.get_visible():
-            pygame.mouse.set_visible(False)
-        for i, button in enumerate(self.buttons):
-            if button.rect.collidepoint(pygame.mouse.get_pos()):
-                if isinstance(self, Selector) and ((direction > 0 and i < len(self.buttons) // 2) or (direction < 0 and i > (len(self.buttons) // 2) - 1)) or not isinstance(self, Selector) and ((direction > 0 and i < len(self.buttons) - 1) or (direction < 0 and i > 0)):
-                    cur = pygame.mouse.get_pos()
-                    pygame.mouse.set_pos(cur[0], cur[1] + (direction * button.rect.height))
-                    break
+    def _handle_bar_confirm(self, i: int, button) -> int | None:
+        """Inline slider adjustment on confirm press (Enter / A button)."""
+        # For now just return the index so the caller knows which bar was activated.
+        return i
 
-    def move_mouse_pos_horiz(self, direction) -> None:
-        if direction == 0 or len(self.buttons) == 1 or not isinstance(self, Selector):
-            return
-        if pygame.mouse.get_visible():
-            pygame.mouse.set_visible(False)
-        for i, button in enumerate(self.buttons):
-            if button.rect.collidepoint(pygame.mouse.get_pos()):
-                if isinstance(button, Bar):
-                    if len(button.range) == 2 and button.range[0] == 0 and button.range[1] == 100:
-                        for j, val in enumerate(button.range):
-                            if button.value == val and ((j < len(button.range) - 1 and direction > 0) or (j > 0 and direction < 0)):
-                                button.value = max(button.range[0], min(button.range[-1], button.pct_val * (button.range[-1] - button.range[0]) + button.range[0]))
-                                break
-                elif (direction > 0 and i % 2 == 0) or (direction < 0 and i % 2 == 1):
-                    cur = pygame.mouse.get_pos()
-                    pygame.mouse.set_pos(cur[0] + direction * button.rect.width, cur[1])
-                break
+    def set_mouse_pos(self, i: int) -> None:
+        """Set the focused button index (kept for backward compatibility)."""
+        self.focused_index = max(0, min(i, len(self.buttons) - 1))
+
 
 class Selector(Menu):
     def __init__(self, controller, header, note, images, values, index=0, music=None, should_glitch=True, accept_only=False):
@@ -319,12 +384,13 @@ class Selector(Menu):
                 for key in images.keys():
                     self.images[key] = []
                     for image in images[key]:
-                        scale_val = min(image.get_width() / self.controller.win.get_width(), image.get_height() / self.controller.win.get_height())
-                        if scale_val > 1:
-                            image = pygame.transform.scale_by(image, 1 / scale_val)
-                        max_image_width = max(max_image_width, image.get_width())
-                        max_image_height = max(max_image_height, image.get_height())
-                        self.images[key].append(image)
+                        if image:
+                            scale_val: int = min(image.get_width() / self.controller.win.get_width(), image.get_height() / self.controller.win.get_height())
+                            if scale_val > 1:
+                                image = pygame.transform.scale_by(image, 1 / scale_val)
+                            max_image_width = max(max_image_width, image.get_width())
+                            max_image_height = max(max_image_height, image.get_height())
+                            self.images[key].append(image)
         else:
             self.images = {"normal": [], "retro": []}
             for image in images:
@@ -375,7 +441,13 @@ class Selector(Menu):
             x = self.controller.win.get_width() // 2 - (button_width * (1 - i % 2))
             y = self.rect.y + self.rect.height - (button_height * ((len(loop_range) - i + 1) // 2))
             self.buttons.append(Button(self.controller, x, y, button_width, button_height, i, img_normal=normal, img_mouseover=mouseover, label_normal=label, label_mouseover=label))
-        self.joystick_movement = (0, 0)
+
+        # focused_index navigation state (Selector doesn't call super().__init__
+        # so these must be set explicitly here alongside joystick_movement)
+        self.joystick_movement  = (0, 0)   # kept for any legacy references
+        self.focused_index: int = 0
+        self._joy_held: tuple[int, int] = (0, 0)
+        self._joy_repeat_timer: float = 0.0
 
         self.music = (None if music is None else validate_file_list("Music", music, "mp3"))
         self.music_index = 0
@@ -384,23 +456,127 @@ class Selector(Menu):
         self.glitches = None
         self.cycle_images(0)
 
-    def move_mouse_pos_horiz(self, direction) -> None:
-        if direction == 0 or len(self.buttons) == 1:
-            return
-        if pygame.mouse.get_visible():
-            pygame.mouse.set_visible(False)
+    # move_mouse_pos_horiz removed — replaced by _apply_focus_move below.
+
+    def _apply_focus_move(self, direction: tuple[int, int]) -> None:
+        """Navigate the 2×2 button grid.
+
+        Layout (normal):          Layout (accept_only):
+          [0: ←]  [1: →]           [0: Accept]
+          [2: Back] [3: Accept]
+        """
+        horiz, vert = direction
+        n = len(self.buttons)
+        if n == 1:
+            return  # accept_only: nothing to navigate
+
+        row = self.focused_index // 2
+        col = self.focused_index % 2
+
+        if horiz > 0 and col == 0:
+            self.focused_index += 1
+        elif horiz < 0 and col == 1:
+            self.focused_index -= 1
+        elif vert > 0 and row == 0:
+            self.focused_index += 2   # move down to back/accept row
+        elif vert < 0 and row == 1:
+            self.focused_index -= 2   # move up to arrows row
+
+    def loop(self) -> int | None:
+        layout = (
+            self.controller.GAMEPAD_LAYOUTS[self.controller.active_gamepad_layout]
+            if self.controller.gamepad is not None and self.controller.active_gamepad_layout
+            else None
+        )
+        gamepad = self.controller.gamepad
+
+        # ── Directional input ──────────────────────────────────────────────
+        raw_dir = (0, 0)
+        if gamepad is not None and layout is not None:
+            horiz = gamepad.get_axis(layout['axis_horiz'])
+            vert  = gamepad.get_axis(layout['axis_vert'])
+            if abs(horiz) > Menu.JOYSTICK_TOLERANCE:
+                raw_dir = (1 if horiz > 0 else -1, 0)
+            elif abs(vert) > Menu.JOYSTICK_TOLERANCE:
+                raw_dir = (0, 1 if vert > 0 else -1)
+            elif gamepad.get_button(layout['button_right']):
+                raw_dir = (1, 0)
+            elif gamepad.get_button(layout['button_left']):
+                raw_dir = (-1, 0)
+            elif gamepad.get_button(layout['button_up']):
+                raw_dir = (0, -1)
+            elif gamepad.get_button(layout['button_down']):
+                raw_dir = (0, 1)
+
+        HOLD_DELAY  = 0.40
+        HOLD_REPEAT = 0.12
+        now = time.monotonic()
+
+        if raw_dir != (0, 0):
+            if self._joy_held == (0, 0):
+                self._apply_focus_move(raw_dir)
+                self._joy_repeat_timer = now + HOLD_DELAY
+                self._joy_held = raw_dir
+            elif raw_dir == self._joy_held and now >= self._joy_repeat_timer:
+                self._apply_focus_move(raw_dir)
+                self._joy_repeat_timer = now + HOLD_REPEAT
+            elif raw_dir != self._joy_held:
+                self._apply_focus_move(raw_dir)
+                self._joy_repeat_timer = now + HOLD_DELAY
+                self._joy_held = raw_dir
+            # Horizontal movement on the arrows row (buttons 0/1) cycles
+            # images immediately without needing a separate confirm press.
+            if raw_dir[0] != 0 and self.focused_index < 2 and len(self.buttons) > 1:
+                return self.focused_index
+        else:
+            self._joy_held = (0, 0)
+
+        # ── Mouse hover updates focus ──────────────────────────────────────
+        pos = pygame.mouse.get_pos()
         for i, button in enumerate(self.buttons):
-            if button.rect.collidepoint(pygame.mouse.get_pos()):
-                if isinstance(button, Bar):
-                    if len(button.range) == 2 and button.range[0] == 0 and button.range[1] == 100:
-                        for j, val in enumerate(button.range):
-                            if button.value == val and ((j < len(button.range) - 1 and direction > 0) or (j > 0 and direction < 0)):
-                                button.value = max(button.range[0], min(button.range[-1], button.pct_val * (button.range[-1] - button.range[0]) + button.range[0]))
-                                break
-                elif (direction > 0 and i % 2 == 0) or (direction < 0 and i % 2 == 1):
-                    cur = pygame.mouse.get_pos()
-                    pygame.mouse.set_pos(cur[0] + direction * button.rect.width, cur[1])
+            if button.is_enabled and button.rect.collidepoint(pos):
+                self.focused_index = i
                 break
+
+        self.focused_index = max(0, min(self.focused_index, len(self.buttons) - 1))
+        for i, button in enumerate(self.buttons):
+            button.is_focused   = (i == self.focused_index and button.is_enabled)
+            button.is_mouseover = (button.is_enabled and button.rect.collidepoint(pos))
+
+        # ── Events ────────────────────────────────────────────────────────
+        for event in pygame.event.get():
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                for i, button in enumerate(self.buttons):
+                    if button.is_enabled and button.rect.collidepoint(pos):
+                        return i
+
+            elif event.type == pygame.KEYDOWN:
+                kl = self.controller.KEYBOARD_LAYOUTS[self.controller.active_keyboard_layout]
+                if event.key in kl['keys_right']:
+                    self._apply_focus_move((1, 0))
+                    if self.focused_index < 2 and len(self.buttons) > 1:
+                        return self.focused_index
+                elif event.key in kl['keys_left']:
+                    self._apply_focus_move((-1, 0))
+                    if self.focused_index < 2 and len(self.buttons) > 1:
+                        return self.focused_index
+                elif event.key in kl['keys_crouch_uncrouch']:
+                    self._apply_focus_move((0, 1))
+                elif event.key in kl['keys_jump']:
+                    self._apply_focus_move((0, -1))
+                elif event.key in kl['keys_pause_unpause']:
+                    return -1
+                elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+                    return self.focused_index
+
+            elif event.type == pygame.JOYBUTTONDOWN and layout is not None:
+                if event.button == layout['button_jump']:
+                    return self.focused_index
+                elif event.button == layout['button_crouch_uncrouch']:
+                    return -1
+
+        return None
+
     def set_index(self, index: int) -> None:
         self.image_index = index
         self.image_selected = self.images["retro" if self.controller.retro else "normal"][index]

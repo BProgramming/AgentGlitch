@@ -50,9 +50,13 @@ class Level:
             self.cinematics = (None if meta_dict[name].get("cinematics") is None else CinematicsManager(meta_dict[name]["cinematics"], controller, player_sprites=self._player.sprites))
         self.particle_effects: list[ParticleEffect] = []
         if meta_dict[name].get("particle_effect") is not None:
-            self.particle_effects.append(self.gen_particle_effect(meta_dict[name]["particle_effect"].upper(), win))
+            effect = self.gen_particle_effect(meta_dict[name]["particle_effect"].upper(), win)
+            if effect:
+                self.particle_effects.append(effect)
         if self._retro:
-            self.particle_effects.append(self.gen_particle_effect("FILM", win))
+            effect = self.gen_particle_effect("FILM", win)
+            if effect:
+                self.particle_effects.append(effect)
         if meta_dict[name].get("abilities") is not None:
             for key in meta_dict[name]["abilities"]:
                 self.player.abilities[key.casefold()] = meta_dict[name]["abilities"][key]

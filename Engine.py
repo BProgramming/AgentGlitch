@@ -2,10 +2,10 @@ import pygame
 from Block import Block
 from SteamworksConnection import SteamworksConnection
 from Helpers import load_json_dict, load_object_dicts, load_levels, load_audios, display_text, DifficultyScale, \
-    handle_exception, load_text_from_file, ASSETS_FOLDER, retroify_image, load_images
-from os.path import join, isfile, abspath
+    handle_exception, load_text_from_file, ASSETS_FOLDER, load_images
 from DiscordConnection import DiscordConnection
 from SimpleVFX.SimpleVFX import VisualEffectsManager
+from pathlib import Path
 
 # This stuff happens in the middle of imports because some classes require pygame display available before they can be imported
 pygame.init()
@@ -16,11 +16,11 @@ discord.set_status(details="In the menu:", state="Gathering intel")
 WIDTH, HEIGHT = 1920, 1080
 FPS_TARGET = 150
 
-icon = join(ASSETS_FOLDER, "Icons", "icon_small.png")
-if isfile(icon):
+icon = Path(ASSETS_FOLDER) / "Icons" / "icon_small.png"
+if Path(icon).is_file():
     pygame.display.set_icon(pygame.image.load(icon))
 else:
-    handle_exception(f'File {FileNotFoundError(abspath(icon))} not found.')
+    handle_exception(f'File {FileNotFoundError(Path(icon).resolve())} not found.')
 
 WINDOW = pygame.display.set_mode((WIDTH, HEIGHT), flags=pygame.SCALED)
 pygame.display.set_caption("AGENT GLITCH")
@@ -44,8 +44,11 @@ def main(win):
     clock = pygame.time.Clock()
 
     levels = load_levels("Levels")
-    objects_dict = load_object_dicts("ReferenceDicts\\GameObjects")
+    objects_dict = load_object_dicts(Path("ReferenceDicts") / "GameObjects")
     meta_dict = load_json_dict("ReferenceDicts", "meta.agd")
+
+    if not levels or not objects_dict or not meta_dict:
+        return
 
     controller = Controller(None, win, main_menu_music=(None if meta_dict.get("MAIN_MENU") is None or meta_dict["MAIN_MENU"].get("music") is None else list(meta_dict["MAIN_MENU"]["music"].split(' '))), steamworks=steamworks, discord=discord)
     controller.has_dlc.update(steamworks.has_dlc())
@@ -64,7 +67,7 @@ def main(win):
     else:
         end_cinematics = {}
 
-    cinematics_files = start_cinematics + recap_cinematics + end_cinematics
+    cinematics_files: list = start_cinematics + recap_cinematics + end_cinematics
     cinematics = CinematicsManager(cinematics_files, controller)
     loading_screens = load_images("LoadingScreens", None)
 
@@ -127,13 +130,18 @@ def main(win):
         cur_level = None
         while True:
             # THIS PART LOADS EVERYTHING: #
-            loading_screen = list(loading_screens.values())[random.randint(0, len(loading_screens) - 1)]
-            if controller.retro:
-                loading_screen = retroify_image(loading_screen)
-            scale_factor = min(win.get_width() / loading_screen.get_width(), win.get_height() / loading_screen.get_height())
-            loading_screen = pygame.transform.scale_by(loading_screen, scale_factor)
             win.fill((0, 0, 0))
-            win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
+            if loading_screens:
+                loading_screen: pygame.Surface | None = list(loading_screens.values())[random.randint(0, len(loading_screens) - 1)]
+            else:
+                loading_screen: pygame.Surface | None = None
+            if loading_screen and controller.retro:
+                loading_screen = retroify_image(loading_screen)
+            if loading_screen:
+                scale_factor = min(win.get_width() / loading_screen.get_width(), win.get_height() / loading_screen.get_height())
+                loading_screen = pygame.transform.scale_by(loading_screen, scale_factor)
+            if loading_screen:
+                win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
             display_text("Loading mission... [1/3]", controller, min_pause_time=0, should_sleep=False, retro=controller.retro, background=True)
             should_load = False
             if new_game:
@@ -152,23 +160,27 @@ def main(win):
                 controller.level_selected = None
             controller.goto_load = False
             win.fill((0, 0, 0))
-            win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
+            if loading_screen:
+                win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
             display_text("Loading mission... [2/3]", controller, min_pause_time=0, should_sleep=False, retro=controller.retro, background=True)
             player_audio = enemy_audio = load_audios("Actors")
             block_audio = load_audios("Blocks")
             message_audio = load_audios("Messages", dir2=cur_level, suppress_error=True)
             vfx_manager = VisualEffectsManager(join(ASSETS_FOLDER, "VisualEffects"))
             win.fill((0, 0, 0))
-            win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
+            if loading_screen:
+                win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
             display_text("Loading mission... [3/3]", controller, min_pause_time=0, should_sleep=False, retro=controller.retro, background=True)
             controller.level = level = Level(cur_level, levels, meta_dict, objects_dict, {}, {}, player_audio, enemy_audio, block_audio, message_audio, vfx_manager, win, controller, loading_screen)
 
             win.fill((0, 0, 0))
-            win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
+            if loading_screen:
+                win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
             display_text("Loading agent...", controller, min_pause_time=0, should_sleep=False, retro=level.retro, background=True)
 
             win.fill((0, 0, 0))
-            win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
+            if loading_screen:
+                win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
             display_text("Initializing controls...", controller, min_pause_time=0, should_sleep=False, retro=level.retro, background=True)
             controller.hud = hud = HUD(level.player, win, retro=level.retro)
 
@@ -177,7 +189,8 @@ def main(win):
             controller.save()
 
             win.fill((0, 0, 0))
-            win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
+            if loading_screen:
+                win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))
             funny_loading_text = ["Applying finishing touches", "Applying one last coat of paint", "Almost done", "Any minute now", "Nearly there", "One more thing", "Tidying up", "Training agent", "Catching the train", "Finishing lunch", "Folding laundry"]
             display_text(f'{funny_loading_text[random.randint(0, len(funny_loading_text) - 1)]}...', controller, min_pause_time=0, should_sleep=False, retro=level.retro, background=True)
 
@@ -201,7 +214,7 @@ def main(win):
 
             camera.fade_in(controller)
             if not should_load and level.start_message is not None:
-                display_text(load_text_from_file(level.start_message), controller, should_type_text=True, retro=level.retro)
+                display_text(load_text_from_file(level.start_message) or '', controller, should_type_text=True, retro=level.retro)
 
             camera.draw(controller.master_volume, glitches=None)
             if controller.active_objective is None:
@@ -211,7 +224,6 @@ def main(win):
             dtime_offset: float = 0.0
             glitch_timer = 0
             glitches = None
-            next_level = None
             clock.tick(FPS_TARGET)
 
             # MAIN GAME LOOP: #
@@ -237,22 +249,22 @@ def main(win):
                             controller.save()
                             controller.quit()
                         case pygame.JOYDEVICEADDED:
-                            dtime_offset += controller.enable_gamepad(notify=True)
+                            dtime_offset += controller.enable_gamepad(notify=True, device_index=event.device_index)
                         case pygame.JOYDEVICEREMOVED:
-                            dtime_offset += controller.disable_gamepad(notify=True)
+                            dtime_offset += controller.on_device_removed(event, notify=True)
                         case pygame.KEYDOWN:
-                            dtime_offset += controller.handle_single_input(event.key, win)
+                            dtime_offset += controller.handle_single_input(event.key)
                         case pygame.KEYUP:
                             # DEV ONLY if event.key == pygame.K_F2:
                             # DEV ONLY    level.gen_background()
                             level.player.stop()
                         case pygame.JOYBUTTONDOWN:
-                            dtime_offset += controller.handle_single_input(event.button, win)
+                            dtime_offset += controller.handle_single_input(event.button)
                         case pygame.JOYBUTTONUP:
                             level.player.stop()
                         case pygame.USEREVENT:
                             pygame.mixer.music.play()
-                            if "LOOP" not in controller.music[controller.music_index].upper():
+                            if "LOOP" not in controller.music[controller.music_index].stem.upper():
                                 controller.cycle_music()
                         case _:
                             pass
@@ -270,7 +282,7 @@ def main(win):
                 vfx_manager.manage(dtime)
 
                 for ent in level.entities:
-                    if (not isinstance(ent, Actor) and not type(ent) is Block) or (isinstance(ent, Actor) and math.dist(ent.rect.center, (camera.focus_x, camera.focus_y)) < win.get_width() * 1.5):
+                    if (not isinstance(ent, Actor) and not type(ent) is Block) or (isinstance(ent, Actor) and ent.rect and math.dist(ent.rect.center, (camera.focus_x, camera.focus_y)) < win.get_width() * 1.5):
                         if hasattr(ent, "patrol") and callable(ent.patrol):
                             ent.patrol(dtime)
                         dtime_offset += ent.loop(dtime)
@@ -349,7 +361,7 @@ def main(win):
                 break
             elif controller.next_level is not None:
                 if level.end_message is not None:
-                    display_text(load_text_from_file(level.end_message), controller, should_type_text=True, retro=level.retro)
+                    display_text(load_text_from_file(level.end_message) or '', controller, should_type_text=True, retro=level.retro)
                 controller.save_player_profile()
                 camera.fade_out(controller)
                 if level.cinematics is not None and level.end_cinematic is not None:
