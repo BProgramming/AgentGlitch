@@ -102,7 +102,7 @@ def main(win):
             slide = pygame.transform.scale_by(slide, scale_factor)
             slide_retro = pygame.image.load(title_screen_retro_file).convert_alpha()
             scale_factor_retro = min(win.get_width() / slide_retro.get_width(), win.get_height() / slide_retro.get_height())
-            slide_retro = retroify_image(pygame.transform.scale_by(slide_retro, scale_factor_retro))
+            slide_retro = image_to_retro(pygame.transform.scale_by(slide_retro, scale_factor_retro))
             controller.main_menu.clear_normal = slide.copy()
             controller.main_menu.clear_retro = slide_retro.copy()
             black = pygame.Surface((win.get_width(), win.get_height()), pygame.SRCALPHA)
@@ -136,7 +136,7 @@ def main(win):
             else:
                 loading_screen: pygame.Surface | None = None
             if loading_screen and controller.retro:
-                loading_screen = retroify_image(loading_screen)
+                loading_screen = image_to_retro(loading_screen)
             if loading_screen:
                 scale_factor = min(win.get_width() / loading_screen.get_width(), win.get_height() / loading_screen.get_height())
                 loading_screen = pygame.transform.scale_by(loading_screen, scale_factor)

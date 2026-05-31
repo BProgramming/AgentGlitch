@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import Any, TYPE_CHECKING
 import math
 import pygame
 import time
@@ -7,77 +9,98 @@ from pathlib import Path
 from Actor import Actor, MovementState
 from Block import Door
 from Helpers import DifficultyScale, MovementDirection, load_text_from_file, display_text, ASSETS_FOLDER, \
-    retroify_image, RETRO_BLACK, RETRO_WHITE, NORMAL_WHITE, NORMAL_BLACK, TEXT_BOX_BORDER_RADIUS, process_text
+    image_to_retro, RETRO_BLACK, RETRO_WHITE, NORMAL_WHITE, NORMAL_BLACK, TEXT_BOX_BORDER_RADIUS, process_text
 from SimpleVFX.SimpleVFX import VisualEffect, ImageDirection
+
+if TYPE_CHECKING:
+    from Controller import Controller
+    from Level import Level
 
 
 class NPCAlertState(Enum):
-    """Behaviour state for hostile NPC awareness of the player.
-
-    PATROL  – following the assigned patrol path (or standing idle if no path).
-    WAIT    – paused at a waypoint (duplicate-coordinate stop on the patrol path).
-    SEARCH  – player was recently spotted or just lost; NPC looks back and forth.
-    PURSUE  – actively chasing / engaging the player.
-    """
     PATROL = 0
     WAIT   = 1
     SEARCH = 2
     PURSUE = 3
 
-    def __str__(self) -> str:
+    def __str__(
+            self: NPCAlertState,
+    ) -> str:
         return self.name
 
 
 class NonPlayer(Actor):
-    VELOCITY_TARGET      = 250
-    PLAYER_SPOT_RANGE    = 3
-    # Rate-limiter: minimum seconds between full raycasting spot-checks.
-    PLAYER_SPOT_COOLDOWN = 2
-    # How long the NPC lingers in SEARCH before committing to PURSUE or PATROL.
-    ALERT_COOLDOWN       = 1.5
-    # How long the NPC faces each direction while searching.
-    SEARCH_LOOK_TIME     = 0.9
-    # How long the NPC waits at a marked waypoint.
-    PATH_WAIT_TIME       = 2.0
-    # Pixels beyond the NPC's leading edge used when checking for a gap ahead.
-    GAP_LOOKAHEAD        = 10
+    VELOCITY_TARGET:      float | int = 250.0
+    PLAYER_SPOT_COOLDOWN: float | int =   2.0
+    ALERT_COOLDOWN:       float | int =   1.5
+    SEARCH_LOOK_TIME:     float | int =   0.9
+    PATH_WAIT_TIME:       float | int =   2.0
 
-    def __init__(self, level, controller, x, y, sprite_master, audios, difficulty, block_size,
-                 path=None, kill_at_end=False, is_hostile=True, collision_message=None,
-                 bark=None, hp=100, can_shoot=False, spot_range=PLAYER_SPOT_RANGE,
-                 sprite=None, proj_sprite=None, name="Enemy"):
-        super().__init__(level, controller, x, y, sprite_master, audios, difficulty, block_size,
-                         can_shoot=can_shoot, sprite=sprite, proj_sprite=proj_sprite, name=name)
+    PLAYER_SPOT_RANGE: int =  3
+    GAP_LOOKAHEAD:     int = 10
+
+    def __init__(
+            self:              NonPlayer,
+            level:             Level,
+            controller:        Controller,
+            x:                 float | int,
+            y:                 float | int,
+            sprite_master:     dict[str, dict[str, list[pygame.Surface]]],
+            audios:            dict[str, list[pygame.mixer.Sound]],
+            difficulty:        float | int,
+            block_size:        float | int,
+            path:              list[list[tuple[float | int, float | int] | bool]] | None  = None,
+            kill_at_end:       bool                                                       = False,
+            is_hostile:        bool                                                       = True,
+            collision_message: str | dict[str, str | None] | None                         = None,
+            bark:              str | list[str] | None                                     = None,
+            hp:                float | int                                                = 100,
+            can_shoot:         bool                                                       = False,
+            spot_range:        float | int                                                = PLAYER_SPOT_RANGE,
+            sprite:            str | None                                                 = None,
+            proj_sprite:       str | None                                                 = None,
+            name:              str                                                        = "Enemy",
+    ):
+        super().__init__(
+            level,
+            controller,
+            x,
+            y,
+            sprite_master,
+            audios,
+            difficulty,
+            block_size,
+            can_shoot   = can_shoot,
+            sprite      = sprite,
+            proj_sprite = proj_sprite,
+            name        = name
+        )
         self.target_vel  = NonPlayer.VELOCITY_TARGET
         self.is_hostile  = is_hostile
 
-        # ── collision / bark message setup ─────────────────────────────────
-        if collision_message is not None:
-            if isinstance(collision_message, dict) \
-                    and collision_message.get("text") is not None \
-                    and collision_message.get("audio") is not None:
-                audio_file = Path(ASSETS_FOLDER) / "SoundEffects" / "Text" / collision_message["audio"]
-                if audio_file.is_file():
-                    self.collision_message = {
-                        "text":  load_text_from_file(collision_message["text"]),
-                        "audio": pygame.mixer.Sound(str(audio_file)),
-                    }
-                else:
-                    self.collision_message = load_text_from_file(collision_message["text"])
-            else:
+        self.collision_message: list[str] | dict[str, list[str] | pygame.mixer.Sound | None] | None = None
+        if collision_message:
+            if isinstance(collision_message, str):
                 self.collision_message = load_text_from_file(collision_message)
-        else:
-            self.collision_message = None
-        self.queued_message = None
+            elif isinstance(collision_message, dict):
+                f = collision_message.get("text")
+                if f:
+                    self.collision_message = load_text_from_file(f)
+                f = collision_message.get("audio")
+                if f:
+                    self.collision_message = {
+                        "text": self.collision_message,
+                        "audio": pygame.mixer.Sound(f)
+                    }
+        self.queued_message: str | list[str] | dict[str, str | list[str] | pygame.mixer.Sound | None] | None = None
 
-        # ── patrol path ────────────────────────────────────────────────────
         self.patrol_path       = path
         self.kill_at_end       = kill_at_end
         self.spot_range        = spot_range * block_size
         if path is None:
             self.spot_range *= 2
         self.patrol_path_index = 0
-        if self.patrol_path is not None:
+        if self.patrol_path:
             for point in self.patrol_path:
                 point[0] += (block_size - self.rect.width) // 2
                 point[1] += (block_size - self.rect.height)
@@ -93,10 +116,8 @@ class NonPlayer(Actor):
                 else MovementDirection.LEFT
             )
 
-        # ── HP ─────────────────────────────────────────────────────────────
         self.max_hp = self.hp = hp * self.difficulty
 
-        # ── cooldowns (all decremented each frame by update_cooldowns) ──────
         self.cooldowns.update({
             "spot_player":    0.0,  # rate-limiter for raycasting
             "alert_cooldown": 0.0,  # SEARCH decision window
@@ -105,15 +126,10 @@ class NonPlayer(Actor):
         })
         self.cached_cooldowns = self.cooldowns.copy()
 
-        # ── alert state machine ─────────────────────────────────────────────
         self.alert_state: NPCAlertState = NPCAlertState.PATROL
 
-        # ── door interaction ────────────────────────────────────────────────
-        # True while the NPC has triggered a door open and is waiting for it
-        # to slide clear before resuming movement.
         self._waiting_for_door: bool = False
 
-        # ── vision cone surfaces ────────────────────────────────────────────
         vision_hidden  = pygame.Surface((256, 10), pygame.SRCALPHA)
         vision_spotted = vision_hidden.copy()
         chunk = pygame.Surface((1, 10), pygame.SRCALPHA)
@@ -126,8 +142,8 @@ class NonPlayer(Actor):
             chunk.set_alpha(i)
             vision_spotted.blit(chunk, (i, 0))
         if self.level.retro:
-            vision_hidden  = retroify_image(vision_hidden)
-            vision_spotted = retroify_image(vision_spotted)
+            vision_hidden  = image_to_retro(vision_hidden)
+            vision_spotted = image_to_retro(vision_spotted)
         self.vision = {
             "hidden": {
                 MovementDirection.LEFT:  vision_hidden,
@@ -145,12 +161,7 @@ class NonPlayer(Actor):
         )
         self.has_barked = False
 
-    # ──────────────────────────────────────────────────────────────────────
-    # Alert-state helpers
-    # ──────────────────────────────────────────────────────────────────────
-
     def _enter_search(self, *, from_pursue: bool) -> None:
-        """Transition into SEARCH state and spawn the appropriate VFX above the NPC."""
         self.alert_state = NPCAlertState.SEARCH
         self.cooldowns["alert_cooldown"] = NonPlayer.ALERT_COOLDOWN
         self.cooldowns["search_turn"]    = NonPlayer.SEARCH_LOOK_TIME
@@ -168,18 +179,12 @@ class NonPlayer(Actor):
             time=NonPlayer.ALERT_COOLDOWN,
         )
 
-    # ──────────────────────────────────────────────────────────────────────
-    # Internal helpers
-    # ──────────────────────────────────────────────────────────────────────
-
     def __adj_spot_range__(self) -> float:
         return self.spot_range * self.level.player.size / (
             1.5 if self.level.player.is_crouching else 1
         )
 
     def __spot_player__(self) -> bool:
-        """Raycast visibility check.  Sets spot_player cooldown as a rate-limiter.
-        Returns True if the player is currently visible."""
         dist = math.dist(self.level.player.rect.center, self.rect.center)
         facing_toward = (
             self.facing == (
@@ -197,7 +202,6 @@ class NonPlayer(Actor):
                 for ent in self.level.get_entities_in_range((probe_x, cy), blocks_only=True):
                     if ent.rect.collidepoint(probe_x, cy):
                         return False
-            # Visible – refresh rate-limiter and optionally shoot
             self.cooldowns["spot_player"] = NonPlayer.PLAYER_SPOT_COOLDOWN
             if (self.state in (
                     MovementState.IDLE, MovementState.CROUCH, MovementState.RUN,
@@ -210,12 +214,6 @@ class NonPlayer(Actor):
         return False
 
     def __find_floor__(self, dist: float) -> bool:
-        """Check whether there is a floor tile at horizontal offset *dist* from
-        the NPC's left edge (negative = left, positive = right).
-
-        Bug-fix: both the range query and the exact collidepoint test now use
-        the same reference x so results are consistent.
-        """
         check_x = int(self.rect.x + dist)
         check_y = self.rect.bottom
         for block in self.level.get_entities_in_range((check_x, check_y), blocks_only=True):
@@ -236,22 +234,13 @@ class NonPlayer(Actor):
         elif self.patrol_path_index <= -len(self.patrol_path):
             self.patrol_path_index = 0
 
-    # ──────────────────────────────────────────────────────────────────────
-    # Core per-frame logic
-    # ──────────────────────────────────────────────────────────────────────
-
     def patrol(self, dtime: float) -> None:   # noqa: C901 (intentionally complex)
-        """Called once per frame by the engine before loop().
-        Drives both patrol-path following and the alert-state machine.
-        """
         self.should_move_horiz = False
 
-        # Don't override wind-up / wind-down animations or the hit stagger.
         if (self.cooldowns["get_hit"] > 0
                 or self.state in (MovementState.WIND_UP, MovementState.WIND_DOWN)):
             return
 
-        # ── Door wait: stand still until the door slides out of the way ───
         if self._waiting_for_door:
             still_blocked = any(
                 isinstance(ent, Door) and pygame.sprite.collide_rect(self, ent)
@@ -261,46 +250,37 @@ class NonPlayer(Actor):
                 return
             self._waiting_for_door = False
 
-        # ── SEARCH state: look back and forth while deciding ───────────────
         if self.alert_state == NPCAlertState.SEARCH:
             if self.cooldowns["search_turn"] <= 0:
                 self.direction = self.facing = self.direction.swap()
                 self.cooldowns["search_turn"] = NonPlayer.SEARCH_LOOK_TIME
 
             if self.cooldowns["alert_cooldown"] <= 0:
-                # Decision moment: force a fresh raycasting check.
                 self.cooldowns["spot_player"] = 0
                 if self.is_hostile and self.__spot_player__():
                     self.alert_state = NPCAlertState.PURSUE
                 else:
                     self.alert_state = NPCAlertState.PATROL
-            return  # NPC stands still while searching
+            return
 
-        # ── WAIT state: paused at waypoint ────────────────────────────────
         if self.alert_state == NPCAlertState.WAIT:
             if self.cooldowns["wait"] <= 0:
                 self.alert_state = NPCAlertState.PATROL
             else:
-                # Can still spot the player while waiting
                 if self.is_hostile and self.cooldowns["spot_player"] <= 0:
                     if self.__spot_player__():
                         self._enter_search(from_pursue=False)
                 return
 
-        # ─────────────────────────────────────────────────────────────────
-        # Determine current player visibility (rate-limited)
-        # ─────────────────────────────────────────────────────────────────
         can_see_player: bool
         if self.is_hostile:
             if self.cooldowns["spot_player"] <= 0:
                 can_see_player = self.__spot_player__()
             else:
-                # Within the rate-limiter window: we saw them recently.
                 can_see_player = True
         else:
             can_see_player = False
 
-        # ── Stationary NPC (no patrol path) ──────────────────────────────
         if self.patrol_path is None:
             self.should_move_vert = False
             self.direction = self.facing = (
@@ -322,15 +302,11 @@ class NonPlayer(Actor):
                     self.alert_state = NPCAlertState.PATROL
             return
 
-        # ── Has a patrol path ─────────────────────────────────────────────
 
-        # PATROL → SEARCH transition
         if self.alert_state == NPCAlertState.PATROL and can_see_player:
             self._enter_search(from_pursue=False)
             return
-
-        # PURSUE state
-        if self.alert_state == NPCAlertState.PURSUE:
+        elif self.alert_state == NPCAlertState.PURSUE:
             if not can_see_player:
                 self._enter_search(from_pursue=True)
                 return
@@ -377,8 +353,6 @@ class NonPlayer(Actor):
                     self.should_move_horiz = True
             return
 
-        # ── PATROL state: follow path ─────────────────────────────────────
-        # (WAIT is handled above; we only reach here in PATROL)
         target_x = self.patrol_path[self.patrol_path_index][0] - self.rect.x
 
         if abs(target_x) > 1:
@@ -390,7 +364,6 @@ class NonPlayer(Actor):
             )
             self.should_move_horiz = True
 
-            # ── Gap detection: jump before walking off an edge ─────────────
             # Check floor one step ahead of the NPC's leading edge.
             if self.jump_count == 0 and not self.should_move_vert:
                 leading_edge_offset = (
@@ -452,7 +425,6 @@ class NonPlayer(Actor):
         return True
 
     def draw(self, win, offset_x, offset_y, master_volume) -> None:
-        # Vision cone (only shown on easier difficulties).
         if self.difficulty <= DifficultyScale.EASY and self.is_hostile:
             adj_x = self.rect.centerx - offset_x - (
                 self.__adj_spot_range__() if self.facing == MovementDirection.LEFT else 0
@@ -504,10 +476,6 @@ class NonPlayer(Actor):
                          should_type_text=False, retro=self.level.retro)
         self.queued_message = None
         return time.perf_counter() - start
-
-    # ──────────────────────────────────────────────────────────────────────
-    # Bark / text rendering
-    # ──────────────────────────────────────────────────────────────────────
 
     def set_bark(self, output: list[str] | str | None) -> pygame.Surface | None:
         if output is None or output == "":

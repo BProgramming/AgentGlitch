@@ -3,7 +3,7 @@ import time
 import sys
 from os.path import join, isfile
 
-from Helpers import ASSETS_FOLDER, retroify_image
+from Helpers import ASSETS_FOLDER, image_to_retro
 from Level import Level
 from HUD import HUD
 
@@ -96,7 +96,7 @@ class Camera:
 
         self.bg_image = pygame.image.load(file).convert_alpha()
         if self.level.retro:
-            self.bg_image = retroify_image(self.bg_image)
+            self.bg_image = image_to_retro(self.bg_image)
         _, _, width, height = self.bg_image.get_rect()
 
         self.bg_tileset = []
@@ -110,7 +110,7 @@ class Camera:
             if isfile(file):
                 self.fg_image = pygame.image.load(file).convert_alpha()
                 if self.level.retro:
-                    self.fg_image = retroify_image(self.fg_image)
+                    self.fg_image = image_to_retro(self.fg_image)
 
     def draw(self, master_volume: dict[str, float], glitches: list=None) -> None:
         visible_screen = pygame.Rect(self.offset_x, self.offset_y, self.width, self.height)

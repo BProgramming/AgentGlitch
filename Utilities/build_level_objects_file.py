@@ -1,15 +1,18 @@
 import re
-from os.path import isfile
+from pathlib import Path
 
 def gen_ents(file):
-    pin = 'C:\\Users\\brent\\PycharmProjects\\AgentGlitch\\Assets\\Levels\\'
-    pout = 'C:\\Users\\brent\\PycharmProjects\\AgentGlitch\\Assets\\ReferenceDicts\\GameObjects\\'
-    if isfile(f'{pout}{file}.agd'):
-        print(f'ERROR: File {pout}{file}.agd already exists')
-    elif not isfile(f'{pin}{file}.agl'):
-        print(f'ERROR: File {pin}{file}.agl does not exist')
+    pin = Path('Assets') / 'Levels' / file / '.agl'
+    pout = Path('Assets') / 'ReferenceDicts' / 'GameObjects' / file / '.agd'
+    if pout.is_file():
+        print(f'ERROR: File {pout} already exists')
+    elif not pin.is_file():
+        print(f'ERROR: File {pin} does not exist')
     else:
-        with (open(f'{pin}{file}.agl', 'r', newline='') as fin, open(f'{pout}{file}.agd', 'w', newline='') as fout):
+        with (
+            open(pin, 'r', newline='') as fin,
+            open(pout, 'w', newline='') as fout,
+        ):
             values = sorted(list(set(re.split(r'[\s,]+', fin.read()))))
 
             fout.write('{\n')
@@ -19,6 +22,6 @@ def gen_ents(file):
                 output = f'  "{value}' + '": {\n    "type": "",\n    "data": {\n      \n    }\n  }' + f'{(',' if i < len(values) - 1 else '')}\n'
                 fout.write(output)
             fout.write('}')
-            print(f'File {pout}{file}.agd created')
+            print(f'File {pout} created')
 
 gen_ents('level3')

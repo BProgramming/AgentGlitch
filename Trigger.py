@@ -1,40 +1,82 @@
+from __future__ import annotations
 import time
 import pygame
-from os.path import join, isfile
-from Helpers import display_text, load_text_from_file, load_path, set_property, ASSETS_FOLDER, handle_exception
-from Entity import Entity
-from Block import Block, BreakableBlock, MovableBlock, Hazard, MovingBlock, MovingHazard, Door, FallingHazard
-from Objectives import Objective
-from NonPlayer import NonPlayer
+from typing import Any
+
+from Block import (
+    Block,
+    BreakableBlock,
+    MovableBlock,
+    MovingBlock,
+    Door,
+    Hazard,
+    MovingHazard,
+    FallingHazard,
+)
 from Boss import Boss
+from Controller import Controller
+from Entity import Entity
+from Helpers import (
+    ASSETS_FOLDER,
+    display_text,
+    handle_exception,
+    load_text_from_file,
+    load_path,
+    set_property,
+)
+from Level import Level
+from NonPlayer import NonPlayer
+from Objectives import Objective
 
 class Trigger(Entity):
-    def __init__(self, level, controller, x, y, width, height, value, fire_once=True, name="Trigger"):
-        super().__init__(level, controller, x, y, width, height, name=name)
+    def __init__(
+            self:       Trigger,
+            level:      Level,
+            controller: Controller,
+            x:          float | int,
+            y:          float | int,
+            width:      float | int,
+            height:     float | int,
+            value:      Any,
+            fire_once:  bool = True,
+            name:       str  = "Trigger",
+    ):
+        super().__init__(
+            level,
+            controller,
+            x,
+            y,
+            width,
+            height,
+            name = name,
+        )
         self.fire_once = fire_once
         self.has_fired = False
-        self.value = self.__load_input__(value)
+        self.value     = self.__load_input__(value)
 
-    def save(self) -> dict | None:
-        if self.has_fired:
-            return {self.name: {"has_fired": self.has_fired}}
-        else:
-            return None
+    def save(self: Trigger) -> dict[str, dict[str, bool]] | None:
+        return {self.name: {"has_fired": self.has_fired}} if self.has_fired else None
 
-    def load(self, ent) -> None:
-        self.has_fired = ent["has_fired"]
+    def load(self: Trigger, info: dict[str, Any]) -> None:
+        self.has_fired = info["has_fired"]
 
     @staticmethod
-    def __unpack_input__(value: dict) -> tuple:
+    def __unpack_input__(value: dict) -> tuple[Any, Any]:
         return value['ref'], value['input']
 
-    def __load_input__(self, value) -> object:
+    def __load_input__(self: Trigger, value) -> Any:
         return value
 
-    def collide(self, ent: Entity | None) -> float:
+    def collide(self: Trigger, ent: Entity | None) -> float | int:
         return 0.0
 
-    def draw(self, win, offset_x, offset_y, master_volume) -> None:
+    def draw(
+            self:           Trigger,
+            win:            pygame.Surface,
+            offset_x:       float | int,
+            offset_y:       float | int,
+            master_volume:  dict
+    ) -> None:
         pass
 
 class AchievementTrigger(Trigger):
@@ -190,8 +232,8 @@ class SoundTrigger(Trigger):
         super().__init__(level, controller, x, y, width, height, value, fire_once=fire_once, name=name)
 
     def __load_input__(self, value) -> pygame.mixer.Sound | None:
-        path = join(ASSETS_FOLDER, "SoundEffects", "triggers", value)
-        if not isfile(path) or len(value) < 4 or (value[-4:] != ".wav" and value[-4:] != ".mp3"):
+        path = ASSETS_FOLDER / "SoundEffects" / "triggers" / value
+        if not path.is_file() or len(value) < 4 or (value[-4:] != ".wav" and value[-4:] != ".mp3"):
             return None
         else:
             return pygame.mixer.Sound(path)

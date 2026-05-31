@@ -2,7 +2,7 @@ import cv2
 import pygame
 import time
 from enum import Enum
-from Helpers import glitch, handle_exception, ASSETS_FOLDER, retroify_image, NORMAL_WHITE, RETRO_WHITE, RETRO_BLACK, NORMAL_BLACK
+from Helpers import glitch, handle_exception, ASSETS_FOLDER, image_to_retro, NORMAL_WHITE, RETRO_WHITE, RETRO_BLACK, NORMAL_BLACK
 from os.path import join, isfile, abspath
 
 
@@ -115,7 +115,7 @@ class Cinematic:
         og_slide = slide
 
         if controller.retro:
-            slide = retroify_image(slide)
+            slide = image_to_retro(slide)
             colour_white = RETRO_WHITE
             colour_black = RETRO_BLACK
         else:

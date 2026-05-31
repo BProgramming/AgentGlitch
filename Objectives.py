@@ -5,7 +5,7 @@ import time
 import pygame
 from os.path import join, isfile, abspath
 from Entity import Entity
-from Helpers import handle_exception, set_sound_source, load_sprite_sheets, ASSETS_FOLDER, retroify_image
+from Helpers import handle_exception, set_sound_source, load_sprite_sheets, ASSETS_FOLDER, image_to_retro
 
 
 class Objective(Entity):
@@ -16,7 +16,7 @@ class Objective(Entity):
         if isfile(join(ASSETS_FOLDER, "Icons", "Pointer", "pointer_retro.png")):
             POINTER_SPRITE_RETRO: pygame.Surface = pygame.transform.scale2x(pygame.image.load(join(ASSETS_FOLDER, "Icons", "Pointer", "pointer_retro.png")).convert_alpha())
         else:
-            POINTER_SPRITE_RETRO: pygame.Surface = retroify_image(POINTER_SPRITE)
+            POINTER_SPRITE_RETRO: pygame.Surface = image_to_retro(POINTER_SPRITE)
         POINTER_SPRITE_HEIGHT: int = POINTER_SPRITE.get_height()
         POINTER_SPRITE_WIDTH: int = POINTER_SPRITE.get_width()
 

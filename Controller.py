@@ -35,7 +35,7 @@ class Controller:
         self.force_retro: bool = False
         self.level = level
         self.next_level = None
-        self.master_volume: dict[str, float] = {"master": 1.0, "background": 1.0, "player": 1.0, "non-player": 1.0, "cinematics": 1.0}
+        self.master_volume: dict[str, float | int] = {"master": 1.0, "background": 1.0, "player": 1.0, "non-player": 1.0, "cinematics": 1.0}
         dif = {"label": "Difficulty", "type": ButtonType.BAR, "snap": True, "value": self.difficulty, "range": (float(DifficultyScale.EASIEST), float(DifficultyScale.EASY), float(DifficultyScale.MEDIUM), float(DifficultyScale.HARD), float(DifficultyScale.HARDEST))}
         vol_mt = {"label": "Master volume", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["master"], "range": (0, 100)}
         vol_bg = {"label": "Music", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["background"], "range": (0, 100)}

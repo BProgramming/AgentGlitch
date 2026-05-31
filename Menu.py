@@ -1,7 +1,7 @@
 import time
 import pygame
 from enum import Enum
-from Helpers import load_images, glitch, DifficultyScale, validate_file_list, handle_exception, retroify_image, NORMAL_BLACK, NORMAL_WHITE, RETRO_BLACK, RETRO_WHITE
+from Helpers import load_images, glitch, DifficultyScale, validate_file_list, handle_exception, image_to_retro, NORMAL_BLACK, NORMAL_WHITE, RETRO_BLACK, RETRO_WHITE
 
 
 class ButtonType(Enum):
@@ -15,7 +15,7 @@ class Button:
         self.controller = controller
         self.value = value
         self._normal = {'normal': self.__make__(img_normal, label_normal), 'mouseover': self.__make__(img_mouseover, label_mouseover)}
-        self._retro = {key: retroify_image(value) for key, value in self._normal.items()}
+        self._retro = {key: image_to_retro(value) for key, value in self._normal.items()}
         self.is_mouseover = False
         self.is_focused: bool = False
         self.is_enabled = True
@@ -112,7 +112,7 @@ class Menu:
             screen = pygame.Surface((min(2 * self.controller.win.get_width() // 3, button_width), button_height * len(buttons)), pygame.SRCALPHA)
             screen.fill(NORMAL_BLACK)
         self.screen_normal = screen
-        self.screen_retro = retroify_image(screen)
+        self.screen_retro = image_to_retro(screen)
         self.rect = pygame.Rect((self.controller.win.get_width() - screen.get_width()) // 2, (self.controller.win.get_height() - screen.get_height()) // 2, screen.get_width(), screen.get_height())
 
         self.buttons = []
@@ -151,7 +151,7 @@ class Menu:
         if self.clear_normal is None:
             self.clear_normal = pygame.display.get_surface().copy()
         if self.clear_retro is None:
-            self.clear_retro = retroify_image(self.clear_normal)
+            self.clear_retro = image_to_retro(self.clear_normal)
 
         if self.controller.gamepad is not None:
             self.set_mouse_pos(0)
@@ -206,7 +206,7 @@ class Menu:
         if self.clear_normal is None:
             self.clear_normal = pygame.display.get_surface().copy()
         if self.clear_retro is None:
-            self.clear_retro = retroify_image(self.clear_normal)
+            self.clear_retro = image_to_retro(self.clear_normal)
 
         self.controller.win.fill((0, 0, 0))
         clear = self.clear_retro if self.controller.retro else self.clear_normal
@@ -400,7 +400,7 @@ class Selector(Menu):
                 max_image_width = max(max_image_width, image.get_width())
                 max_image_height = max(max_image_height, image.get_height())
                 self.images["normal"].append(image)
-                self.images["retro"].append(retroify_image(image))
+                self.images["retro"].append(image_to_retro(image))
 
         self.note = []
         if note is not None:
@@ -415,7 +415,7 @@ class Selector(Menu):
             screen = pygame.Surface((min(2 * self.controller.win.get_width() // 3, button_width * 2), max_image_height + (button_height * 2)), pygame.SRCALPHA)
             screen.fill(NORMAL_BLACK)
         self.screen_normal = screen
-        self.screen_retro = retroify_image(screen)
+        self.screen_retro = image_to_retro(screen)
         self.rect = pygame.Rect((self.controller.win.get_width() - screen.get_width()) // 2, (self.controller.win.get_height() - screen.get_height()) // 2, screen.get_width(), screen.get_height())
 
         self.values = values

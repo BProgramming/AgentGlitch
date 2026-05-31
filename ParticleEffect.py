@@ -2,7 +2,7 @@ import pygame
 import random
 from enum import Enum
 
-from Helpers import retroify_image, NORMAL_WHITE, RETRO_WHITE
+from Helpers import image_to_retro, NORMAL_WHITE, RETRO_WHITE
 
 
 class ParticleType(Enum):
@@ -46,7 +46,7 @@ class ParticleEffect:
         particle = pygame.Surface((width, height), pygame.SRCALPHA)
         particle.fill(color)
         if is_retro:
-            particle = retroify_image(particle)
+            particle = image_to_retro(particle)
 
         for point in points:
             image.blit(particle, point)

@@ -1,5 +1,4 @@
-from os import listdir
-from os.path import join
+from pathlib import Path
 from PIL import Image
 
 def crop(im, width, height):
@@ -100,8 +99,8 @@ def convert(im, base, target, lips=True):
     return new
 
 def run_conversion(path, base, target):
-    for file in listdir(path):
-        filepath = join(path, file)
+    for file in Path(path).iterdir():
+        filepath = Path(path) / file
         print(filepath)
         convert(Image.open(filepath), base, target, lips=True).save(filepath)
 #run_conversion('/Assets/Sprites/UnarmedAgent1', 'black', 'white')
@@ -151,8 +150,8 @@ def convert_all(base):
 convert_all('white')
 
 def recolour(path):
-    for file in listdir(path):
-        filepath = join(path, file)
+    for file in Path(path).iterdir():
+        filepath = Path(path) / file
         im = Image.open(filepath)
         data = []
         for pixel in im.getdata():

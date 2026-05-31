@@ -4,7 +4,7 @@ import pygame
 from os.path import join, isfile, abspath
 from Entity import Entity
 from Helpers import handle_exception, MovementDirection, load_sprite_sheets, set_sound_source, ASSETS_FOLDER, \
-    retroify_image
+    image_to_retro
 from SimpleVFX.SimpleVFX import VisualEffect, ImageDirection
 
 
@@ -44,7 +44,7 @@ class Block(Entity):
             rect = pygame.Rect(coord_x, coord_y, width // 2, height // 2)
             surface.blit(image_master[path], (0, 0), rect)
             if retro:
-                surface = retroify_image(surface)
+                surface = image_to_retro(surface)
             return pygame.transform.scale2x(surface)
         else:
             handle_exception(f'File {FileNotFoundError(abspath(path))} not found.')

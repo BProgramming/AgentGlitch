@@ -1,6 +1,6 @@
 import pygame
 from os.path import join, isfile, abspath
-from Helpers import handle_exception, load_images, ASSETS_FOLDER, retroify_image, NORMAL_BLACK, NORMAL_WHITE, \
+from Helpers import handle_exception, load_images, ASSETS_FOLDER, image_to_retro, NORMAL_BLACK, NORMAL_WHITE, \
     RETRO_BLACK, RETRO_WHITE
 
 
@@ -32,7 +32,7 @@ class HUD:
             handle_exception(f'File {FileNotFoundError(abspath(join(ASSETS_FOLDER, "Icons", "Timer", "decimal.png")))} not found.')
         if self.retro:
             for key in self.time_characters:
-                self.time_characters[key] = retroify_image(self.time_characters[key])
+                self.time_characters[key] = image_to_retro(self.time_characters[key])
         self.time_num_icon_width: int = self.time_characters["0"].get_width()
         self.time_punc_icon_width: int = self.time_characters["COLON"].get_width()
         self.old_time: str = "00:00.000"
@@ -48,49 +48,49 @@ class HUD:
         else:
             self.icon_jump: pygame.Surface | None = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
             if retro:
-                self.icon_jump = retroify_image(self.icon_jump)
+                self.icon_jump = image_to_retro(self.icon_jump)
         file = join(ASSETS_FOLDER, "Icons", "double_jump.png")
         if not isfile(file):
             handle_exception(f'File {FileNotFoundError(abspath(file))} not found.')
         else:
             self.icon_double_jump: pygame.Surface | None = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
             if retro:
-                self.icon_double_jump = retroify_image(self.icon_double_jump)
+                self.icon_double_jump = image_to_retro(self.icon_double_jump)
         file = join(ASSETS_FOLDER, "Icons", "block.png")
         if not isfile(file):
             handle_exception(f'File {FileNotFoundError(abspath(file))} not found.')
         else:
             self.icon_block: pygame.Surface | None = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
             if retro:
-                self.icon_block = retroify_image(self.icon_block)
+                self.icon_block = image_to_retro(self.icon_block)
         file = join(ASSETS_FOLDER, "Icons", "teleport.png")
         if not isfile(file):
             handle_exception(f'File {FileNotFoundError(abspath(file))} not found.')
         else:
             self.icon_teleport: pygame.Surface | None = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
             if retro:
-                self.icon_teleport = retroify_image(self.icon_teleport)
+                self.icon_teleport = image_to_retro(self.icon_teleport)
         file = join(ASSETS_FOLDER, "Icons", "wall_jump.png")
         if not isfile(file):
             handle_exception(f'File {FileNotFoundError(abspath(file))} not found.')
         else:
             self.icon_wall_jump: pygame.Surface | None = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
             if retro:
-                self.icon_wall_jump = retroify_image(self.icon_wall_jump)
+                self.icon_wall_jump = image_to_retro(self.icon_wall_jump)
         file = join(ASSETS_FOLDER, "Icons", "resize.png")
         if not isfile(file):
             handle_exception(f'File {FileNotFoundError(abspath(file))} not found.')
         else:
             self.icon_resize: pygame.Surface | None = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
             if retro:
-                self.icon_resize = retroify_image(self.icon_resize)
+                self.icon_resize = image_to_retro(self.icon_resize)
         file = join(ASSETS_FOLDER, "Icons", "bullet_time.png")
         if not isfile(file):
             handle_exception(f'File {FileNotFoundError(abspath(file))} not found.')
         else:
             self.icon_bullet_time: pygame.Surface | None = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
             if retro:
-                self.icon_bullet_time = retroify_image(self.icon_bullet_time)
+                self.icon_bullet_time = image_to_retro(self.icon_bullet_time)
 
         file = join(ASSETS_FOLDER, "Icons", "save.png")
         if not isfile(file):
@@ -98,7 +98,7 @@ class HUD:
         else:
             self.save_icon: pygame.Surface | None = pygame.transform.scale2x(pygame.image.load(file).convert_alpha())
             if retro:
-                self.save_icon = retroify_image(self.save_icon)
+                self.save_icon = image_to_retro(self.save_icon)
 
     @staticmethod
     def __make_capsule__(retro, width, height):
