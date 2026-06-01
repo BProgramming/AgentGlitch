@@ -1,42 +1,221 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
 import random
 import time
 import pygame
 import pygame._sdl2.controller
 import sys
-from Menu import Menu, Selector, ButtonType
-from Helpers import display_text, DifficultyScale, load_images, load_level_images, load_picker_sprites, \
-    make_image_from_text
-from SaveLoadFunctions import save, save_player_profile
+
+from DiscordConnection import DiscordConnection
+from Menu import (
+    Menu,
+    Selector,
+    ButtonType,
+)
+from Helpers import (
+    display_text,
+    DifficultyScale,
+    load_images,
+    load_level_images,
+    load_picker_sprites,
+    make_image_from_text,
+)
+from SaveLoad import (
+    save,
+    save_player_profile,
+)
+from SteamworksConnection import SteamworksConnection
+
+if TYPE_CHECKING:
+    from Level import Level
 
 
 class Controller:
-    KEYBOARD_LAYOUTS = {"ARROW_MOVE": {"keys_quicksave": [pygame.K_F5], "keys_cycle_layout": [pygame.K_F9], "keys_fullscreen_toggle": [pygame.K_F11], "keys_left": [pygame.K_LEFT], "keys_right": [pygame.K_RIGHT], "keys_crouch_uncrouch": [pygame.K_DOWN], "keys_jump": [pygame.K_UP], "keys_teleport_dash": [pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_KP_PLUS], "keys_pause_unpause": [pygame.K_ESCAPE], "keys_attack": [pygame.K_d], "keys_block": [pygame.K_a], "keys_bullet_time": [pygame.K_SPACE, pygame.K_KP0], "keys_grow": [pygame.K_w], "keys_shrink": [pygame.K_s]},
-                        "WASD_MOVE": {"keys_quicksave": [pygame.K_F5], "keys_cycle_layout": [pygame.K_F9], "keys_fullscreen_toggle": [pygame.K_F11], "keys_left": [pygame.K_a], "keys_right": [pygame.K_d], "keys_crouch_uncrouch": [pygame.K_s], "keys_jump": [pygame.K_w], "keys_teleport_dash": [pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_KP_PLUS], "keys_pause_unpause": [pygame.K_ESCAPE], "keys_attack": [pygame.K_LEFT, pygame.K_KP4], "keys_block": [pygame.K_RIGHT, pygame.K_KP6], "keys_bullet_time": [pygame.K_SPACE, pygame.K_KP0], "keys_grow": [pygame.K_UP, pygame.K_KP8], "keys_shrink": [pygame.K_DOWN, pygame.K_KP5]},
-                        "NUMPAD_MOVE": {"keys_quicksave": [pygame.K_F5], "keys_cycle_layout": [pygame.K_F9], "keys_fullscreen_toggle": [pygame.K_F11], "keys_left": [pygame.K_KP4], "keys_right": [pygame.K_KP6], "keys_crouch_uncrouch": [pygame.K_KP5], "keys_jump": [pygame.K_KP8], "keys_teleport_dash": [pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_KP_PLUS],  "keys_pause_unpause": [pygame.K_ESCAPE], "keys_attack": [pygame.K_d], "keys_block": [pygame.K_a], "keys_bullet_time": [pygame.K_SPACE, pygame.K_KP0], "keys_grow": [pygame.K_w], "keys_shrink": [pygame.K_s]},
-                        "ALT_NUMPAD_MOVE": {"keys_quicksave": [pygame.K_F5], "keys_cycle_layout": [pygame.K_F9], "keys_fullscreen_toggle": [pygame.K_F11], "keys_left": [pygame.K_KP4], "keys_right": [pygame.K_KP6], "keys_crouch_uncrouch": [pygame.K_KP5], "keys_jump": [pygame.K_KP8], "keys_teleport_dash": [pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_KP_PLUS],  "keys_pause_unpause": [pygame.K_ESCAPE], "keys_attack": [pygame.K_a], "keys_block": [pygame.K_d], "keys_bullet_time": [pygame.K_SPACE, pygame.K_KP0], "keys_grow": [pygame.K_w], "keys_shrink": [pygame.K_s]}}
-    GAMEPAD_LAYOUTS = {"SWITCH PRO": {"button_up": pygame.CONTROLLER_BUTTON_DPAD_UP, "button_down": pygame.CONTROLLER_BUTTON_DPAD_DOWN, "button_quicksave": pygame.CONTROLLER_BUTTON_BACK, "button_left": pygame.CONTROLLER_BUTTON_DPAD_LEFT, "button_right": pygame.CONTROLLER_BUTTON_DPAD_RIGHT, "axis_vert": pygame.CONTROLLER_AXIS_LEFTY, "axis_horiz": pygame.CONTROLLER_AXIS_LEFTX, "button_crouch_uncrouch": pygame.CONTROLLER_BUTTON_B, "button_jump": pygame.CONTROLLER_BUTTON_A, "button_teleport_dash": pygame.CONTROLLER_BUTTON_X, "button_pause_unpause": pygame.CONTROLLER_BUTTON_START, "axis_attack": pygame.CONTROLLER_AXIS_TRIGGERRIGHT, "axis_block": pygame.CONTROLLER_AXIS_TRIGGERLEFT, "button_bullet_time": pygame.CONTROLLER_BUTTON_Y, "button_grow": pygame.CONTROLLER_BUTTON_RIGHTSHOULDER, "button_shrink": pygame.CONTROLLER_BUTTON_LEFTSHOULDER},
-                        "XBOX": {"button_up": pygame.CONTROLLER_BUTTON_DPAD_UP, "button_down": pygame.CONTROLLER_BUTTON_DPAD_DOWN, "button_quicksave": pygame.CONTROLLER_BUTTON_BACK, "button_left": pygame.CONTROLLER_BUTTON_DPAD_LEFT, "button_right": pygame.CONTROLLER_BUTTON_DPAD_RIGHT, "axis_vert": pygame.CONTROLLER_AXIS_LEFTY, "axis_horiz": pygame.CONTROLLER_AXIS_LEFTX, "button_crouch_uncrouch": pygame.CONTROLLER_BUTTON_B, "button_jump": pygame.CONTROLLER_BUTTON_A, "button_teleport_dash": pygame.CONTROLLER_BUTTON_X, "button_pause_unpause": pygame.CONTROLLER_BUTTON_START, "axis_attack": pygame.CONTROLLER_AXIS_TRIGGERRIGHT, "axis_block": pygame.CONTROLLER_AXIS_TRIGGERLEFT, "button_bullet_time": pygame.CONTROLLER_BUTTON_Y, "button_grow": pygame.CONTROLLER_BUTTON_RIGHTSHOULDER, "button_shrink": pygame.CONTROLLER_BUTTON_LEFTSHOULDER},
-                        "PS4": {"button_up": pygame.CONTROLLER_BUTTON_DPAD_UP, "button_down": pygame.CONTROLLER_BUTTON_DPAD_DOWN, "button_quicksave": pygame.CONTROLLER_BUTTON_BACK, "button_left": pygame.CONTROLLER_BUTTON_DPAD_LEFT, "button_right": pygame.CONTROLLER_BUTTON_DPAD_RIGHT, "axis_vert": pygame.CONTROLLER_AXIS_LEFTY, "axis_horiz": pygame.CONTROLLER_AXIS_LEFTX, "button_crouch_uncrouch": pygame.CONTROLLER_BUTTON_B, "button_jump": pygame.CONTROLLER_BUTTON_A, "button_teleport_dash": pygame.CONTROLLER_BUTTON_X, "button_pause_unpause": pygame.CONTROLLER_BUTTON_START, "axis_attack": pygame.CONTROLLER_AXIS_TRIGGERRIGHT, "axis_block": pygame.CONTROLLER_AXIS_TRIGGERLEFT, "button_bullet_time": pygame.CONTROLLER_BUTTON_Y, "button_grow": pygame.CONTROLLER_BUTTON_RIGHTSHOULDER, "button_shrink": pygame.CONTROLLER_BUTTON_LEFTSHOULDER},
-                        "PS5": {"button_up": pygame.CONTROLLER_BUTTON_DPAD_UP, "button_down": pygame.CONTROLLER_BUTTON_DPAD_DOWN, "button_quicksave": pygame.CONTROLLER_BUTTON_BACK, "button_left": pygame.CONTROLLER_BUTTON_DPAD_LEFT, "button_right": pygame.CONTROLLER_BUTTON_DPAD_RIGHT, "axis_vert": pygame.CONTROLLER_AXIS_LEFTY, "axis_horiz": pygame.CONTROLLER_AXIS_LEFTX, "button_crouch_uncrouch": pygame.CONTROLLER_BUTTON_B, "button_jump": pygame.CONTROLLER_BUTTON_A, "button_teleport_dash": pygame.CONTROLLER_BUTTON_X, "button_pause_unpause": pygame.CONTROLLER_BUTTON_START, "axis_attack": pygame.CONTROLLER_AXIS_TRIGGERRIGHT, "axis_block": pygame.CONTROLLER_AXIS_TRIGGERLEFT, "button_bullet_time": pygame.CONTROLLER_BUTTON_Y, "button_grow": pygame.CONTROLLER_BUTTON_RIGHTSHOULDER, "button_shrink": pygame.CONTROLLER_BUTTON_LEFTSHOULDER},
-                        "NONE": {"button_up": None, "button_down": None, "button_quicksave": None, "button_left": None, "button_right": None, "axis_horiz": None, "hat_horiz": None, "button_crouch_uncrouch": None, "button_jump": None, "button_teleport_dash": None, "button_pause_unpause": None, "axis_attack": None, "axis_block": None, "button_bullet_time": None, "button_grow": None, "button_shrink": None}}
+    KEYBOARD_LAYOUTS = {
+        "ARROW_MOVE": {
+            "keys_quicksave":         [pygame.K_F5],
+            "keys_cycle_layout":      [pygame.K_F9],
+            "keys_fullscreen_toggle": [pygame.K_F11],
+            "keys_left":              [pygame.K_LEFT],
+            "keys_right":             [pygame.K_RIGHT],
+            "keys_crouch_uncrouch":   [pygame.K_DOWN],
+            "keys_jump":              [pygame.K_UP],
+            "keys_teleport_dash":     [pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_KP_PLUS],
+            "keys_pause_unpause":     [pygame.K_ESCAPE],
+            "keys_attack":            [pygame.K_d],
+            "keys_block":             [pygame.K_a],
+            "keys_bullet_time":       [pygame.K_SPACE, pygame.K_KP0],
+            "keys_grow":              [pygame.K_w],
+            "keys_shrink":            [pygame.K_s],
+        },
+        "WASD_MOVE": {
+            "keys_quicksave":         [pygame.K_F5],
+            "keys_cycle_layout":      [pygame.K_F9],
+            "keys_fullscreen_toggle": [pygame.K_F11],
+            "keys_left":              [pygame.K_a],
+            "keys_right":             [pygame.K_d],
+            "keys_crouch_uncrouch":   [pygame.K_s],
+            "keys_jump":              [pygame.K_w],
+            "keys_teleport_dash":     [pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_KP_PLUS],
+            "keys_pause_unpause":     [pygame.K_ESCAPE],
+            "keys_attack":            [pygame.K_LEFT, pygame.K_KP4],
+            "keys_block":             [pygame.K_RIGHT, pygame.K_KP6],
+            "keys_bullet_time":       [pygame.K_SPACE, pygame.K_KP0],
+            "keys_grow":              [pygame.K_UP, pygame.K_KP8],
+            "keys_shrink":            [pygame.K_DOWN, pygame.K_KP5],
+        },
+        "NUMPAD_MOVE": {
+            "keys_quicksave":         [pygame.K_F5],
+            "keys_cycle_layout":      [pygame.K_F9],
+            "keys_fullscreen_toggle": [pygame.K_F11],
+            "keys_left":              [pygame.K_KP4],
+            "keys_right":             [pygame.K_KP6],
+            "keys_crouch_uncrouch":   [pygame.K_KP5],
+            "keys_jump":              [pygame.K_KP8],
+            "keys_teleport_dash":     [pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_KP_PLUS],
+            "keys_pause_unpause":     [pygame.K_ESCAPE],
+            "keys_attack":            [pygame.K_d],
+            "keys_block":             [pygame.K_a],
+            "keys_bullet_time":       [pygame.K_SPACE, pygame.K_KP0],
+            "keys_grow":              [pygame.K_w],
+            "keys_shrink":            [pygame.K_s],
+        },
+        "ALT_NUMPAD_MOVE": {
+            "keys_quicksave":         [pygame.K_F5],
+            "keys_cycle_layout":      [pygame.K_F9],
+            "keys_fullscreen_toggle": [pygame.K_F11],
+            "keys_left":              [pygame.K_KP4],
+            "keys_right":             [pygame.K_KP6],
+            "keys_crouch_uncrouch":   [pygame.K_KP5],
+            "keys_jump":              [pygame.K_KP8],
+            "keys_teleport_dash":     [pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_KP_PLUS],
+            "keys_pause_unpause":     [pygame.K_ESCAPE],
+            "keys_attack":            [pygame.K_a],
+            "keys_block":             [pygame.K_d],
+            "keys_bullet_time":       [pygame.K_SPACE, pygame.K_KP0],
+            "keys_grow":              [pygame.K_w],
+            "keys_shrink":            [pygame.K_s],
+        },
+    }
+    GAMEPAD_LAYOUTS = {
+        "SWITCH PRO": {
+            "button_up":              pygame.CONTROLLER_BUTTON_DPAD_UP,
+            "button_down":            pygame.CONTROLLER_BUTTON_DPAD_DOWN,
+            "button_quicksave":       pygame.CONTROLLER_BUTTON_BACK,
+            "button_left":            pygame.CONTROLLER_BUTTON_DPAD_LEFT,
+            "button_right":           pygame.CONTROLLER_BUTTON_DPAD_RIGHT,
+            "axis_vert":              pygame.CONTROLLER_AXIS_LEFTY,
+            "axis_horiz":             pygame.CONTROLLER_AXIS_LEFTX,
+            "button_crouch_uncrouch": pygame.CONTROLLER_BUTTON_B,
+            "button_jump":            pygame.CONTROLLER_BUTTON_A,
+            "button_teleport_dash":   pygame.CONTROLLER_BUTTON_X,
+            "button_pause_unpause":   pygame.CONTROLLER_BUTTON_START,
+            "axis_attack":            pygame.CONTROLLER_AXIS_TRIGGERRIGHT,
+            "axis_block":             pygame.CONTROLLER_AXIS_TRIGGERLEFT,
+            "button_bullet_time":     pygame.CONTROLLER_BUTTON_Y,
+            "button_grow":            pygame.CONTROLLER_BUTTON_RIGHTSHOULDER,
+            "button_shrink":          pygame.CONTROLLER_BUTTON_LEFTSHOULDER,
+        },
+        "XBOX": {
+            "button_up":              pygame.CONTROLLER_BUTTON_DPAD_UP,
+            "button_down":            pygame.CONTROLLER_BUTTON_DPAD_DOWN,
+            "button_quicksave":       pygame.CONTROLLER_BUTTON_BACK,
+            "button_left":            pygame.CONTROLLER_BUTTON_DPAD_LEFT,
+            "button_right":           pygame.CONTROLLER_BUTTON_DPAD_RIGHT,
+            "axis_vert":              pygame.CONTROLLER_AXIS_LEFTY,
+            "axis_horiz":             pygame.CONTROLLER_AXIS_LEFTX,
+            "button_crouch_uncrouch": pygame.CONTROLLER_BUTTON_B,
+            "button_jump":            pygame.CONTROLLER_BUTTON_A,
+            "button_teleport_dash":   pygame.CONTROLLER_BUTTON_X,
+            "button_pause_unpause":   pygame.CONTROLLER_BUTTON_START,
+            "axis_attack":            pygame.CONTROLLER_AXIS_TRIGGERRIGHT,
+            "axis_block":             pygame.CONTROLLER_AXIS_TRIGGERLEFT,
+            "button_bullet_time":     pygame.CONTROLLER_BUTTON_Y,
+            "button_grow":            pygame.CONTROLLER_BUTTON_RIGHTSHOULDER,
+            "button_shrink":          pygame.CONTROLLER_BUTTON_LEFTSHOULDER,
+        },
+        "PS4": {
+            "button_up":              pygame.CONTROLLER_BUTTON_DPAD_UP,
+            "button_down":            pygame.CONTROLLER_BUTTON_DPAD_DOWN,
+            "button_quicksave":       pygame.CONTROLLER_BUTTON_BACK,
+            "button_left":            pygame.CONTROLLER_BUTTON_DPAD_LEFT,
+            "button_right":           pygame.CONTROLLER_BUTTON_DPAD_RIGHT,
+            "axis_vert":              pygame.CONTROLLER_AXIS_LEFTY,
+            "axis_horiz":             pygame.CONTROLLER_AXIS_LEFTX,
+            "button_crouch_uncrouch": pygame.CONTROLLER_BUTTON_B,
+            "button_jump":            pygame.CONTROLLER_BUTTON_A,
+            "button_teleport_dash":   pygame.CONTROLLER_BUTTON_X,
+            "button_pause_unpause":   pygame.CONTROLLER_BUTTON_START,
+            "axis_attack":            pygame.CONTROLLER_AXIS_TRIGGERRIGHT,
+            "axis_block":             pygame.CONTROLLER_AXIS_TRIGGERLEFT,
+            "button_bullet_time":     pygame.CONTROLLER_BUTTON_Y,
+            "button_grow":            pygame.CONTROLLER_BUTTON_RIGHTSHOULDER,
+            "button_shrink":          pygame.CONTROLLER_BUTTON_LEFTSHOULDER,
+        },
+        "PS5": {
+            "button_up":              pygame.CONTROLLER_BUTTON_DPAD_UP,
+            "button_down":            pygame.CONTROLLER_BUTTON_DPAD_DOWN,
+            "button_quicksave":       pygame.CONTROLLER_BUTTON_BACK,
+            "button_left":            pygame.CONTROLLER_BUTTON_DPAD_LEFT,
+            "button_right":           pygame.CONTROLLER_BUTTON_DPAD_RIGHT,
+            "axis_vert":              pygame.CONTROLLER_AXIS_LEFTY,
+            "axis_horiz":             pygame.CONTROLLER_AXIS_LEFTX,
+            "button_crouch_uncrouch": pygame.CONTROLLER_BUTTON_B,
+            "button_jump":            pygame.CONTROLLER_BUTTON_A,
+            "button_teleport_dash":   pygame.CONTROLLER_BUTTON_X,
+            "button_pause_unpause":   pygame.CONTROLLER_BUTTON_START,
+            "axis_attack":            pygame.CONTROLLER_AXIS_TRIGGERRIGHT,
+            "axis_block":             pygame.CONTROLLER_AXIS_TRIGGERLEFT,
+            "button_bullet_time":     pygame.CONTROLLER_BUTTON_Y,
+            "button_grow":            pygame.CONTROLLER_BUTTON_RIGHTSHOULDER,
+            "button_shrink":          pygame.CONTROLLER_BUTTON_LEFTSHOULDER,
+        },
+        "NONE": {
+            "button_up":              None,
+            "button_down":            None,
+            "button_quicksave":       None,
+            "button_left":            None,
+            "button_right":           None,
+            "axis_horiz":             None,
+            "hat_horiz":              None,
+            "button_crouch_uncrouch": None,
+            "button_jump":            None,
+            "button_teleport_dash":   None,
+            "button_pause_unpause":   None,
+            "axis_attack":            None,
+            "axis_block":             None,
+            "button_bullet_time":     None,
+            "button_grow":            None,
+            "button_shrink":          None,
+        },
+    }
     JOYSTICK_TOLERANCE = 3500
 
-    def __init__(self, level, win, layout=None, main_menu_music=None, steamworks=None, discord=None):
-        self.win = win
-        self.steamworks = steamworks.connection
-        self.discord = discord
-        self.should_store_steam_stats = False
-        self.player_sprite_selected = None
-        self.start_level: str | None = None
-        self.difficulty = DifficultyScale.MEDIUM
-        self.hud = None
-        self.goto_load = self.goto_main = self.goto_restart = False
-        self.has_dlc: dict[str, bool] = steamworks.has_dlc()
-        self.force_retro: bool = False
-        self.level = level
-        self.next_level = None
-        self.master_volume: dict[str, float | int] = {"master": 1.0, "background": 1.0, "player": 1.0, "non-player": 1.0, "cinematics": 1.0}
-        dif = {"label": "Difficulty", "type": ButtonType.BAR, "snap": True, "value": self.difficulty, "range": (float(DifficultyScale.EASIEST), float(DifficultyScale.EASY), float(DifficultyScale.MEDIUM), float(DifficultyScale.HARD), float(DifficultyScale.HARDEST))}
+    def __init__(
+            self:            Controller,
+            level:           Level | None,
+            win:             pygame.Surface,
+            layout:          str | None                  = None,
+            main_menu_music: list[str] | None            = None,
+            steamworks:      SteamworksConnection | None = None,
+            discord:         DiscordConnection | None    = None,
+    ) -> None:
+        """Initialize the controller: input layouts, menus, selectors, volume, and game state."""
+        self.win                          = win
+        self.steamworks                   = steamworks.connection if steamworks else None
+        self.discord                      = discord
+        self.should_store_steam_stats     = False
+        self.player_sprite_selected       = None
+        self.start_level: str | None      = None
+        self.difficulty                   = DifficultyScale.MEDIUM
+        self.hud                          = None
+        self.goto_load = self.goto_main   = self.goto_restart = False
+        self.has_dlc:     dict[str, bool] = steamworks.has_dlc() if steamworks else {}
+        self.force_retro: bool            = False
+        self.level                        = level
+        self.next_level                   = None
+        self.master_volume: dict[str, float] = {"master": 1.0, "background": 1.0, "player": 1.0, "non-player": 1.0, "cinematics": 1.0}
+        dif    = {"label": "Difficulty", "type": ButtonType.BAR, "snap": True, "value": self.difficulty, "range": (float(DifficultyScale.EASIEST), float(DifficultyScale.EASY), float(DifficultyScale.MEDIUM), float(DifficultyScale.HARD), float(DifficultyScale.HARDEST))}
         vol_mt = {"label": "Master volume", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["master"], "range": (0, 100)}
         vol_bg = {"label": "Music", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["background"], "range": (0, 100)}
         vol_pc = {"label": "Player", "type": ButtonType.BAR, "snap": False, "value": self.master_volume["player"], "range": (0, 100)}
@@ -46,14 +225,14 @@ class Controller:
             self.main_menu = Menu(self, None, [{"label": "New game", "type": ButtonType.CLICK}, {"label": "Continue", "type": ButtonType.CLICK}, {"label": "Select a level", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Toggle retro style", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}], music=main_menu_music)
         else:
             self.main_menu = Menu(self, None, [{"label": "New game", "type": ButtonType.CLICK}, {"label": "Continue", "type": ButtonType.CLICK}, {"label": "Select a level", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}], music=main_menu_music)
-        self.pause_menu = Menu(self, "PAUSED", [{"label": "Resume", "type": ButtonType.CLICK}, {"label": "Load last save", "type": ButtonType.CLICK}, {"label": "Restart level", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Quit to menu", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}])
+        self.pause_menu    = Menu(self, "PAUSED", [{"label": "Resume", "type": ButtonType.CLICK}, {"label": "Load last save", "type": ButtonType.CLICK}, {"label": "Restart level", "type": ButtonType.CLICK}, {"label": "Settings", "type": ButtonType.CLICK}, {"label": "Quit to menu", "type": ButtonType.CLICK}, {"label": "Quit to desktop", "type": ButtonType.CLICK}])
         self.settings_menu = Menu(self, "SETTINGS", [dif, {"label": "Controls", "type": ButtonType.CLICK}, {"label": "Volume", "type": ButtonType.CLICK}, {"label": "Toggle fullscreen", "type": ButtonType.CLICK}, {"label": "Back", "type": ButtonType.CLICK}])
-        self.volume_menu = Menu(self, "VOLUME", [vol_mt, vol_bg, vol_pc, vol_fx, vol_cn, {"label": "Back", "type": ButtonType.CLICK}])
+        self.volume_menu   = Menu(self, "VOLUME", [vol_mt, vol_bg, vol_pc, vol_fx, vol_cn, {"label": "Back", "type": ButtonType.CLICK}])
         self.controls_menu = Menu(self, "CONTROLS", [{"label": "Keyboard", "type": ButtonType.CLICK}, {"label": "Controller", "type": ButtonType.CLICK}, {"label": "Back", "type": ButtonType.CLICK}])
-        difficulty_images = [make_image_from_text(256, 128, "EASIEST", ["Agent is much stronger", "Agent can survive huge falls", "Enemies are much weaker", "Enemy sight ranges are visible"], border=5), make_image_from_text(256, 128, "EASY", ["Agent is stronger", "Agent can survive big falls", "Enemies are weaker", "Enemy sight ranges are visible"], border=5), make_image_from_text(256, 128, "MEDIUM", ["Agent is normal strength", "Agent can survive moderate falls", "Enemies are normal strength", "Enemy sight ranges are not visible"], border=5), make_image_from_text(256, 128, "HARD", ["Agent is weaker", "Agent can survive small falls", "Enemies are stronger", "Enemy sight ranges are not visible"], border=5), make_image_from_text(256, 128, "HARDEST", ["Agent is much weaker", "Agent can survive tiny falls", "Enemies are much stronger", "Enemy sight ranges are not visible"], border=5)]
+        difficulty_images  = [make_image_from_text(256, 128, "EASIEST", ["Agent is much stronger", "Agent can survive huge falls", "Enemies are much weaker", "Enemy sight ranges are visible"], border=5), make_image_from_text(256, 128, "EASY", ["Agent is stronger", "Agent can survive big falls", "Enemies are weaker", "Enemy sight ranges are visible"], border=5), make_image_from_text(256, 128, "MEDIUM", ["Agent is normal strength", "Agent can survive moderate falls", "Enemies are normal strength", "Enemy sight ranges are not visible"], border=5), make_image_from_text(256, 128, "HARD", ["Agent is weaker", "Agent can survive small falls", "Enemies are stronger", "Enemy sight ranges are not visible"], border=5), make_image_from_text(256, 128, "HARDEST", ["Agent is much weaker", "Agent can survive tiny falls", "Enemies are much stronger", "Enemy sight ranges are not visible"], border=5)]
         self.difficulty_picker = Selector(self, "CHOOSE DIFFICULTY", ["You can change this at any time."], difficulty_images, [DifficultyScale.EASIEST, DifficultyScale.EASY, DifficultyScale.MEDIUM, DifficultyScale.HARD, DifficultyScale.HARDEST], index=2)
         sprite_images, sprite_values = load_picker_sprites("Sprites")
-        self.sprite_picker = Selector(self, "CHOOSE PLAYER", ["This is a visual choice only.", "Anyone can be an Agent."], sprite_images, sprite_values, index=2 * random.randrange(0, len(sprite_images['normal']) // 2))
+        self.sprite_picker = Selector(self, "CHOOSE PLAYER", ["This is a visual choice only.", "Anyone can be an Agent."], sprite_images, sprite_values, index=2 * random.randrange(0, len(sprite_images["normal"]) // 2))
         self.level_selected = None
         level_images, level_values = load_level_images("LevelImages")
         self.level_picker = Selector(self, "CHOOSE LEVEL", None, level_images, level_values)
@@ -61,72 +240,109 @@ class Controller:
             self.set_keyboard_layout("ARROW_MOVE")
         else:
             self.set_keyboard_layout(layout)
-        self._gamepad_guid: str | None = None
-        self._gamepad_was_disconnected: bool = False
-        self.gamepad = None
-        self.active_gamepad_layout = None
-        self.keyboard_layout_picker = Selector(self, "KEYBOARD LAYOUT", ["This can be cycled with the F9 key."], (load_images("Menu", "Keyboards") or {}).values(), list(self.KEYBOARD_LAYOUTS.keys()))
-        self.gamepad_layout_picker = Selector(self, "CONTROLLER LAYOUT", ["This is detected when you connect a controller."], (load_images("Menu", "Controllers") or {}).values(), list(self.GAMEPAD_LAYOUTS.keys()), accept_only=True)
-        self.music = None
-        self.music_index = 0
-        self.should_hot_swap_level = False
-        self.should_scroll_to_point = None
-        self.active_objective: str | None = None
+        self._gamepad_guid: str | None        = None
+        self._gamepad_was_disconnected: bool  = False
+        self.gamepad                          = None
+        self.active_gamepad_layout            = None
+        self.keyboard_layout_picker           = Selector(self, "KEYBOARD LAYOUT", ["This can be cycled with the F9 key."], (load_images("Menu", "Keyboards") or {}).values(), list(self.KEYBOARD_LAYOUTS.keys())) # noqa
+        self.gamepad_layout_picker            = Selector(self, "CONTROLLER LAYOUT", ["This is detected when you connect a controller."], (load_images("Menu", "Controllers") or {}).values(), list(self.GAMEPAD_LAYOUTS.keys()), accept_only = True) # noqa
+        self.music                            = None
+        self.music_index                      = 0
+        self.should_hot_swap_level            = False
+        self.should_scroll_to_point           = None
+        self.active_objective: str | None     = None
 
-    def activate_objective(self, name: str | None, value: bool, popup: bool=True) -> None:
-        self.active_objective = name
+    def activate_objective(
+            self:  Controller,
+            name:  str | None,
+            value: bool,
+            popup: bool = True,
+    ) -> None:
+        """Set the active objective by name, updating matching objectives and the HUD."""
+        if self.level:
+            self.active_objective = name
 
-        if name is not None:
-            text = None
-            for objective in self.level.objectives:
-                if name.casefold() == objective.name.casefold():
-                    objective.is_active = value
-                    if text is None and objective.text is not None:
-                        text = objective.text
-        else:
-            text = self.level.default_objective
+            if name:
+                text = None
+                for objective in self.level.objectives:
+                    if objective.name.casefold().split(" ")[0] == name.casefold().split(" ")[0]:
+                        text = objective
+                        objective.is_active = value
+                        if not text and objective.text:
+                            text = objective.text
+            else:
+                text = self.level.default_objective
 
-        if text is not None and self.hud is not None:
-            if popup:
-                display_text(f'New objective: {text}', self, retro=self.retro)
-            self.hud.activate_objective(text)
+            if text and self.hud:
+                if popup:
+                    display_text(f"New objective: {text}", self, retro = self.retro)
+                self.hud.activate_objective(text)
+        return None
 
-    def refresh_selector_images(self) -> None:
+    def refresh_selector_images(
+            self: Controller,
+    ) -> None:
+        """Re-render all selector images for the current colour scheme."""
         for sel in [self.difficulty_picker, self.sprite_picker, self.level_picker, self.keyboard_layout_picker, self.gamepad_layout_picker]:
             sel.cycle_images(0)
+        return None
 
     @property
-    def retro(self) -> bool:
+    def retro(
+            self: Controller,
+    ) -> bool:
+        """Return whether retro styling is active (forced or from the current level)."""
         return self.force_retro or (self.level is not None and self.level.retro)
 
-    def save(self):
+    def save(
+            self: Controller,
+    ) -> None:
+        """Save the current level, HUD, and controller state."""
         save(self.level, self.hud, self)
+        return None
 
-    def save_player_profile(self):
+    def save_player_profile(
+            self: Controller,
+    ) -> None:
+        """Save the player's profile."""
         save_player_profile(self, self.level)
+        return None
 
-    def quit(self):
+    def quit(
+            self: Controller,
+    ) -> None:
+        """Save the profile, close subsystems, and exit the program."""
         self.save_player_profile()
-        self.discord.close()
+        if isinstance(self.discord, DiscordConnection):
+            self.discord.close()
         if pygame._sdl2.controller.get_init():
             pygame._sdl2.controller.quit()
         if pygame.get_init():
             pygame.quit()
         sys.exit()
 
-    def queue_track_list(self, music=None) -> None:
-        if not music:
-            self.music = self.level.music
-        else:
-            self.music = music
-        if self.music:
-            self.music_index = 0
-            if pygame.mixer.music.get_busy():
-                pygame.mixer.music.queue(self.music[self.music_index])
+    def queue_track_list(
+            self:  Controller,
+            music: list[str] | None = None,
+    ) -> None:
+        """Queue or load the next music track list (level music by default)."""
+        if self.level:
+            if not music:
+                self.music = self.level.music
             else:
-                pygame.mixer.music.load(self.music[self.music_index])
+                self.music = music
+            if self.music:
+                self.music_index = 0
+                if pygame.mixer.music.get_busy(): # noqa
+                    pygame.mixer.music.queue(self.music[self.music_index]) # noqa
+                else:
+                    pygame.mixer.music.load(self.music[self.music_index]) # noqa
+        return None
 
-    def cycle_music(self) -> None:
+    def cycle_music(
+            self: Controller,
+    ) -> None:
+        """Advance to the next queued music track, wrapping the playlist."""
         if self.music is not None:
             self.music_index += 1
             if self.music_index >= len(self.music):
@@ -136,13 +352,22 @@ class Controller:
                     pygame.mixer.music.queue(self.music[self.music_index])
                 else:
                     pygame.mixer.music.load(self.music[self.music_index])
+        return None
 
-    def set_difficulty(self) -> None:
+    def set_difficulty(
+            self: Controller,
+    ) -> None:
+        """Apply the current difficulty to every entity in the level."""
         if self.level is not None:
             for ent in self.level.entities:
                 ent.set_difficulty(self.difficulty)
+        return None
 
-    def disable_gamepad(self, notify=True) -> float:
+    def disable_gamepad(
+            self:   Controller,
+            notify: bool = True,
+    ) -> float:
+        """Disconnect the active gamepad and return the frame-time offset spent notifying."""
         start = time.perf_counter()
         if self.gamepad is not None:
             self.gamepad.quit()
@@ -152,7 +377,12 @@ class Controller:
                 display_text("Controller disconnected.", self, retro=self.retro)
         return time.perf_counter() - start
 
-    def enable_gamepad(self, notify: bool = True, device_index: int | None = None) -> float:
+    def enable_gamepad(
+            self:         Controller,
+            notify:       bool       = True,
+            device_index: int | None = None,
+    ) -> float:
+        """Connect a gamepad, detecting or restoring its layout, and return the frame-time offset."""
         start = time.perf_counter()
         if not pygame._sdl2.controller.get_init():
             pygame._sdl2.controller.init()
@@ -172,7 +402,7 @@ class Controller:
         try:
             pygame.joystick.init()
             new_guid = pygame.joystick.Joystick(device_index).get_guid()
-        except Exception:
+        except Exception: # noqa
             pass
 
         # If this looks like the same controller that disconnected, skip re-detection
@@ -182,7 +412,7 @@ class Controller:
                 and self._gamepad_guid is not None
                 and new_guid == self._gamepad_guid
         )
-        self._gamepad_guid = new_guid
+        self._gamepad_guid             = new_guid
         self._gamepad_was_disconnected = False
 
         if is_reconnect:
@@ -217,22 +447,25 @@ class Controller:
         if notify:
             display_text(
                 [msg,
-                 'Changing controllers during gameplay can confuse the system.',
-                 'If controls behave strangely, try restarting with the controller connected.'],
+                 "Changing controllers during gameplay can confuse the system.",
+                 "If controls behave strangely, try restarting with the controller connected."],
                 self, retro=self.retro,
             )
         return time.perf_counter() - start
 
-    def on_device_removed(self, event, notify: bool = True) -> float:
-        """Called specifically for JOYDEVICEREMOVED events.
-        Preserves the active gamepad layout so reconnection works without re-detection."""
+    def on_device_removed(
+            self:   Controller,
+            event:  pygame.event.Event,
+            notify: bool = True,
+    ) -> float:
+        """Handle a JOYDEVICEREMOVED event, preserving the layout for clean reconnection."""
         start = time.perf_counter()
         if self.gamepad is None:
             return time.perf_counter() - start
         try:
             if self.gamepad.get_id() != event.instance_id:
                 return time.perf_counter() - start
-        except Exception:
+        except Exception: # noqa
             pass
         self._gamepad_was_disconnected = True
         # Preserve active_gamepad_layout — don't reset it.
@@ -242,16 +475,32 @@ class Controller:
             display_text("Controller disconnected.", self, retro=self.retro)
         return time.perf_counter() - start
 
-    def set_keyboard_layout(self, name) -> None:
-        self.active_keyboard_layout = name
+    def set_keyboard_layout(
+            self: Controller,
+            name: str,
+    ) -> None:
+        """Set the active keyboard layout by name."""
+        self.active_keyboard_layout = name # noqa
+        return None
 
-    def set_gamepad_layout(self, name) -> None:
+    def set_gamepad_layout(
+            self: Controller,
+            name: str,
+    ) -> None:
+        """Set the active gamepad layout by name (None for the NONE layout)."""
         self.active_gamepad_layout = (None if name == "NONE" else name)
+        return None
 
-    def pick_from_selector(self, selector, clear_normal=None, clear_retro=None) -> bool:
+    def pick_from_selector(
+            self:         Controller,
+            selector:     Selector,
+            clear_normal: pygame.Surface | None = None,
+            clear_retro:  pygame.Surface | None = None,
+    ) -> bool:
+        """Run a selector's input loop until accept/back, returning whether it was accepted."""
         selector.fade_in()
         selector.clear_normal = clear_normal
-        selector.clear_retro = clear_retro
+        selector.clear_retro  = clear_retro
         while True:
             for event in pygame.event.get():
                 match event.type:
@@ -259,19 +508,19 @@ class Controller:
                         self.save()
                         self.quit()
                     case pygame.KEYDOWN:
-                        if event.key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]['keys_pause_unpause']:
+                        if event.key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]["keys_pause_unpause"]:
                             pygame.mouse.set_visible(False)
                             return False
                     case pygame.JOYBUTTONDOWN:
-                        if event.button == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]['button_pause_unpause']:
+                        if event.button == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]["button_pause_unpause"]:
                             pygame.mouse.set_visible(False)
                             return False
                     case pygame.JOYDEVICEADDED:
-                        self.enable_gamepad(notify=True, device_index=event.device_index)
+                        self.enable_gamepad(notify = True, device_index = event.device_index)
                         if self.gamepad is not None:
                             pygame.mouse.set_visible(False)
                     case pygame.JOYDEVICEREMOVED:
-                        self.on_device_removed(event, notify=True)
+                        self.on_device_removed(event, notify = True)
                         if self.gamepad is None:
                             pygame.mouse.set_visible(True)
                     case pygame.MOUSEMOTION:
@@ -306,7 +555,12 @@ class Controller:
                     case _:
                         pass
 
-    def volume(self, clear_normal=None, clear_retro=None) -> None:
+    def volume(
+            self:         Controller,
+            clear_normal: pygame.Surface | None = None,
+            clear_retro:  pygame.Surface | None = None,
+    ) -> None:
+        """Run the volume menu, applying master/music/channel volume changes live."""
         self.volume_menu.buttons[0].value = self.master_volume["master"] * 100
         self.volume_menu.buttons[1].value = self.master_volume["background"] * 100
         self.volume_menu.buttons[2].value = self.master_volume["player"] * 100
@@ -315,7 +569,7 @@ class Controller:
 
         self.volume_menu.fade_in()
         self.volume_menu.clear_normal = clear_normal
-        self.volume_menu.clear_retro = clear_retro
+        self.volume_menu.clear_retro  = clear_retro
 
         mt_notch = self.volume_menu.buttons[0].value
         bg_notch = self.volume_menu.buttons[1].value
@@ -326,19 +580,19 @@ class Controller:
                         self.save()
                         self.quit()
                     case pygame.KEYDOWN:
-                        if event.key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]['keys_pause_unpause']:
+                        if event.key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]["keys_pause_unpause"]:
                             pygame.mouse.set_visible(False)
-                            return
+                            return None
                     case pygame.JOYBUTTONDOWN:
-                        if event.button == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]['button_pause_unpause']:
+                        if event.button == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]["button_pause_unpause"]:
                             pygame.mouse.set_visible(False)
-                            return
+                            return None
                     case pygame.JOYDEVICEADDED:
-                        self.enable_gamepad(notify=True, device_index=event.device_index)
+                        self.enable_gamepad(notify = True, device_index = event.device_index)
                         if self.gamepad is not None:
                             pygame.mouse.set_visible(False)
                     case pygame.JOYDEVICEREMOVED:
-                        self.on_device_removed(event, notify=True)
+                        self.on_device_removed(event, notify = True)
                         if self.gamepad is None:
                             pygame.mouse.set_visible(True)
                     case pygame.MOUSEMOTION:
@@ -364,30 +618,35 @@ class Controller:
 
             match val:
                 case 0:
-                    pass  #set master volume
+                    pass  # set master volume
                 case 1:
-                    pass  #set background music volume
+                    pass  # set background music volume
                 case 2:
-                    pass  #set player volume
+                    pass  # set player volume
                 case 3:
-                    pass  #set effects volume
+                    pass  # set effects volume
                 case 4:
-                    pass  #set cinematics volume
+                    pass  # set cinematics volume
                 case 5 | -1:
                     self.volume_menu.fade_out()
-                    self.master_volume["player"] = self.volume_menu.buttons[2].value / 100
+                    self.master_volume["player"]     = self.volume_menu.buttons[2].value / 100
                     self.master_volume["non-player"] = self.volume_menu.buttons[3].value / 100
                     self.master_volume["cinematics"] = self.volume_menu.buttons[4].value / 100
-                    return
+                    return None
                 case _:
                     pass
 
-    def controls(self, clear_normal=None, clear_retro=None) -> None:
+    def controls(
+            self:         Controller,
+            clear_normal: pygame.Surface | None = None,
+            clear_retro:  pygame.Surface | None = None,
+    ) -> None:
+        """Run the controls menu for choosing keyboard and controller layouts."""
         self.controls_menu.buttons[1].is_enabled = bool(self.gamepad is not None)
 
         self.controls_menu.fade_in()
         self.controls_menu.clear_normal = clear_normal
-        self.controls_menu.clear_retro = clear_retro
+        self.controls_menu.clear_retro  = clear_retro
 
         while True:
             for event in pygame.event.get():
@@ -396,19 +655,19 @@ class Controller:
                         self.save()
                         self.quit()
                     case pygame.KEYDOWN:
-                        if event.key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]['keys_pause_unpause']:
+                        if event.key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]["keys_pause_unpause"]:
                             pygame.mouse.set_visible(False)
-                            return
+                            return None
                     case pygame.JOYBUTTONDOWN:
-                        if event.button == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]['button_pause_unpause']:
+                        if event.button == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]["button_pause_unpause"]:
                             pygame.mouse.set_visible(False)
-                            return
+                            return None
                     case pygame.JOYDEVICEADDED:
-                        self.enable_gamepad(notify=True, device_index=event.device_index)
+                        self.enable_gamepad(notify = True, device_index = event.device_index)
                         if self.gamepad is not None:
                             pygame.mouse.set_visible(False)
                     case pygame.JOYDEVICEREMOVED:
-                        self.on_device_removed(event, notify=True)
+                        self.on_device_removed(event, notify = True)
                         if self.gamepad is None:
                             pygame.mouse.set_visible(True)
                     case pygame.MOUSEMOTION:
@@ -441,16 +700,21 @@ class Controller:
                         self.controls_menu.fade_in()
                 case 2 | -1:
                     self.controls_menu.fade_out()
-                    return
+                    return None
                 case _:
                     pass
 
-    def settings(self, clear_normal=None, clear_retro=None) -> None:
+    def settings(
+            self:         Controller,
+            clear_normal: pygame.Surface | None = None,
+            clear_retro:  pygame.Surface | None = None,
+    ) -> None:
+        """Run the settings menu, applying difficulty and routing to sub-menus."""
         self.settings_menu.buttons[0].value = self.difficulty
 
         self.settings_menu.fade_in()
         self.settings_menu.clear_normal = clear_normal
-        self.settings_menu.clear_retro = clear_retro
+        self.settings_menu.clear_retro  = clear_retro
         while True:
             for event in pygame.event.get():
                 match event.type:
@@ -458,19 +722,19 @@ class Controller:
                         self.save()
                         self.quit()
                     case pygame.KEYDOWN:
-                        if event.key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]['keys_pause_unpause']:
+                        if event.key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]["keys_pause_unpause"]:
                             pygame.mouse.set_visible(False)
-                            return
+                            return None
                     case pygame.JOYBUTTONDOWN:
-                        if event.button == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]['button_pause_unpause']:
+                        if event.button == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]["button_pause_unpause"]:
                             pygame.mouse.set_visible(False)
-                            return
+                            return None
                     case pygame.JOYDEVICEADDED:
-                        self.enable_gamepad(notify=True, device_index=event.device_index)
+                        self.enable_gamepad(notify = True, device_index = event.device_index)
                         if self.gamepad is not None:
                             pygame.mouse.set_visible(False)
                     case pygame.JOYDEVICEREMOVED:
-                        self.on_device_removed(event, notify=True)
+                        self.on_device_removed(event, notify = True)
                         if self.gamepad is None:
                             pygame.mouse.set_visible(True)
                     case pygame.MOUSEMOTION:
@@ -485,23 +749,26 @@ class Controller:
 
             match val:
                 case 0:
-                    pass #set difficulty
+                    pass  # set difficulty
                 case 1:
-                    self.controls(clear_normal=self.settings_menu.clear_normal, clear_retro=self.settings_menu.clear_retro)
+                    self.controls(clear_normal = self.settings_menu.clear_normal, clear_retro = self.settings_menu.clear_retro)
                 case 2:
                     time.sleep(0.01)
-                    self.volume(clear_normal=self.settings_menu.clear_normal, clear_retro=self.settings_menu.clear_retro)
+                    self.volume(clear_normal = self.settings_menu.clear_normal, clear_retro = self.settings_menu.clear_retro)
                 case 3:
                     pygame.display.toggle_fullscreen()
                 case 4 | -1:
                     self.settings_menu.fade_out()
                     self.difficulty = DifficultyScale(self.settings_menu.buttons[0].value)
                     self.set_difficulty()
-                    return
+                    return None
                 case _:
                     pass
 
-    def pause(self) -> float:
+    def pause(
+            self: Controller,
+    ) -> float:
+        """Run the pause menu, handling resume/load/restart/quit, and return the frame-time offset."""
         self.pause_menu.clear_normal = self.pause_menu.clear_retro = None
         start = time.perf_counter()
         pygame.mixer.pause()
@@ -515,17 +782,17 @@ class Controller:
                         self.save()
                         self.quit()
                     case pygame.KEYDOWN:
-                        if event.key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]['keys_pause_unpause']:
+                        if event.key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]["keys_pause_unpause"]:
                             paused = False
                     case pygame.JOYBUTTONDOWN:
-                        if event.button == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]['button_pause_unpause']:
+                        if event.button == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]["button_pause_unpause"]:
                             paused = False
                     case pygame.JOYDEVICEADDED:
-                        self.enable_gamepad(notify=True, device_index=event.device_index)
+                        self.enable_gamepad(notify = True, device_index = event.device_index)
                         if self.gamepad is not None:
                             pygame.mouse.set_visible(False)
                     case pygame.JOYDEVICEREMOVED:
-                        self.on_device_removed(event, notify=True)
+                        self.on_device_removed(event, notify = True)
                         if self.gamepad is None:
                             pygame.mouse.set_visible(True)
                     case pygame.MOUSEMOTION:
@@ -548,22 +815,22 @@ class Controller:
                     self.goto_load = True
                     pygame.mixer.unpause()
                     pygame.mouse.set_visible(False)
-                    return 0
+                    return 0.0
                 case 2:
                     self.goto_restart = True
                     pygame.mixer.unpause()
                     pygame.mouse.set_visible(False)
-                    return 0
+                    return 0.0
                 case 3:
                     time.sleep(0.01)
-                    self.settings(clear_normal=self.pause_menu.clear_normal, clear_retro=self.pause_menu.clear_retro)
+                    self.settings(clear_normal = self.pause_menu.clear_normal, clear_retro = self.pause_menu.clear_retro)
                 case 4:
                     self.save()
                     self.save_player_profile()
                     self.goto_main = True
                     pygame.mixer.unpause()
                     pygame.mouse.set_visible(False)
-                    return 0
+                    return 0.0
                 case 5:
                     self.save()
                     self.quit()
@@ -574,7 +841,10 @@ class Controller:
         pygame.mixer.unpause()
         return time.perf_counter() - start
 
-    def main(self) -> bool:
+    def main(
+            self: Controller,
+    ) -> bool:
+        """Run the main menu loop, returning whether a brand-new game was started."""
         self.main_menu.fade_in()
         self.main_menu.fade_music()
         self.level_selected = None
@@ -588,17 +858,17 @@ class Controller:
                         if self.main_menu.music is not None:
                             if "LOOP" in self.main_menu.music[self.main_menu.music_index].upper():
                                 pygame.mixer.music.play(-1)
-                                pygame.mixer.music.set_endevent()
+                                pygame.mixer.music.set_endevent() # noqa - calling without an argument clears the event that would stop the music
                             else:
                                 pygame.mixer.music.play()
                                 self.main_menu.cycle_music()
                                 pygame.mixer.music.queue(self.main_menu.music[self.main_menu.music_index])
                     case pygame.JOYDEVICEADDED:
-                        self.enable_gamepad(notify=True, device_index=event.device_index)
+                        self.enable_gamepad(notify = True, device_index = event.device_index)
                         if self.gamepad is not None:
                             pygame.mouse.set_visible(False)
                     case pygame.JOYDEVICEREMOVED:
-                        self.on_device_removed(event, notify=True)
+                        self.on_device_removed(event, notify = True)
                         if self.gamepad is None:
                             pygame.mouse.set_visible(True)
                     case pygame.MOUSEMOTION:
@@ -666,7 +936,10 @@ class Controller:
                 case _:
                     pass
 
-    def cycle_keyboard_layout(self) -> float:
+    def cycle_keyboard_layout(
+            self: Controller,
+    ) -> float:
+        """Cycle to the next keyboard layout, notify the player, and return the frame-time offset."""
         start = time.perf_counter()
         if self.active_keyboard_layout == "ARROW_MOVE":
             self.set_keyboard_layout("WASD_MOVE")
@@ -688,13 +961,20 @@ class Controller:
 
         return time.perf_counter() - start
 
-    def handle_pause_unpause(self, key) -> float:
-        if key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]['keys_pause_unpause'] or (self.gamepad is not None and key == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]['button_pause_unpause']):
+    def handle_pause_unpause(
+            self: Controller,
+            key:  int,
+    ) -> float:
+        """Pause the game if the key is the pause binding; return the frame-time offset."""
+        if key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]["keys_pause_unpause"] or (self.gamepad is not None and key == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]["button_pause_unpause"]):
             return self.pause()
         else:
             return 0.0
 
-    def handle_any_key(self) -> bool:
+    def handle_any_key(
+            self: Controller,
+    ) -> bool:
+        """Return whether any keyboard key or gamepad button is currently pressed."""
         if any(pygame.key.get_pressed()):
             return True
         elif self.gamepad is not None:
@@ -703,96 +983,104 @@ class Controller:
                     return True
         return False
 
-    def handle_single_input(self, key) -> float:
-        if key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]['keys_pause_unpause'] or (self.gamepad is not None and key == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]['button_pause_unpause']):
+    def handle_single_input(
+            self: Controller,
+            key:  int,
+    ) -> float:
+        """Dispatch a single key/button press to its action and return the frame-time offset."""
+        if key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]["keys_pause_unpause"] or (self.gamepad is not None and key == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]["button_pause_unpause"]):
             return self.pause()
-        elif key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]['keys_quicksave'] or (self.gamepad is not None and key == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]['button_quicksave']):
+        elif key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]["keys_quicksave"] or (self.gamepad is not None and key == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]["button_quicksave"]):
             self.save()
-        elif key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]['keys_cycle_layout']:
+        elif key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]["keys_cycle_layout"]:
             return self.cycle_keyboard_layout()
-        elif key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]['keys_fullscreen_toggle']:
+        elif key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]["keys_fullscreen_toggle"]:
             pygame.display.toggle_fullscreen()
-        elif self.should_scroll_to_point is None:
-            if key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]['keys_crouch_uncrouch'] or (self.gamepad is not None and key == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]['button_crouch_uncrouch']):
+        elif not self.should_scroll_to_point and self.level and self.level.player:
+            if key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]["keys_crouch_uncrouch"] or (self.gamepad is not None and key == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]["button_crouch_uncrouch"]):
                 self.level.player.toggle_crouch()
-            elif key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]['keys_jump'] or (self.gamepad is not None and key == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]['button_jump']):
+            elif key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]["keys_jump"] or (self.gamepad is not None and key == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]["button_jump"]):
                 self.level.player.jump()
-            elif key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]['keys_teleport_dash'] or (self.gamepad is not None and key == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]['button_teleport_dash']):
+            elif key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]["keys_teleport_dash"] or (self.gamepad is not None and key == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]["button_teleport_dash"]):
                 self.level.player.teleport()
-            elif key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]['keys_bullet_time'] or (self.gamepad is not None and key == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]['button_bullet_time']):
+            elif key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]["keys_bullet_time"] or (self.gamepad is not None and key == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]["button_bullet_time"]):
                 self.level.player.bullet_time()
-            elif key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]['keys_grow'] or (self.gamepad is not None and key == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]['button_grow']):
+            elif key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]["keys_grow"] or (self.gamepad is not None and key == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]["button_grow"]):
                 self.level.player.grow()
-            elif key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]['keys_shrink'] or (self.gamepad is not None and key == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]['button_shrink']):
+            elif key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]["keys_shrink"] or (self.gamepad is not None and key == Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]["button_shrink"]):
                 self.level.player.shrink()
         return 0.0
 
-    def handle_continuous_input(self) -> float:
+    def handle_continuous_input(
+            self: Controller,
+    ) -> float:
+        """Handle held movement/attack/block inputs each frame and return the frame-time offset."""
         dtime_offset: float = 0.0
-        if self.should_scroll_to_point is not None:
-            return 0.0
+        if self.level and self.level.player:
+            if self.should_scroll_to_point is not None:
+                return 0.0
 
-        player_is_moving = False
-        player_is_attacking = False
+            player_is_moving    = False
+            player_is_attacking = False
 
-        if self.gamepad is not None:
-            stick = self.gamepad.get_axis(Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]['axis_horiz'])
-            if not player_is_moving and stick is not None:
-                if stick > Controller.JOYSTICK_TOLERANCE:
-                    player_is_moving = True
-                    self.level.player.move_right()
-                elif stick < -Controller.JOYSTICK_TOLERANCE:
-                    player_is_moving = True
-                    self.level.player.move_left()
+            if self.gamepad:
+                stick = self.gamepad.get_axis(Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]["axis_horiz"])
+                if not player_is_moving and stick is not None:
+                    if stick > Controller.JOYSTICK_TOLERANCE:
+                        player_is_moving = True
+                        self.level.player.move_right()
+                    elif stick < -Controller.JOYSTICK_TOLERANCE:
+                        player_is_moving = True
+                        self.level.player.move_left()
 
-            if not player_is_moving and Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]['button_right'] is not None and Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]['button_left'] is not None:
-                if self.gamepad.get_button(Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]['button_right']):
-                    player_is_moving = True
-                    self.level.player.move_right()
-                elif self.gamepad.get_button(Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]['button_left']):
-                    player_is_moving = True
-                    self.level.player.move_left()
+                if not player_is_moving and Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]["button_right"] is not None and Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]["button_left"] is not None:
+                    if self.gamepad.get_button(Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]["button_right"]):
+                        player_is_moving = True
+                        self.level.player.move_right()
+                    elif self.gamepad.get_button(Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]["button_left"]):
+                        player_is_moving = True
+                        self.level.player.move_left()
 
-            stick = self.gamepad.get_axis(Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]['axis_attack'])
-            if not player_is_attacking and stick is not None and stick > Controller.JOYSTICK_TOLERANCE:
-                player_is_attacking = True
-                dtime_offset += self.level.player.attack()
-
-        keys = pygame.key.get_pressed()
-
-        if not player_is_moving:
-            for input_key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]['keys_right']:
-                if keys[input_key]:
-                    player_is_moving = True
-                    self.level.player.move_right()
-                    break
-        if not player_is_moving:
-            for input_key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]['keys_left']:
-                if keys[input_key]:
-                    player_is_moving = True
-                    self.level.player.move_left()
-                    break
-
-        if not player_is_attacking:
-            for input_key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]['keys_attack']:
-                if keys[input_key]:
+                stick = self.gamepad.get_axis(Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]["axis_attack"])
+                if not player_is_attacking and stick is not None and stick > Controller.JOYSTICK_TOLERANCE:
                     player_is_attacking = True
                     dtime_offset += self.level.player.attack()
+
+            keys = pygame.key.get_pressed()
+
+            if not player_is_moving:
+                for input_key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]["keys_right"]:
+                    if keys[input_key]:
+                        player_is_moving = True
+                        self.level.player.move_right()
+                        break
+            if not player_is_moving:
+                for input_key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]["keys_left"]:
+                    if keys[input_key]:
+                        player_is_moving = True
+                        self.level.player.move_left()
+                        break
+
+            if not player_is_attacking:
+                for input_key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]["keys_attack"]:
+                    if keys[input_key]:
+                        player_is_attacking = True
+                        dtime_offset += self.level.player.attack()
+                        break
+
+            if not player_is_attacking:
+                self.level.player.is_attacking = False
+
+            if not player_is_moving:
+                self.level.player.stop()
+
+            if self.gamepad is not None:
+                stick = self.gamepad.get_axis(Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]["axis_block"])
+                if stick is not None and stick > Controller.JOYSTICK_TOLERANCE:
+                    self.level.player.block()
+            for input_key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]["keys_block"]:
+                if keys[input_key]:
+                    self.level.player.block()
                     break
-
-        if not player_is_attacking:
-            self.level.player.is_attacking = False
-
-        if not player_is_moving:
-            self.level.player.stop()
-
-        if self.gamepad is not None:
-            stick = self.gamepad.get_axis(Controller.GAMEPAD_LAYOUTS[self.active_gamepad_layout]['axis_block'])
-            if stick is not None and stick > Controller.JOYSTICK_TOLERANCE:
-                self.level.player.block()
-        for input_key in Controller.KEYBOARD_LAYOUTS[self.active_keyboard_layout]['keys_block']:
-            if keys[input_key]:
-                self.level.player.block()
-                break
 
         return dtime_offset

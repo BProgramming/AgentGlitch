@@ -1,48 +1,108 @@
-from os.path import join
-from Block import Block, BreakableBlock, MovingBlock, MovableBlock, Hazard, MovingHazard, Door, FallingHazard
+from __future__ import annotations
+from typing import TYPE_CHECKING
+import pygame
+from SimpleVFX.SimpleVFX import VisualEffectsManager
+
+from Block import (
+    Block,
+    BreakableBlock,
+    MovingBlock,
+    MovableBlock,
+    Hazard,
+    MovingHazard,
+    Door,
+    FallingHazard,
+)
 from Boss import Boss
-from Cinematics import CinematicsManager
+from Cinematic import CinematicsManager
 from Player import Player
 from NonPlayer import NonPlayer
-from Objectives import Objective
-from Trigger import Trigger, TextTrigger, SoundTrigger, SpawnTrigger, RevertTrigger, SaveTrigger, \
-    ChangeLevelTrigger, PropertyTrigger, CinematicTrigger, AchievementTrigger, ObjectiveTrigger, SwapLevelTrigger, \
-    CameraToPointTrigger, CameraToPlayerTrigger, DiscordStatusTrigger
-from ParticleEffect import *
-from Helpers import load_path, validate_file_list, display_text, ASSETS_FOLDER, NORMAL_WHITE, RETRO_WHITE, \
-    MovementDirection
+from Objective import Objective
+from Trigger import (
+    Trigger,
+    TextTrigger,
+    SoundTrigger,
+    SpawnTrigger,
+    RevertTrigger,
+    SaveTrigger,
+    ChangeLevelTrigger,
+    PropertyTrigger,
+    CinematicTrigger,
+    AchievementTrigger,
+    ObjectiveTrigger,
+    SwapLevelTrigger,
+    CameraToPointTrigger,
+    CameraToPlayerTrigger,
+    DiscordStatusTrigger,
+)
+from ParticleEffect import (
+    ParticleEffect,
+    Rain,
+    Snow,
+    FilmGrain,
+)
+from Helpers import (
+    load_path,
+    validate_file_list,
+    display_text,
+    ASSETS_FOLDER,
+    NORMAL_WHITE,
+    RETRO_WHITE,
+    MovementDirection,
+)
+from steamworks import STEAMWORKS
+
+if TYPE_CHECKING:
+    from Controller import Controller
 
 
 class Level:
     BLOCK_SIZE = 96
 
-    def __init__(self, name, levels, meta_dict, objects_dict, sprite_master, image_master, player_audios, enemy_audios, block_audios, message_audios, vfx_manager, win, controller, loading_screen):
-        self.name = name.upper()
+    def __init__(
+            self:           Level,
+            name:           str,
+            levels:         dict,
+            meta_dict:      dict,
+            objects_dict:   dict,
+            sprite_master:  dict,
+            image_master:   dict,
+            player_audios:  dict,
+            enemy_audios:   dict,
+            block_audios:   dict,
+            message_audios: dict,
+            vfx_manager:    VisualEffectsManager,
+            win:            pygame.Surface,
+            controller:     Controller,
+            loading_screen: pygame.Surface,
+    ) -> None:
+        """Build a level from its layout and metadata: entities, music, cinematics, and effects."""
+        self.name         = name.upper()
         self.display_name = self.name if meta_dict[name].get("name") is None else meta_dict[name]["name"]
-        self.time = 0
+        self.time         = 0
         self.achievements = ({} if meta_dict[name].get("achievements") is None else meta_dict[name]["achievements"])
-        self.block_size = Level.BLOCK_SIZE if meta_dict[name].get("block_size") is None or not meta_dict[name]["block_size"].isnumeric() else int(meta_dict[name]["block_size"])
-        self.purge_queue = {"triggers": set(), "hazards": set(), "blocks": set(), "doors": set(), "enemies": set(), "objectives": set()}
+        self.block_size   = Level.BLOCK_SIZE if meta_dict[name].get("block_size") is None or not meta_dict[name]["block_size"].isnumeric() else int(meta_dict[name]["block_size"])
+        self.purge_queue  = {"triggers": set(), "hazards": set(), "blocks": set(), "doors": set(), "enemies": set(), "objectives": set()}
         if controller.retro:
             self._retro = True
         else:
             self._retro = (False if meta_dict[name].get("retro") is None else meta_dict[name]["retro"])
-        self.can_glitch = (False if meta_dict[name].get("can_glitch") is None else meta_dict[name]["can_glitch"])
+        self.can_glitch             = (False if meta_dict[name].get("can_glitch") is None else meta_dict[name]["can_glitch"])
         self.visual_effects_manager = vfx_manager
-        self.background = (None if meta_dict[name].get("background") is None else meta_dict[name]["background"])
-        self.foreground = (None if meta_dict[name].get("foreground") is None else meta_dict[name]["foreground"])
-        self.start_cinematic = (None if meta_dict[name].get("start_cinematic") is None else meta_dict[name]["start_cinematic"])
-        self.end_cinematic = (None if meta_dict[name].get("end_cinematic") is None else meta_dict[name]["end_cinematic"])
+        self.background             = (None if meta_dict[name].get("background") is None else meta_dict[name]["background"])
+        self.foreground             = (None if meta_dict[name].get("foreground") is None else meta_dict[name]["foreground"])
+        self.start_cinematic        = (None if meta_dict[name].get("start_cinematic") is None else meta_dict[name]["start_cinematic"])
+        self.end_cinematic          = (None if meta_dict[name].get("end_cinematic") is None else meta_dict[name]["end_cinematic"])
         if type(self.start_cinematic) not in [list, tuple]:
             self.start_cinematic = [self.start_cinematic]
         if type(self.end_cinematic) not in [list, tuple]:
             self.end_cinematic = [self.end_cinematic]
         self.start_message = (None if meta_dict[name].get("start_message") is None else meta_dict[name]["start_message"])
-        self.end_message = (None if meta_dict[name].get("end_message") is None else meta_dict[name]["end_message"])
+        self.end_message   = (None if meta_dict[name].get("end_message") is None else meta_dict[name]["end_message"])
         if self._retro and meta_dict[name].get("retro_music") is not None:
-            self.music = validate_file_list("Music", list(meta_dict[name]["retro_music"].split(' ')), "mp3")
+            self.music = validate_file_list("Music", list(meta_dict[name]["retro_music"].split(" ")), "mp3")
         else:
-            self.music = (None if meta_dict[name].get("music") is None else validate_file_list("Music", list(meta_dict[name]["music"].split(' ')), "mp3"))
+            self.music = (None if meta_dict[name].get("music") is None else validate_file_list("Music", list(meta_dict[name]["music"].split(" ")), "mp3"))
         self.level_bounds, self._player, self.triggers, self.blocks, self.dynamic_blocks, self.doors, self.static_blocks, self.hazards, self.falling_hazards, self.enemies, self.objectives = self.build_level(self, levels[self.name], sprite_master, image_master, objects_dict[self.name], player_audios, enemy_audios, block_audios, message_audios, win, controller, None if meta_dict[name].get("player_sprite") is None else meta_dict[name]["player_sprite"], self.block_size, loading_screen)
         if self._retro and meta_dict[name].get("retro_cinematics") is not None:
             self.cinematics = CinematicsManager(meta_dict[name]["retro_cinematics"], controller, player_sprites=self._player.sprites)
@@ -60,27 +120,37 @@ class Level:
         if meta_dict[name].get("abilities") is not None:
             for key in meta_dict[name]["abilities"]:
                 self.player.abilities[key.casefold()] = meta_dict[name]["abilities"][key]
-        self._player.been_hit_this_level = False
+        self._player.been_hit_this_level  = False
         self._player.been_seen_this_level = False
-        self._player.deaths_this_level = 0
-        self._player.kills_this_level = 0
-        self.target_time = (0 if meta_dict[name].get("target_time") is None else meta_dict[name]["target_time"])
-        self.default_objective = (None if meta_dict[name].get("default_objective") is None else meta_dict[name]["default_objective"])
-        self.objectives_collected = []
-        self.objectives_available = len(self.objectives)
-        self.enemies_available = len(self.enemies)
-        self.boss_hp_pct = None
-        self.hot_swap_level = (None if meta_dict[name].get("hot_swap_level") is None or meta_dict.get(meta_dict[name]["hot_swap_level"]) is None else Level(meta_dict[name]["hot_swap_level"], levels, meta_dict, objects_dict, sprite_master, image_master, player_audios, enemy_audios, block_audios, message_audios, vfx_manager, win, controller, loading_screen))
+        self._player.deaths_this_level    = 0
+        self._player.kills_this_level     = 0
+        self.target_time                  = (0 if meta_dict[name].get("target_time") is None else meta_dict[name]["target_time"])
+        self.default_objective            = (None if meta_dict[name].get("default_objective") is None else meta_dict[name]["default_objective"])
+        self.objectives_collected         = []
+        self.objectives_available         = len(self.objectives)
+        self.enemies_available            = len(self.enemies)
+        self.boss_hp_pct                  = None
+        self.hot_swap_level               = (None if meta_dict[name].get("hot_swap_level") is None or meta_dict.get(meta_dict[name]["hot_swap_level"]) is None else Level(meta_dict[name]["hot_swap_level"], levels, meta_dict, objects_dict, sprite_master, image_master, player_audios, enemy_audios, block_audios, message_audios, vfx_manager, win, controller, loading_screen))
 
     @property
-    def player(self) -> Player:
+    def player(
+            self: Level,
+    ) -> Player:
+        """Return the level's player."""
         return self._player
 
     @property
-    def retro(self) -> bool:
+    def retro(
+            self: Level,
+    ) -> bool:
+        """Return whether the level uses retro styling."""
         return self._retro
 
-    def award_achievements(self, steamworks):
+    def award_achievements(
+            self:       Level,
+            steamworks: STEAMWORKS,
+    ) -> bool:
+        """Evaluate and unlock any earned achievements, returning whether any were granted."""
         unlocked_achievements = []
         if self.target_time is not None and self.target_time > 0 and self.time <= self.target_time and self.achievements.get("target_time") is not None and self.achievements["target_time"] is not None:
             unlocked_achievements.append(self.achievements["target_time"])
@@ -97,7 +167,7 @@ class Level:
         if not self.player.been_seen_this_level and self.achievements.get("no_seen") is not None and self.achievements["no_seen"] is not None:
             unlocked_achievements.append(self.achievements["no_seen"])
 
-        if len(unlocked_achievements) > 0 and steamworks is not None:
+        if len(unlocked_achievements) > 0 and steamworks:
             for achievement in unlocked_achievements:
                 if not steamworks.UserStats.GetAchievement(achievement):
                     steamworks.UserStats.SetAchievement(achievement)
@@ -106,38 +176,58 @@ class Level:
             return False
 
     @property
-    def formatted_time(self) -> str:
-        minutes = int(self.time // 60)
-        seconds = int(self.time - (minutes * 60))
+    def formatted_time(
+            self: Level,
+    ) -> str:
+        """Return the level time formatted as MM:SS.t."""
+        minutes            = int(self.time // 60)
+        seconds            = int(self.time - (minutes * 60))
         fractional_seconds = int((self.time - ((minutes * 60) + seconds)) * 10)
         return f'{"0" if minutes < 10 else ""}{minutes}:{"0" if seconds < 10 else ""}{seconds}.{fractional_seconds}'
 
-    def get_recap_text(self) -> list:
-        text = [f'Mission time: {self.formatted_time}.',
-                f'Packets collected: {len(self.objectives_collected)} of {self.objectives_available} ({100 * len(self.objectives_collected) // self.objectives_available}%).']
+    def get_recap_text(
+            self: Level,
+    ) -> list:
+        """Return the end-of-level recap lines (time, objectives, kills, deaths, stealth)."""
+        objectives_pct = (100 * len(self.objectives_collected) // self.objectives_available) if self.objectives_available > 0 else 0
+        text = [f"Mission time: {self.formatted_time}.",
+                f"Packets collected: {len(self.objectives_collected)} of {self.objectives_available} ({objectives_pct}%)."]
         if self.player.kills_this_level == 0:
-            text.append('Nonlethal: You didn\'t dispatch any enemies.')
+            text.append("Nonlethal: You didn't dispatch any enemies.")
         else:
-            text.append(f'Enemies dispatched: {self.player.kills_this_level} of {self.enemies_available} ({100 * self.player.kills_this_level // self.enemies_available} %).')
+            kills_pct = (100 * self.player.kills_this_level // self.enemies_available) if self.enemies_available > 0 else 0
+            text.append(f"Enemies dispatched: {self.player.kills_this_level} of {self.enemies_available} ({kills_pct} %).")
         if self.player.deaths_this_level == 0:
-            text.append('Survivor: You never died.')
+            text.append("Survivor: You never died.")
         else:
-            text.append(f'Deaths: {self.player.deaths_this_level}.')
+            text.append(f"Deaths: {self.player.deaths_this_level}.")
         if not self.player.been_hit_this_level:
-            text.append('Untouchable: You never got hit.')
+            text.append("Untouchable: You never got hit.")
         if not self.player.been_seen_this_level:
-            text.append('Shadow: You were never even seen!')
+            text.append("Shadow: You were never even seen!")
         return text
 
     @property
-    def entities(self) -> list:
+    def entities(
+            self: Level,
+    ) -> list:
+        """Return all level entities in draw/update order."""
         return [self.player] + self.triggers + self.blocks + self.hazards + self.enemies + self.objectives
 
-    def get_entities_in_range(self, point, dist_x=(1, 1), dist_y=(1, 1), blocks_only=False, include_doors=True, include_hazards=False) -> list:
+    def get_entities_in_range(
+            self:            Level,
+            point:           tuple[float, float],
+            dist_x:          tuple[int, int] = (1, 1),
+            dist_y:          tuple[int, int] = (1, 1),
+            blocks_only:     bool            = False,
+            include_doors:   bool            = True,
+            include_hazards: bool            = False,
+    ) -> list:
+        """Return entities near a point, filtered by the blocks/doors/hazards options."""
         x = int(point[0] / self.block_size)
         y = int(point[1] / self.block_size)
-        # this sum thing below is a hack to turn a 2D list into a 1D list since it applies the + operator to the second (optional) [] argument (e.g. an empty list), thereby concatenating all the elements
-        in_range = [block for block in sum([row[max(x - (dist_x[0] - 1), 0):min(x + dist_x[1] + 1, len(row))] for row in self.static_blocks[max(y - (dist_y[0] - 1), 0):min(y + dist_y[1] + 1, len(self.static_blocks))]], []) if block is not None]
+        # the sum() below flattens a 2D slice into a 1D list by concatenating rows onto an empty list
+        in_range = [block for block in sum([row[max(x - (dist_x[0] - 1), 0):min(x + dist_x[1] + 1, len(row))] for row in self.static_blocks[max(y - (dist_y[0] - 1), 0):min(y + dist_y[1] + 1, len(self.static_blocks))]], []) if block is not None] # noqa
 
         if include_doors:
             for i in range(dist_x[0] - 1, dist_x[1] + 1):
@@ -156,7 +246,11 @@ class Level:
 
         return in_range
 
-    def queue_purge(self, ent) -> None:
+    def queue_purge(
+            self: Level,
+            ent:  object,
+    ) -> None:
+        """Queue an entity for removal in the appropriate purge category."""
         if isinstance(ent, Trigger):
             self.purge_queue["triggers"].add(ent)
         if isinstance(ent, Hazard):
@@ -167,8 +261,12 @@ class Level:
             self.purge_queue["enemies"].add(ent)
         elif isinstance(ent, Objective):
             self.purge_queue["objectives"].add(ent)
+        return None
 
-    def purge(self) -> None:
+    def purge(
+            self: Level,
+    ) -> None:
+        """Remove all queued entities from their lists and clear the purge queues."""
         if bool(self.purge_queue["triggers"]):
             self.triggers = [ent for ent in self.triggers if ent not in self.purge_queue["triggers"]]
             self.purge_queue["triggers"].clear()
@@ -185,7 +283,7 @@ class Level:
                                     self.falling_hazards[x].remove(falling_hazard)
             self.purge_queue["hazards"].clear()
         if bool(self.purge_queue["blocks"]):
-            self.blocks = [ent for ent in self.blocks if ent not in self.purge_queue["blocks"]]
+            self.blocks         = [ent for ent in self.blocks if ent not in self.purge_queue["blocks"]]
             self.dynamic_blocks = [ent for ent in self.dynamic_blocks if ent not in self.purge_queue["blocks"]]
             for i in range(len(self.static_blocks)):
                 self.static_blocks[i] = [ent for ent in self.static_blocks[i] if ent not in self.purge_queue["blocks"]]
@@ -196,9 +294,15 @@ class Level:
         if bool(self.purge_queue["objectives"]):
             self.objectives = [ent for ent in self.objectives if ent not in self.purge_queue["objectives"]]
             self.purge_queue["objectives"].clear()
+        return None
 
-    #NOTE: having weather with lots of particles + lots of enemies + bullets will decrease the frame rate
-    def gen_particle_effect(self, name, win) -> ParticleEffect | None:
+    # NOTE: weather with lots of particles + lots of enemies + bullets will decrease the frame rate
+    def gen_particle_effect(
+            self: Level,
+            name: str,
+            win:  pygame.Surface,
+    ) -> ParticleEffect | None:
+        """Construct the particle effect matching a name (rain, snow, or film grain)."""
         if name is None:
             return None
         else:
@@ -211,13 +315,20 @@ class Level:
             else:
                 return None
 
-    def gen_image(self) -> None:
+    def gen_image(
+            self: Level,
+    ) -> None:
+        """Render the whole level to an image file (debug utility)."""
         img = pygame.Surface((self.level_bounds[1][0], self.level_bounds[1][1]), pygame.SRCALPHA)
         for ent in self.entities:
             img.blit(ent.sprite, (ent.rect.x, ent.rect.y))
-        pygame.image.save(img, join(ASSETS_FOLDER, "Misc", self.name + ".png"))
+        pygame.image.save(img, str(ASSETS_FOLDER / "Misc" / (self.name + ".png")))
+        return None
 
-    def gen_background(self) -> None:
+    def gen_background(
+            self: Level,
+    ) -> None:
+        """Render a schematic background image of the level's blocks and hazards (debug utility)."""
         img = pygame.Surface((self.level_bounds[1][0], self.level_bounds[1][1]), pygame.SRCALPHA)
         img.fill((255, 255, 255, 255))
         square = pygame.Surface((self.block_size, self.block_size), pygame.SRCALPHA)
@@ -229,12 +340,26 @@ class Level:
         square.fill((255, 0, 0, 255))
         for block in self.hazards + [door for doors in list(self.doors.values()) for door in doors]:
             img.blit(square, (block.rect.x, block.rect.y))
-        pygame.image.save(img, join(ASSETS_FOLDER, "Misc", self.name + "_bg.png"))
+        pygame.image.save(img, str(ASSETS_FOLDER / "Misc" / (self.name + "_bg.png")))
+        return None
 
-    def __get_static_block_slice__(self, win, offset_x, offset_y) -> list:
+    def __get_static_block_slice__(
+            self:     Level,
+            win:      pygame.Surface,
+            offset_x: float,
+            offset_y: float,
+    ) -> list:
+        """Return the slice of static blocks visible within 1.5 screens of the camera."""
         return [row[int(offset_x // self.block_size):int((offset_x + (1.5 * win.get_width())) // self.block_size)] for row in self.static_blocks[int(offset_y // self.block_size):int((offset_y + (1.5 * win.get_height())) // self.block_size)]]
 
-    def draw(self, win, offset_x, offset_y, master_volume) -> None:
+    def draw(
+            self:          Level,
+            win:           pygame.Surface,
+            offset_x:      float,
+            offset_y:      float,
+            master_volume: dict[str, float],
+    ) -> None:
+        """Draw the level: effects, blocks, hazards, objectives, enemies, player, and overlays."""
         self.visual_effects_manager.draw(win, (offset_x, offset_y))
 
         above_player = []
@@ -263,27 +388,45 @@ class Level:
 
         for effect in self.particle_effects:
             effect.draw(win, offset_x, offset_y, master_volume)
+        return None
 
     @staticmethod
-    def build_level(level, layout, sprite_master, image_master, objects_dict, player_audios, enemy_audios, block_audios, message_audios, win, controller, player_sprite, block_size, loading_screen) -> tuple:
-        width = len(layout[-1]) * block_size
-        height = len(layout) * block_size
-        level_bounds = ((0, 0), (width, height))
-        player_start = (0, 0)
+    def build_level(
+            level:          Level,
+            layout:         list,
+            sprite_master:  dict,
+            image_master:   dict,
+            objects_dict:   dict,
+            player_audios:  dict,
+            enemy_audios:   dict,
+            block_audios:   dict,
+            message_audios: dict,
+            win:            pygame.Surface,
+            controller:     Controller,
+            player_sprite:  str | None,
+            block_size:     int,
+            loading_screen: pygame.Surface,
+    ) -> tuple:
+        """Parse the layout grid into all level entities and return them as a tuple."""
+        width            = len(layout[-1]) * block_size
+        height           = len(layout) * block_size
+        level_bounds     = ((0, 0), (width, height))
+        player_start     = (0, 0)
         player_face_left = False
 
-        blocks = []
-        doors = {}
-        dynamic_blocks = []
-        static_blocks = []
-        triggers = []
-        enemies = []
-        hazards = []
+        blocks          = []
+        doors           = {}
+        dynamic_blocks  = []
+        static_blocks   = []
+        triggers        = []
+        enemies         = []
+        hazards         = []
         falling_hazards = {}
-        objectives = []
-        bar_colour = RETRO_WHITE if level.retro else NORMAL_WHITE
+        objectives      = []
+        bar_colour      = RETRO_WHITE if level.retro else NORMAL_WHITE
 
         def __convert_coords__(coord: int) -> int:
+            """Scale small tile coordinates up to pixel coordinates."""
             actual_size = block_size // 2
             if coord < actual_size:
                 return coord * actual_size
@@ -296,12 +439,12 @@ class Level:
             bar = pygame.Surface((int(win.get_width() * ((i + 1) / len(layout))), 10), pygame.SRCALPHA)
             bar.fill(bar_colour)
             win.blit(bar, (0, win.get_height() - 12))
-            pct = 100 * (i + 1)//len(layout)
+            pct = 100 * (i + 1) // len(layout)
             display_text(f'Building level... {" " if pct < 100 else ""}{" " if pct < 10 else ""}{pct}%', controller, min_pause_time=0, should_sleep=False, retro=level.retro, background=True)
             static_blocks.append([])
             for j in range(len(layout[i])):
                 static_blocks[-1].append(None)
-                for element in [str(i) for i in layout[i][j].split(' ')]:
+                for element in [str(i) for i in layout[i][j].split(" ")]:
                     if len(element) > 0 and objects_dict.get(element) is not None:
                         entry = objects_dict[element]
                         if entry.get("data") is None or entry.get("type") is None:
@@ -309,10 +452,10 @@ class Level:
                         data = entry["data"]
                         match entry["type"].upper():
                             case "PLAYER":
-                                player_start = ((j * block_size), (i * block_size))
-                                player_face_left = False if data.get('face_left') is None else data['face_left']
+                                player_start     = ((j * block_size), (i * block_size))
+                                player_face_left = False if data.get("face_left") is None else data["face_left"]
                             case "OBJECTIVE":
-                                objectives.append(Objective(level, controller, j * block_size, i * block_size, block_size, block_size, sprite_master, block_audios, is_active=(False if data.get("is_active") is None else data["is_active"]), sprite=(None if data.get("sprite") is None else data["sprite"]), sound=("objective" if data.get("sound") is None else data["sound"].lower()), text=(None if data.get("text") is None else data["text"]), trigger=(None if data.get("trigger") is None else data["trigger"]), is_blocking=(False if data.get("is_blocking") is None else data["is_blocking"]), achievement=(None if data.get("achievement") is None else data["achievement"]),  name=(element if data.get("name") is None else data["name"])))
+                                objectives.append(Objective(level, controller, j * block_size, i * block_size, block_size, block_size, sprite_master, block_audios, is_active=(False if data.get("is_active") is None else data["is_active"]), sprite=(None if data.get("sprite") is None else data["sprite"]), sound=("objective" if data.get("sound") is None else data["sound"].lower()), text=(None if data.get("text") is None else data["text"]), trigger=(None if data.get("trigger") is None else data["trigger"]), is_blocking=(False if data.get("is_blocking") is None else data["is_blocking"]), achievement=(None if data.get("achievement") is None else data["achievement"]), name=(element if data.get("name") is None else data["name"])))
                             case "BLOCK":
                                 if i > 0 and len(str(layout[i - 1][j])) > 0 and objects_dict.get(str(layout[i - 1][j])) is not None and objects_dict[str(layout[i - 1][j])]["type"] in ["Block"] and (objects_dict[str(layout[i - 1][j])].get("is_blocking") is not None and objects_dict[str(layout[i - 1][j])]["is_blocking"]):
                                     is_stacked = True
@@ -330,7 +473,7 @@ class Level:
                                 blocks.append(block)
                                 static_blocks[-1][-1] = block
                             case "MOVINGBLOCK":
-                                path = None if data["path"] is None else load_path(data["path"], i, j, block_size)
+                                path       = None if data["path"] is None else load_path(data["path"], i, j, block_size)
                                 is_stacked = False
                                 block = MovingBlock(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, is_enabled=(True if data.get("is_enabled") is None else data["is_enabled"]), hold_for_collision=(False if data.get("hold_for_collision") is None else data["hold_for_collision"]), speed=data["speed"], path=path, coord_x=__convert_coords__(data["coord_x"]), coord_y=__convert_coords__(data["coord_y"]), is_blocking=(True if data.get("is_blocking") is None else data["is_blocking"]), name=(element if data.get("name") is None else data["name"]))
                                 blocks.append(block)
@@ -351,7 +494,7 @@ class Level:
                             case "HAZARD":
                                 hazards.append(Hazard(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, block_audios, controller.difficulty, hit_sides=("UDLR" if data.get("hit_sides") is None else data["hit_sides"].upper()), sprite=data["sprite"], coord_x=__convert_coords__(data["coord_x"]), coord_y=__convert_coords__(data["coord_y"]), name=(element if data.get("name") is None else data["name"])))
                             case "MOVINGHAZARD":
-                                path = None if data["path"] is None else load_path(data["path"], i, j, block_size)
+                                path       = None if data["path"] is None else load_path(data["path"], i, j, block_size)
                                 is_stacked = False
                                 hazards.append(MovingHazard(level, controller, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, block_audios, controller.difficulty, is_stacked, speed=data["speed"], path=path, hit_sides=("UDLR" if data.get("hit_sides") is None else data["hit_sides"].upper()), sprite=data["sprite"], coord_x=__convert_coords__(data["coord_x"]), coord_y=__convert_coords__(data["coord_y"]), name=(element if data.get("name") is None else data["name"])))
                             case "FALLINGHAZARD":
@@ -371,14 +514,14 @@ class Level:
                                 packed_input = (None if data.get("input") is None else data["input"])
                                 triggers.append(Trigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"])))
                             case "TEXTTRIGGER":
-                                packed_input = {'ref': message_audios, 'input': (None if data.get("input") is None else data["input"])}
+                                packed_input = {"ref": message_audios, "input": (None if data.get("input") is None else data["input"])}
                                 triggers.append(TextTrigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"])))
                             case "SOUNDTRIGGER":
                                 packed_input = (None if data.get("input") is None else data["input"])
                                 triggers.append(SoundTrigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"])))
                             case "SPAWNTRIGGER":
-                                all_refs = {'objects_dict': objects_dict, 'sprite_master': sprite_master, 'enemy_audios': enemy_audios, 'block_audios': block_audios, 'message_audios': message_audios, 'image_master': image_master, 'block_size': block_size}
-                                packed_input = {'ref': all_refs, 'input': (None if data.get("input") is None else data["input"])}
+                                all_refs     = {"objects_dict": objects_dict, "sprite_master": sprite_master, "enemy_audios": enemy_audios, "block_audios": block_audios, "message_audios": message_audios, "image_master": image_master, "block_size": block_size}
+                                packed_input = {"ref": all_refs, "input": (None if data.get("input") is None else data["input"])}
                                 triggers.append(SpawnTrigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"])))
                             case "REVERTTRIGGER":
                                 packed_input = (None if data.get("input") is None else data["input"])
@@ -405,7 +548,7 @@ class Level:
                                 packed_input = (None if data.get("input") is None else data["input"])
                                 triggers.append(SwapLevelTrigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"])))
                             case "CAMERATOPOINTTRIGGER":
-                                packed_input = {'ref': block_size, 'input': (None if data.get("input") is None else data["input"])}
+                                packed_input = {"ref": block_size, "input": (None if data.get("input") is None else data["input"])}
                                 triggers.append(CameraToPointTrigger(level, controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"])))
                             case "CAMERATOPLAYERTRIGGER":
                                 packed_input = (None if data.get("input") is None else data["input"])
@@ -417,15 +560,15 @@ class Level:
                                 pass
 
         if player_sprite is not None:
-            selected_sprite = selected_retro_sprite = f'{player_sprite}Player{controller.player_sprite_selected}'
+            selected_sprite = selected_retro_sprite = f"{player_sprite}Player{controller.player_sprite_selected}"
         else:
-            selected_sprite = f'Player{controller.player_sprite_selected}'
-            selected_retro_sprite = f'RetroPlayer{controller.player_sprite_selected}'
+            selected_sprite       = f"Player{controller.player_sprite_selected}"
+            selected_retro_sprite = f"RetroPlayer{controller.player_sprite_selected}"
         player = Player(level, controller, player_start[0], player_start[1], sprite_master, player_audios, controller.difficulty, block_size, sprite=selected_sprite, retro_sprite=selected_retro_sprite)
         if player_face_left:
             player.direction = player.facing = MovementDirection.LEFT
 
-        to_link = [ent for ent in [player] + blocks + hazards + enemies + objectives if hasattr(ent, 'trigger')]
+        to_link = [ent for ent in [player] + blocks + hazards + enemies + objectives if hasattr(ent, "trigger")]
         for i, ent in enumerate(to_link):
             win.fill((0, 0, 0))
             win.blit(loading_screen, ((win.get_width() - loading_screen.get_width()) / 2, (win.get_height() - loading_screen.get_height()) / 2))

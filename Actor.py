@@ -21,15 +21,15 @@ from Helpers import (
     set_sound_source,
     RUMBLE_EFFECT_DURATION,
     RUMBLE_EFFECT_LOW,
-    RUMBLE_EFFECT_HIGH,
+    RUMBLE_EFFECT_HIGH, PathPoint,
 )
-from Objectives import Objective
+from Objective import Objective
 from Projectile import Projectile
 
 if TYPE_CHECKING:
     from Controller import Controller
     from Level import Level
-# This file has lots of 'type: ignore' because PyCharm's type-checker can't validate when guards are nested multiple levels
+
 
 class MovementState(Enum):
     IDLE               =  0
@@ -56,58 +56,63 @@ class MovementState(Enum):
     IDLE_CROUCH_ATTACK = 21
     DEAD               = 22
 
-    def __str__(self) -> str:
+    def __str__(
+            self: MovementState,
+    ) -> str:
+        """Return the movement state's name."""
         return self.name
 
 
 class Actor(Entity):
-    SIZE:                  int =  64
+    SIZE:                  int = 64
     VELOCITY_TARGET:       int = 400
     VELOCITY_JUMP:         int = 500
     MIN_FALL_VEL:          int = 100
     MAX_SHOOT_DISTANCE:    int = 500
     HORIZ_PUSH_DECAY_RATE: int = 200
-    ATTACK_DAMAGE:         int =  10
+    ATTACK_DAMAGE:         int = 10
 
-    GET_HIT_COOLDOWN:           float | int = 1.00
-    LAUNCH_PROJECTILE_COOLDOWN: float | int = 1.00
-    RESIZE_COOLDOWN:            float | int = 3.00
-    RESIZE_DELAY:               float | int = 0.50
-    RESIZE_SCALE_LIMIT:         float | int = 1.50
-    RESIZE_EFFECT:              float | int = 0.05
-    HEAL_DELAY:                 float | int = 5.00
-    DOUBLEJUMP_EFFECT_TRAIL:    float | int = 0.08
-    DEATH_TIME:                 float | int = 1.50
-    BARK_TIME:                  float | int = 2.00
+    GET_HIT_COOLDOWN:           float = 1.00
+    LAUNCH_PROJECTILE_COOLDOWN: float = 1.00
+    RESIZE_COOLDOWN:            float = 3.00
+    RESIZE_DELAY:               float = 0.50
+    RESIZE_SCALE_LIMIT:         float = 1.50
+    RESIZE_EFFECT:              float = 0.05
+    HEAL_DELAY:                 float = 5.00
+    DOUBLE_JUMP_EFFECT_TRAIL:   float = 0.08
+    DEATH_TIME:                 float = 1.50
+    BARK_TIME:                  float = 2.00
 
     def __init__(
             self:          Actor,
             level:         Level,
             controller:    Controller,
-            x:             float | int,
-            y:             float | int,
+            x:             float,
+            y:             float,
             sprite_master: dict[str, dict[str, list[pygame.Surface]]],
             audios:        dict[str, list[pygame.mixer.Sound]],
-            difficulty:    float | int,
-            block_size:    float | int,
-            can_shoot:     bool        = False,
-            can_resize:    bool        = False,
-            width:         float | int = SIZE,
-            height:        float | int = SIZE,
-            attack_damage: float | int = ATTACK_DAMAGE,
-            sprite:        str | None  = None,
-            proj_sprite:   str | None  = None,
-            name:          str         = "Actor",
-    ):
+            difficulty:    float,
+            block_size:    float,
+            can_shoot:     bool       = False,
+            can_resize:    bool       = False,
+            width:         float      = SIZE,
+            height:        float      = SIZE,
+            attack_damage: float      = ATTACK_DAMAGE,
+            sprite:        str | None = None,
+            proj_sprite:   str | None = None,
+            name:          str        = "Actor",
+    ) -> None:
+        """Initialize an actor's movement, abilities, cooldowns, sprites, and audio state."""
         super().__init__(level, controller, x, y, width, height, name = name)
-        self.difficulty: float | int = difficulty
+        self.difficulty: float = difficulty
+        self.purgeable_on_load = True
 
         self.direction: MovementDirection = MovementDirection.RIGHT
         self.facing:    MovementDirection = MovementDirection.RIGHT
 
-        self.is_hostile:    bool        = False
-        self.is_attacking:  bool        = False
-        self.attack_damage: float | int = attack_damage * difficulty
+        self.is_hostile:    bool  = False
+        self.is_attacking:  bool  = False
+        self.attack_damage: float = attack_damage * difficulty
 
         self.abilities: dict[str, bool] = {
             "can_double_jump": False,
@@ -134,22 +139,22 @@ class Actor(Entity):
                 "doublejump_effect_trail": 0.0,
             }
         )
-        self.cached_cooldowns: dict[str, float | int] = self.cooldowns.copy()
+        self.cached_cooldowns: dict[str, float] = self.cooldowns.copy()
 
-        self.patrol_path:       list[list[tuple[float | int, float | int] | bool]] | None = None
-        self.x_vel:             float | int = 0.0
-        self.y_vel:             float | int = 0.0
-        self.x_accel_time:      float | int = 0.0
-        self.x_accel_max_time:  float | int = 0.0
-        self.target_vel:        float | int = Actor.VELOCITY_TARGET
-        self.push_x:            float | int = 0.0
-        self.push_y:            float | int = 0.0
-        self.teleport_distance: float | int = 0.0
-        self.should_move_horiz: bool        = False
-        self.should_move_vert:  bool        = True
-        self.is_crouching:      bool        = False
-        self.is_wall_jumping:   bool        = False
-        self.jump_count:        int         = 0
+        self.patrol_path:       list[PathPoint] | None = None
+        self.x_vel:             float                  = 0.0
+        self.y_vel:             float                  = 0.0
+        self.x_accel_time:      float                  = 0.0
+        self.x_accel_max_time:  float                  = 0.0
+        self.target_vel:        float                  = Actor.VELOCITY_TARGET
+        self.push_x:            float                  = 0.0
+        self.push_y:            float                  = 0.0
+        self.teleport_distance: float                  = 0.0
+        self.should_move_horiz: bool                   = False
+        self.should_move_vert:  bool                   = True
+        self.is_crouching:      bool                   = False
+        self.is_wall_jumping:   bool                   = False
+        self.jump_count:        int                    = 0
 
         self.state:               MovementState = MovementState.IDLE
         self.state_changed:       bool          = False
@@ -158,10 +163,10 @@ class Actor(Entity):
         self.is_final_anim_frame: bool          = False
         self.is_animated_attack:  bool          = False
 
-        self.size:               float | int = 1.0
-        self.size_target:        float | int = 1.0
-        self.cached_size:        float | int = 1.0
-        self.cached_size_target: float | int = 1.0
+        self.size:               float = 1.0
+        self.size_target:        float = 1.0
+        self.cached_size:        float = 1.0
+        self.cached_size_target: float = 1.0
 
         self.sprite_name: str                             = sprite if sprite else "UnarmedAgent"
         self.sprites:     dict[str, list[pygame.Surface]] = load_sprite_sheets("Sprites", (sprite if sprite else "UnarmedAgent"), sprite_master, direction = True, retro = self.level.retro)
@@ -180,33 +185,36 @@ class Actor(Entity):
             "HIT":         [0],
             "RESIZE":      [0],
         }
-        self.active_audio:         pygame.mixer.Sound | None           = None
-        self.active_audio_time:    float | int                         = 0.0
-        self.active_audio_channel: pygame.mixer.Channel | None         = None
+        self.active_audio:         pygame.mixer.Sound | None   = None
+        self.active_audio_time:    float                       = 0.0
+        self.active_audio_channel: pygame.mixer.Channel | None = None
 
         self.update_sprite()
         self.update_geo()
         if self.rect:
             self.rect.x += (block_size - self.rect.width) // 2
             self.rect.y += (block_size - self.rect.height)
-            self.cached_x: float | int = self.rect.x
-            self.cached_y: float | int = self.rect.y
+            self.cached_x: float = self.rect.x
+            self.cached_y: float = self.rect.y
 
     @property
     def max_jumps(
             self: Actor,
     ) -> int:
+        """Return the maximum number of jumps available to the actor."""
         return 2 if self.abilities["can_double_jump"] else 1
 
     @property
     def gravity(
             self: Actor,
-    ) -> float | int:
+    ) -> float:
+        """Return the actor's gravity, scaled by size and reduced during a wall jump."""
         return super().gravity * (self.size / (1 + (3 if self.is_wall_jumping and self.y_vel > 0 else 0)))
 
     def save(
             self: Actor,
     ) -> dict:
+        """Return a serializable dict of the actor's persistent state, including projectiles."""
         projectiles = []
         for proj in self.active_projectiles:
             projectiles.append(proj.save())
@@ -216,7 +224,7 @@ class Actor(Entity):
                 "cached x y":  (self.cached_x, self.cached_y),
                 "cooldowns":   self.cached_cooldowns,
                 "size":        self.size,
-                "size_target": self.size,
+                "size_target": self.size_target,
                 "projectiles": projectiles,
             },
         }
@@ -225,6 +233,7 @@ class Actor(Entity):
             self: Actor,
             data: dict[str, Any],
     ) -> None:
+        """Restore the actor's position, cooldowns, size, and active projectiles from saved data."""
         self.rect.x, self.rect.y = self.cached_x, self.cached_y = data["cached x y"]
 
         self.cooldowns = self.cached_cooldowns = data["cooldowns"]
@@ -258,8 +267,9 @@ class Actor(Entity):
 
     def set_difficulty(
             self:  Actor,
-            scale: float | int,
+            scale: float,
     ) -> None:
+        """Rescale the actor's hp, damage, and projectiles to the new difficulty."""
         self.difficulty = scale
 
         self.max_hp        *= scale
@@ -274,8 +284,9 @@ class Actor(Entity):
 
     def resize(
             self:   Actor,
-            target: float | int,
+            target: float,
     ) -> None:
+        """Begin resizing the actor toward a target scale and start the resize cooldown."""
         if self.hp > 0 and self.size_target != target:
             self.size_target               = target
             self.attack_damage             *= target
@@ -287,6 +298,7 @@ class Actor(Entity):
     def grow(
             self: Actor,
     ) -> None:
+        """Resize the actor up toward the maximum scale if able."""
         if self.hp > 0 >= self.cooldowns["resize"] and self.abilities["can_resize"]:
             self.resize(min(self.size_target * Actor.RESIZE_SCALE_LIMIT, Actor.RESIZE_SCALE_LIMIT))
         return None
@@ -294,15 +306,17 @@ class Actor(Entity):
     def shrink(
             self: Actor,
     ) -> None:
+        """Resize the actor down toward the minimum scale if able."""
         if self.hp > 0 >= self.cooldowns["resize"] and self.abilities["can_resize"]:
             self.resize(max(self.size_target / Actor.RESIZE_SCALE_LIMIT, 1 / Actor.RESIZE_SCALE_LIMIT))
         return None
 
     def move(
             self: Actor,
-            dx: float | int,
-            dy: float | int,
+            dx:   float,
+            dy:   float,
     ) -> None:
+        """Move the actor by the given deltas, clamping to level bounds and handling top/bottom limits."""
         if self.rect:
             if dx != 0:
                 if self.rect.left + dx < self.level.level_bounds[0][0] - (self.rect.width // 5):
@@ -316,7 +330,7 @@ class Actor(Entity):
                 if self.rect.top + dy < self.level.level_bounds[0][1]:
                     self.hit_head()
                 elif self.rect.top + dy > self.level.level_bounds[1][1]:
-                    self.die()
+                    self.die()  # die()'s frame-time offset is discarded here; move() returns None
                 else:
                     self.rect.y += dy
 
@@ -325,6 +339,7 @@ class Actor(Entity):
     def cache(
             self: Actor,
     ) -> None:
+        """Cache the actor's position and state when it is idle, healthy, and grounded."""
         if (
                 self.rect and
                 self.cooldowns["get_hit"] <= 0 and
@@ -343,11 +358,13 @@ class Actor(Entity):
     def revert(
             self: Actor,
     ) -> int:
+        """Revert the actor to its cached state (no-op for the base actor)."""
         return 0
 
     def jump(
             self: Actor,
     ) -> None:
+        """Make the actor jump if able, spawning trail VFX and handling wall-jump push-off."""
         if self.rect and self.hp > 0 and self.jump_count < self.max_jumps:
             self.should_move_vert = True
             self.y_vel            = -Actor.VELOCITY_JUMP
@@ -355,10 +372,10 @@ class Actor(Entity):
 
             if self.jump_count > 1:
                 rotation = (self.x_vel / self.y_vel) * 30
-                self.level.visual_effects_manager.spawn(
+                self.level.visual_effects_manager.spawn( # noqa
                     VisualEffect(
                         self,
-                        self.level.visual_effects_manager.image_master,
+                        self.level.visual_effects_manager.image_master, # noqa
                         image_name = "JUMPLINES",
                         direction  = [ImageDirection.BOTTOM, (ImageDirection.RIGHT if self.facing == MovementDirection.RIGHT else ImageDirection.LEFT)],
                         rotation   = rotation,
@@ -366,7 +383,7 @@ class Actor(Entity):
                         offset     = (self.rect.width // 2, 0),
                         scale      = (self.rect.width // 2, self.rect.height),
                     ),
-                    time = Actor.DOUBLEJUMP_EFFECT_TRAIL,
+                    time = Actor.DOUBLE_JUMP_EFFECT_TRAIL,
                 )
 
             if self.is_wall_jumping:
@@ -381,13 +398,15 @@ class Actor(Entity):
 
     def land(
             self: Actor,
-    ) -> None:
+    ) -> float:
+        """Stop vertical motion on landing, applying fall damage and rumble for big drops."""
+        dtime_offset = 0.0
         self.should_move_vert = False
 
         if self.y_vel > 2 * Actor.VELOCITY_JUMP:
             self.hp -= self.y_vel * self.y_vel / (18000 * self.size)
             if self.hp < 0:
-                self.die()
+                dtime_offset += self.die()
             elif self == self.level.player and self.controller.gamepad is not None:
                 self.controller.gamepad.rumble(RUMBLE_EFFECT_LOW, RUMBLE_EFFECT_LOW, RUMBLE_EFFECT_DURATION)
 
@@ -395,11 +414,12 @@ class Actor(Entity):
         self.jump_count      = 0
         self.is_wall_jumping = False
 
-        return None
+        return dtime_offset
 
     def hit_head(
             self: Actor,
     ) -> None:
+        """Reverse and dampen vertical velocity when the actor hits a ceiling."""
         self.y_vel *= -0.5
         return None
 
@@ -407,6 +427,7 @@ class Actor(Entity):
             self:        Actor,
             attack_type: str,
     ) -> None:
+        """Play an attack sound, positioned relative to the player for non-player actors."""
         if attack_type in self.audios:
             active_audio_channel = pygame.mixer.find_channel()
 
@@ -424,6 +445,7 @@ class Actor(Entity):
             self:   Actor,
             target: tuple[int, int],
     ) -> None:
+        """Launch a projectile toward the target if able, on cooldown, and alive."""
         if self.rect and self.hp > 0 >= self.cooldowns["launch_projectile"]:
             adj_target = target[0], self.rect.centery
             proj = Projectile(
@@ -436,7 +458,7 @@ class Actor(Entity):
                 self.attack_damage,
                 self.difficulty,
                 sprite = self.proj_sprite,
-                name   = f"{self.name}'s projectile #{(len(self.active_projectiles) + 1)}"
+                name   = f"{self.name}'s projectile #{(len(self.active_projectiles) + 1)}",
             )
             self.active_projectiles.append(proj)
 
@@ -449,50 +471,56 @@ class Actor(Entity):
     def get_hit(
             self: Actor,
             ent:  Entity,
-    ) -> float | int:
+    ) -> float:
+        """Apply damage from an attacker, refresh hit/heal cooldowns, and die if depleted."""
         self.cooldowns["get_hit"] = Actor.GET_HIT_COOLDOWN
         self.cooldowns["heal"]    = Actor.HEAL_DELAY * self.difficulty
 
+        dtime_offset: float = 0.0
         if ent.attack_damage is not None:
             self.hp -= ent.attack_damage
             if self.hp < 0:
-                self.die()
+                dtime_offset += self.die()
 
-        return 0.0
+        return dtime_offset
 
     def get_collisions(
             self: Actor,
-    ) -> float | int:
-        if not self.rect:
+    ) -> float:
+        """Resolve collisions with actors, hazards, objectives, and blocks, returning the frame-time offset."""
+        rect = self.rect
+        if not rect:
             return 0.0
 
         collided = False
-        dtime_offset: float | int = 0.0
+        dtime_offset: float = 0.0
 
         if self == self.level.player:
-            ents = self.level.get_entities_in_range((self.rect.x, self.rect.y)) # type: ignore
+            ents = self.level.get_entities_in_range((rect.x, rect.y))
         elif self.is_hostile:
-            ents = [self.level.player] + self.level.get_entities_in_range((self.rect.x, self.rect.y), blocks_only = True, include_doors = True) # type: ignore
+            ents = [self.level.player] + self.level.get_entities_in_range((rect.x, rect.y), blocks_only = True, include_doors = True)
         else:
-            ents = self.level.get_entities_in_range((self.rect.x, self.rect.y), blocks_only = True, include_doors = True) # type: ignore
+            ents = self.level.get_entities_in_range((rect.x, rect.y), blocks_only = True, include_doors = True)
 
         for ent in ents:
-            if ent.rect and ent.mask and self.rect.colliderect(ent.rect): # type: ignore
-                if pygame.sprite.collide_mask(self, ent): # type: ignore
-                    if isinstance(ent, Actor) or isinstance(ent, Objective):
-                        overlap = self.mask.overlap_mask(ent.mask, (0, 0)).get_rect() # type: ignore
+            ent_rect = ent.rect
+            ent_mask = ent.mask
+            if ent_rect and ent_mask and rect.colliderect(ent_rect):
+                if pygame.sprite.collide_mask(self, ent): # noqa
+                    if self.mask and (isinstance(ent, Actor) or isinstance(ent, Objective)):
+                        overlap = self.mask.overlap_mask(ent_mask, (0, 0)).get_rect()
                     else:
-                        overlap = self.rect.clip(ent.rect) # type: ignore
+                        overlap = rect.clip(ent_rect)
 
                     if isinstance(ent, Actor) and ent != self.level.player:
-                        if ent.facing == (MovementDirection.RIGHT if self.rect.centerx - ent.rect.centerx >= 0 else MovementDirection.LEFT) and ent.is_attacking and self.cooldowns["get_hit"] <= 0: # type: ignore
+                        if ent.facing == (MovementDirection.RIGHT if rect.centerx - ent_rect.centerx >= 0 else MovementDirection.LEFT) and ent.is_attacking and self.cooldowns["get_hit"] <= 0:
                             dtime_offset += self.get_hit(ent)
                     elif isinstance(ent, Hazard):
                         if ent.is_attacking and self.cooldowns["get_hit"] <= 0:
-                            if overlap.width <= overlap.height and ((self.rect.x <= ent.rect.x and "L" in ent.hit_sides) or (self.rect.x >= ent.rect.x and "R" in ent.hit_sides)): # type: ignore
+                            if overlap.width <= overlap.height and ((rect.x <= ent_rect.x and "L" in ent.hit_sides) or (rect.x >= ent_rect.x and "R" in ent.hit_sides)):
                                 dtime_offset += self.get_hit(ent)
 
-                            if overlap.width >= overlap.height and ((self.rect.y <= ent.rect.y and "U" in ent.hit_sides) or (self.rect.y >= ent.rect.y and "D" in ent.hit_sides)): # type: ignore
+                            if overlap.width >= overlap.height and ((rect.y <= ent_rect.y and "U" in ent.hit_sides) or (rect.y >= ent_rect.y and "D" in ent.hit_sides)):
                                 dtime_offset += self.get_hit(ent)
                     elif isinstance(ent, Objective) and self == self.level.player:
                         dtime_offset += ent.get_hit(self)
@@ -500,43 +528,43 @@ class Actor(Entity):
                     if ent.collide(self):
                         self.collide(ent)
                         if overlap.width <= overlap.height and (self.x_vel == 0 or self.direction == (MovementDirection.RIGHT if self.x_vel >= 0 else MovementDirection.LEFT)):
-                            if self.abilities["can_move_blocks"] and isinstance(ent, MovableBlock) and ent.should_move_horiz and self.direction == (MovementDirection.RIGHT if ent.rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT): # type: ignore
+                            if self.abilities["can_move_blocks"] and isinstance(ent, MovableBlock) and ent.should_move_horiz and self.direction == (MovementDirection.RIGHT if ent_rect.centerx - rect.centerx >= 0 else MovementDirection.LEFT):
                                 ent.push_x = self.x_vel * self.size
 
                             if (isinstance(ent, Actor) and ent.is_hostile) or not isinstance(ent, Actor):
-                                if self.x_vel <= 0 and self.rect.centerx > ent.rect.centerx: # type: ignore
-                                    self.rect.left = ent.rect.right - (self.rect.width // 5) # type: ignore
-                                    self.x_vel     = 0.0
-                                elif self.x_vel >= 0 and self.rect.centerx <= ent.rect.centerx: # type: ignore
-                                    self.rect.right = ent.rect.left + (self.rect.width // 5) # type: ignore
-                                    self.x_vel      = 0.0
+                                if self.x_vel <= 0 and rect.centerx > ent_rect.centerx:
+                                    rect.left  = ent_rect.right - (rect.width // 5)
+                                    self.x_vel = 0.0
+                                elif self.x_vel >= 0 and rect.centerx <= ent_rect.centerx:
+                                    rect.right = ent_rect.left + (rect.width // 5)
+                                    self.x_vel = 0.0
 
                             collided = True
 
                         if overlap.width >= overlap.height:
-                            if self.y_vel >= 0 and not ent.is_stacked and self.rect.bottom == overlap.bottom: # type: ignore
-                                self.rect.bottom = ent.rect.top # type: ignore
-                                self.land()
-                            elif self.y_vel < 0 and self.rect.top == overlap.top: # type: ignore
-                                self.rect.top = ent.rect.bottom # type: ignore
+                            if self.y_vel >= 0 and not ent.is_stacked and rect.bottom == overlap.bottom:
+                                rect.bottom = ent_rect.top
+                                dtime_offset += self.land()
+                            elif self.y_vel < 0 and rect.top == overlap.top:
+                                rect.top = ent_rect.bottom
                                 self.hit_head()
 
-                        if collided and self.should_move_vert and self.abilities["can_wall_jump"] and not self.is_wall_jumping and self.direction == (MovementDirection.RIGHT if overlap.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT): # type: ignore
+                        if collided and self.should_move_vert and self.abilities["can_wall_jump"] and not self.is_wall_jumping and self.direction == (MovementDirection.RIGHT if overlap.centerx - rect.centerx >= 0 else MovementDirection.LEFT):
                             self.y_vel           = min(self.y_vel, 0.0)
                             self.jump_count      = 0
                             self.is_wall_jumping = True
                 elif isinstance(ent, Objective) and self == self.level.player and ent.sprite is None:
                     dtime_offset += ent.get_hit(self)
-            elif ent.rect.top <= self.rect.bottom <= ent.rect.bottom and self.rect.left + (self.rect.width // 4) <= ent.rect.right and self.rect.right - (self.rect.width // 4) >= ent.rect.left: # type: ignore
-                if isinstance(ent, MovingBlock) or isinstance(ent, MovableBlock) :
+            elif ent_rect.top <= rect.bottom <= ent_rect.bottom and rect.left + (rect.width // 4) <= ent_rect.right and rect.right - (rect.width // 4) >= ent_rect.left:
+                if isinstance(ent, MovingBlock) or isinstance(ent, MovableBlock):
                     ent.collide(self)
 
-                if self.rect.centerx != ent.rect.centerx: # type: ignore
-                    if math.degrees(math.atan(abs(self.rect.centery - ent.rect.centery) / abs(self.rect.centerx - ent.rect.centerx))) >= 45: # type: ignore
+                if rect.centerx != ent_rect.centerx:
+                    if math.degrees(math.atan(abs(rect.centery - ent_rect.centery) / abs(rect.centerx - ent_rect.centerx))) >= 45:
                         self.should_move_vert = False
 
-                        if self.rect.bottom != ent.rect.top: # type: ignore
-                            self.rect.bottom = ent.rect.top # type: ignore
+                        if rect.bottom != ent_rect.top:
+                            rect.bottom = ent_rect.top
 
         if self.y_vel != 0 and not collided and self.is_wall_jumping:
             if self.direction == MovementDirection.RIGHT:
@@ -544,7 +572,7 @@ class Actor(Entity):
             else:
                 dist_x = (1, 0)
 
-            check_blocks = len(self.level.get_entities_in_range((self.rect.x, self.rect.y), dist_x = dist_x, blocks_only = True, include_doors = False)) # type: ignore
+            check_blocks = len(self.level.get_entities_in_range((rect.x, rect.y), dist_x = dist_x, blocks_only = True, include_doors = False))
 
             if check_blocks == 0:
                 self.is_wall_jumping = False
@@ -553,27 +581,29 @@ class Actor(Entity):
 
     def die(
             self: Actor,
-    ) -> None:
+    ) -> float:
+        """Mark the actor dead, start the death cooldown, and rumble on player death."""
         super().die()
 
-        if self.hp <= 0 and self.cooldowns.get('dead') and self.cooldowns['dead'] <= 0:
-            self.cooldowns['dead'] = Actor.DEATH_TIME
+        if self.hp <= 0 and self.cooldowns.get("dead") and self.cooldowns["dead"] <= 0:
+            self.cooldowns["dead"] = Actor.DEATH_TIME
 
             if self == self.level.player and self.controller.gamepad:
                 self.controller.gamepad.rumble(RUMBLE_EFFECT_HIGH, RUMBLE_EFFECT_HIGH, RUMBLE_EFFECT_DURATION)
 
-        return None
+        return 0.0
 
     def update_state(
             self: Actor,
     ) -> None:
+        """Select the actor's animation state from its movement, attack, and status flags."""
         old = self.state
-        if self.hp <= 0 and self.cooldowns.get('dead') is not None:
+        if self.hp <= 0 and self.cooldowns.get("dead") is not None:
             if self.state != MovementState.DEAD:
                 self.state           = MovementState.DEAD
                 self.animation_count = 0
         elif self.size_target != self.size:
-            # this is not combined because, when kept separate, it lets the animation keep playing until the cooldown ends
+            # kept separate so the animation keeps playing until the cooldown ends
             if self.state != MovementState.RESIZE:
                 self.state           = MovementState.RESIZE
                 self.animation_count = 0
@@ -594,13 +624,13 @@ class Actor(Entity):
                     self.update_state()
                     return None
         elif self.cooldowns["get_hit"] > 0:
-            # this is not combined because, when kept separate, it lets the animation keep playing until the cooldown ends
+            # kept separate so the animation keeps playing until the cooldown ends
             if self.state != MovementState.HIT:
                 self.state           = MovementState.HIT
                 self.animation_count = 0
         else:
             if self.teleport_distance != 0:
-            # this is not combined because, when kept separate, it lets the animation keep playing until the cooldown ends
+                # kept separate so the animation keeps playing until the cooldown ends
                 if self.state != MovementState.TELEPORT:
                     self.state           = MovementState.TELEPORT
                     self.animation_count = 0
@@ -685,6 +715,7 @@ class Actor(Entity):
     def update_sprite(
             self: Actor,
     ) -> int:
+        """Advance the actor's animation, scale by size, trigger step audio, and return the frame index."""
         active_sprites = self.sprites[f"{str(self.state)}_{str(self.facing)}"]
         active_index   = math.floor((self.animation_count / Actor.ANIMATION_DELAY) % len(active_sprites))
 
@@ -714,6 +745,7 @@ class Actor(Entity):
     def update_geo(
             self: Actor,
     ) -> None:
+        """Recompute the actor's rect and collision mask from its current sprite."""
         if self.sprite and self.rect:
             self.rect = self.sprite.get_rect(topleft=(self.rect.x, self.rect.y))
             self.mask = pygame.mask.from_surface(self.sprite)
@@ -721,9 +753,10 @@ class Actor(Entity):
 
     def loop(
             self:  Actor,
-            dtime: float | int,
+            dtime: float,
     ) -> float:
-        dtime_offset: float | int = super().loop(dtime)
+        """Advance the actor: healing, projectiles, resizing, motion, caching, and state."""
+        dtime_offset: float = super().loop(dtime)
 
         self.animation_count += dtime
 
@@ -765,10 +798,10 @@ class Actor(Entity):
 
                     self.size = self.size_target
 
-                    self.level.visual_effects_manager.spawn(
+                    self.level.visual_effects_manager.spawn( # noqa
                         VisualEffect(
                             self,
-                            self.level.visual_effects_manager.image_master,
+                            self.level.visual_effects_manager.image_master, # noqa
                             image_name       = "RESIZEBURST",
                             alpha            = 128,
                             scale            = (self.rect.width * scale_factor, self.rect.height * scale_factor),
@@ -780,9 +813,9 @@ class Actor(Entity):
                 if self.should_move_horiz:
                     if self.x_accel_time < self.x_accel_max_time and abs(self.x_vel) < self.target_vel:
                         self.x_accel_time += dtime
-                        self.x_vel = self.direction * self.target_vel * math.sqrt(self.x_accel_time / self.x_accel_max_time)
+                        self.x_vel = float(self.direction) * self.target_vel * math.sqrt(self.x_accel_time / self.x_accel_max_time)
                     else:
-                        self.x_vel = self.direction * self.target_vel
+                        self.x_vel = float(self.direction) * self.target_vel
                 else:
                     self.x_accel_time = 0.0
                     self.x_vel        = 0.0
@@ -810,39 +843,42 @@ class Actor(Entity):
     def draw(
             self:          Actor,
             win:           pygame.Surface,
-            offset_x:      float | int,
-            offset_y:      float | int,
-            master_volume: dict[str, float | int],
+            offset_x:      float,
+            offset_y:      float,
+            master_volume: dict[str, float],
     ) -> None:
-        adj_x_image   = self.rect.x - offset_x # type: ignore
-        adj_y_image   = self.rect.y - offset_y # type: ignore
-        window_width  = win.get_width()
-        window_height = win.get_height()
+        """Draw the actor's projectiles and sprite, and manage positional attack audio."""
+        if self.rect:
+            adj_x_image   = self.rect.x - offset_x
+            adj_y_image   = self.rect.y - offset_y
+            window_width  = win.get_width()
+            window_height = win.get_height()
 
-        if len(self.active_projectiles) > 0:
-            for proj in self.active_projectiles:
-                proj.draw(win, offset_x, offset_y, master_volume)
+            if len(self.active_projectiles) > 0:
+                for proj in self.active_projectiles:
+                    proj.draw(win, offset_x, offset_y, master_volume)
 
-        if self.sprite and self.rect and -self.rect.width < adj_x_image <= window_width and -self.rect.height < adj_y_image <= window_height:
-            self.update_sprite()
-            self.update_geo()
+            if self.sprite and self.rect and -self.rect.width < adj_x_image <= window_width and -self.rect.height < adj_y_image <= window_height:
+                self.update_sprite()
+                self.update_geo()
 
-            win.blit(self.sprite, (adj_x_image, adj_y_image))
+                win.blit(self.sprite, (adj_x_image, adj_y_image))
 
-        if self.active_audio:
-            if not self.active_audio_channel:
-                self.active_audio_channel = pygame.mixer.find_channel()
+            if self.active_audio:
+                if not self.active_audio_channel:
+                    self.active_audio_channel = pygame.mixer.find_channel()
 
-                if self.active_audio_channel:
-                    self.active_audio_channel.play(self.active_audio)
+                    if self.active_audio_channel:
+                        self.active_audio_channel.play(self.active_audio)
 
-            if self.active_audio_channel and self.active_audio_channel.get_busy():
-                if self == self.level.player:
-                    self.active_audio_channel.set_volume(master_volume["player"]) # type: ignore
+                if self.active_audio_channel and self.active_audio_channel.get_busy():
+                    if self == self.level.player:
+                        if self.active_audio_channel:
+                            self.active_audio_channel.set_volume(master_volume["player"])
+                    else:
+                        set_sound_source(self.rect, self.level.player.rect, self.controller.master_volume["non-player"], self.active_audio_channel)
                 else:
-                    set_sound_source(self.rect, self.level.player.rect, self.controller.master_volume["non-player"], self.active_audio_channel)
-            else:
-                self.active_audio         = None
-                self.active_audio_channel = None
+                    self.active_audio         = None
+                    self.active_audio_channel = None
 
         return None

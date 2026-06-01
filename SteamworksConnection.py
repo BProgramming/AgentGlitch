@@ -1,3 +1,4 @@
+from __future__ import annotations
 import sys
 import os
 from pathlib import Path
@@ -15,23 +16,30 @@ from steamworks.exceptions import SteamException
 
 
 class SteamworksConnection:
-    def __init__(self):
+    def __init__(
+            self: SteamworksConnection,
+    ) -> None:
+        """Initialize the Steamworks connection and request current user stats."""
         self.connection = self.initialize()
         if not self.connection.UserStats.RequestCurrentStats():
-            handle_exception(f'{ConnectionError("Couldn\'t retrieve Steam user info.")}')
+            handle_exception(f'{ConnectionError("Couldn't retrieve Steam user info.")}')
 
     @staticmethod
     def initialize() -> STEAMWORKS:
+        """Create and initialize a STEAMWORKS instance, reporting any failure."""
         sw = STEAMWORKS()
         try:
             sw.initialize()
         except SteamException as e:
-            handle_exception(f'{e}')
+            handle_exception(f"{e}")
         except OSError as e:
-            handle_exception(f'{e}')
+            handle_exception(f"{e}")
         except Exception as e:
-            handle_exception(f'{e}')
+            handle_exception(f"{e}")
         return sw
 
-    def has_dlc(self) -> dict[str, bool]:
+    def has_dlc(
+            self: SteamworksConnection,
+    ) -> dict[str, bool]:
+        """Return a mapping of DLC names to whether they are installed."""
         return {"gumshoe": True}  ## self.connection.Apps.IsDLCInstalled(DLC_APP_ID)}

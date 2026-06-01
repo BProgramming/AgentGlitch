@@ -35,9 +35,9 @@ GLITCH_COLOURS: list[tuple[int, int, int]] = [(42, 128, 65), (32, 93, 179), (129
 
 TEXT_BOX_BORDER_RADIUS: int = 4
 
-RUMBLE_EFFECT_HIGH:     float | int = 0.5
-RUMBLE_EFFECT_LOW:      float | int = 0.1
-RUMBLE_EFFECT_DURATION: int         = 500 # if this is 0, it will rumble until stop_rumble() is called (so don't set it to 0!)
+RUMBLE_EFFECT_HIGH:     float = 0.5
+RUMBLE_EFFECT_LOW:      float = 0.1
+RUMBLE_EFFECT_DURATION: int   = 500  # if this is 0, it will rumble until stop_rumble() is called (so don't set it to 0)
 
 
 class MovementDirection(IntEnum):
@@ -46,12 +46,14 @@ class MovementDirection(IntEnum):
 
     def __str__(
             self: MovementDirection,
-    ):
+    ) -> str:
+        """Return the direction's name."""
         return self.name
 
     def swap(
             self: MovementDirection,
-    ):
+    ) -> MovementDirection:
+        """Return the opposite direction."""
         return MovementDirection(self.value * -1)
 
 
@@ -65,12 +67,14 @@ class DifficultyScale(float, Enum):
     def __str__(
             self: DifficultyScale,
     ) -> str:
+        """Return the difficulty's name with underscores replaced by spaces."""
         return self.name.replace("_", " ")
 
 
 def handle_exception(
         msg: str,
 ) -> None:
+    """Log an error to a timestamped file, show an error dialogue, and exit."""
     if pygame.get_init():
         pygame.quit()
 
@@ -78,7 +82,7 @@ def handle_exception(
     filename_time  = time.strftime("%Y%m%d_%H%M%S", cur_time)
     printable_time = time.strftime("%Y-%m-%d, %H:%M:%S", cur_time)
 
-    log_file = Path(Path(GAME_DATA_FOLDER) / f"glitch_{filename_time}.log").resolve()
+    log_file = (GAME_DATA_FOLDER / f"glitch_{filename_time}.log").resolve()
 
     with open(log_file, "w") as log:
         print(f"Error encountered at GMT {printable_time}:", file = log)
@@ -95,6 +99,7 @@ def link_trigger(
         to_link:      list[str],
         to_be_linked: list[Trigger],
 ) -> list[Trigger]:
+    """Match trigger name prefixes to Trigger objects and return the linked list."""
     triggers = []
 
     for active_triggers in to_link:
@@ -111,11 +116,12 @@ def validate_file_list(
         files:     list[str],
         ext:       str | None = None,
 ) -> list[str]:
+    """Return resolved paths for files that exist in a directory and match an optional extension."""
     out = []
 
     for name in files:
         file = ASSETS_FOLDER / directory / name
-        if file.is_file() and (not ext or file.suffix.casefold() == ext):
+        if file.is_file() and (not ext or file.suffix.casefold()[1:] == ext):
             out.append(file.resolve())
 
     return out
@@ -124,7 +130,7 @@ def validate_file_list(
 def image_to_retro(
         img: pygame.Surface,
 ) -> pygame.Surface:
-
+    """Convert an image to greyscale and tint it with the retro palette."""
     img           = pygame.transform.grayscale(img)
     tint_color    = RETRO_WHITE
     color_surface = pygame.Surface(img.get_size(), pygame.SRCALPHA)
@@ -137,6 +143,7 @@ def image_to_retro(
 def load_picker_sprites(
         directory: str,
 ) -> tuple[dict[str, list[Any]], list[Any]] | None:
+    """Load player picker sprites (normal and retro) and their values from a directory."""
     images = {"normal": [], "retro": []}
     values = []
     path   = ASSETS_FOLDER / directory
@@ -145,7 +152,7 @@ def load_picker_sprites(
         handle_exception(f"File {FileNotFoundError(path.resolve())} not found.")
         return None
 
-    for folder in [f for f in path.iterdir() if Path(path / f).is_dir()]:
+    for folder in [f for f in path.iterdir() if (path / f).is_dir()]:
         if folder.name.casefold().startswith("player"):
             lower_path = folder / "picker.png"
             if lower_path.is_file():
@@ -175,6 +182,7 @@ def load_picker_sprites(
 def load_level_images(
         directory: str,
 ) -> tuple | None:
+    """Load level preview images and their uppercased stems from a directory."""
     images = []
     values = []
     path   = ASSETS_FOLDER / directory
@@ -183,8 +191,8 @@ def load_level_images(
         handle_exception(f"File {FileNotFoundError(path.resolve())} not found.")
         return None
 
-    for file in sorted([f for f in path.iterdir() if Path(path / f).is_file() and f.suffix.casefold() == ".png"]):
-        asset   = pygame.transform.smoothscale_by(pygame.image.load(Path(path) / file).convert_alpha(), 4)
+    for file in sorted([f for f in path.iterdir() if (path / f).is_file() and f.suffix.casefold() == ".png"]):
+        asset   = pygame.transform.smoothscale_by(pygame.image.load(path / file).convert_alpha(), 4)
         surface = pygame.Surface((asset.get_width(), asset.get_height()), pygame.SRCALPHA)
         rect    = pygame.Rect(0, 0, asset.get_width(), asset.get_height())
         surface.blit(asset, (0, 0), rect)
@@ -199,19 +207,20 @@ def load_level_images(
 
 
 def make_image_from_text(
-        width:  float | int,
-        height: float | int,
+        width:  float,
+        height: float,
         header: str,
         body:   list[str],
         border: int  = 5,
         retro:  bool = False,
 ) -> pygame.Surface:
+    """Render a header and body lines onto a centred surface and return it."""
     text_header = pygame.font.SysFont("courier", 32).render(header, True, RETRO_WHITE if retro else NORMAL_WHITE)
 
-    max_width:  float | int = text_header.get_width()
-    max_height: float | int = text_header.get_height()
+    max_width:  float = text_header.get_width()
+    max_height: float = text_header.get_height()
 
-    boxes_body  = []
+    boxes_body = []
     for line in body:
         text_body = pygame.font.SysFont("courier", 16).render(line, True, RETRO_WHITE if retro else NORMAL_WHITE)
         box_body  = pygame.Surface((text_body.get_width() + (border * 2), text_body.get_height()), pygame.SRCALPHA)
@@ -231,8 +240,9 @@ def make_image_from_text(
 
 def load_images(
         dir1: str,
-        dir2: str,
-) -> dict | None:
+        dir2: str | None,
+) -> dict[str, pygame.Surface | None] | None:
+    """Load all PNG images from a directory into a dict keyed by uppercased stem."""
     path = ASSETS_FOLDER / dir1 / dir2 if dir2 else ASSETS_FOLDER / dir1
 
     if not path.is_dir():
@@ -240,8 +250,8 @@ def load_images(
         return None
 
     images = {}
-    for image in [f for f in path.iterdir() if Path(path / f).is_file() and f.suffix.casefold() == ".png"]:
-        asset   = pygame.image.load(Path(path) / image).convert_alpha()
+    for image in [f for f in path.iterdir() if (path / f).is_file() and f.suffix.casefold() == ".png"]:
+        asset   = pygame.image.load(path / image).convert_alpha()
         surface = pygame.Surface((asset.get_width(), asset.get_height()), pygame.SRCALPHA)
         rect    = pygame.Rect(0, 0, asset.get_width(), asset.get_height())
         surface.blit(asset, (0, 0), rect)
@@ -256,6 +266,7 @@ def load_images(
 def flip(
         sprites: list[pygame.Surface],
 ) -> list[pygame.Surface]:
+    """Return a horizontally flipped copy of each sprite in the list."""
     return [pygame.transform.flip(sprite, True, False) for sprite in sprites]
 
 
@@ -266,13 +277,14 @@ def load_sprite_sheets(
         direction:     bool = False,
         retro:         bool = False,
 ) -> dict[str, list[pygame.Surface]]:
+    """Load (and cache) sprite sheets from a directory, optionally split by direction and retro-tinted."""
     if not sprite_master.get(dir2):
         path = ASSETS_FOLDER / dir1 / dir2
 
         if not path.is_dir():
             options = []
 
-            for directory in Path(ASSETS_FOLDER / dir1).iterdir():
+            for directory in (ASSETS_FOLDER / dir1).iterdir():
                 if len(dir2) < len(directory.name) and directory.name.casefold().startswith(dir2.casefold()):
                     options.append(directory)
 
@@ -285,7 +297,7 @@ def load_sprite_sheets(
             path = ASSETS_FOLDER / dir1 / dir2
 
         all_sprites = {}
-        for image in [f for f in path.iterdir() if Path(path / f).is_file()]:
+        for image in [f for f in path.iterdir() if (path / f).is_file()]:
             sprite_sheet = pygame.image.load(path / image).convert_alpha()
             if retro:
                 sprite_sheet = image_to_retro(sprite_sheet)
@@ -300,7 +312,7 @@ def load_sprite_sheets(
 
             if direction:
                 all_sprites[f"{image.stem.upper()}_RIGHT"] = sprites
-                all_sprites[f"{image.stem.upper()}_LEFT"] = flip(sprites)
+                all_sprites[f"{image.stem.upper()}_LEFT"]  = flip(sprites)
             else:
                 all_sprites[image.stem.upper()] = sprites
 
@@ -313,6 +325,7 @@ def load_json_dict(
         directory: str,
         file:      str,
 ) -> dict | None:
+    """Load and parse a JSON file from a directory, or report it missing."""
     path = ASSETS_FOLDER / directory / file
 
     try:
@@ -326,6 +339,7 @@ def load_json_dict(
 def load_object_dicts(
         directory: str,
 ) -> dict | None:
+    """Load all .agd object-definition files from a directory into a dict keyed by uppercased stem."""
     path = ASSETS_FOLDER / directory
 
     if not path.is_dir():
@@ -333,7 +347,7 @@ def load_object_dicts(
         return None
 
     dicts = {}
-    for f in [f for f in path.iterdir() if Path(path / f).is_file() and f.suffix.casefold() == ".agd"]:
+    for f in [f for f in path.iterdir() if (path / f).is_file() and f.suffix.casefold() == ".agd"]:
         dicts[f.stem.upper()] = load_json_dict(directory, f.name)
 
     return dicts
@@ -342,6 +356,7 @@ def load_object_dicts(
 def load_levels(
         directory: str,
 ) -> dict | None:
+    """Load all .agl level CSVs from a directory into a dict of row lists keyed by uppercased stem."""
     path = ASSETS_FOLDER / directory
 
     if not path.is_dir():
@@ -349,7 +364,7 @@ def load_levels(
         return None
 
     levels = {}
-    for f in sorted([f for f in path.iterdir() if Path(path / f).is_file() and f.suffix.casefold() == ".agl"]):
+    for f in sorted([f for f in path.iterdir() if (path / f).is_file() and f.suffix.casefold() == ".agl"]):
         with open(path / f) as level:
             reader = csv.reader(level, delimiter=",", quotechar='"')
             levels[f.stem.upper()] = [row for row in reader]
@@ -361,6 +376,7 @@ def __load_single_audio__(
         path:           Path,
         suppress_error: bool = False,
 ) -> dict | None:
+    """Load all audio files in a single directory into a dict keyed by the directory name."""
     if not path.is_dir():
         if not suppress_error:
             handle_exception(f"File {FileNotFoundError(path.resolve())} not found.")
@@ -368,9 +384,9 @@ def __load_single_audio__(
 
     sounds = {}
     for file in [f for f in path.iterdir() if f.is_file() and f.suffix.casefold() in (".mp3", ".wav", ".wave")]:
-        if not sounds.get(path.stem.upper()):
+        if not sounds.get(path.name.upper()):
             sounds[path.name.upper()] = []
-        sounds[path.name.upper()].append(Path(path / file).resolve())
+        sounds[path.name.upper()].append((path / file).resolve())
 
     return sounds
 
@@ -380,6 +396,7 @@ def load_audios(
         dir2:           str | None = None,
         suppress_error: bool       = False,
 ) -> dict | None:
+    """Load all sound effects under a directory into a dict of shared Sound objects keyed by folder name."""
     path = ASSETS_FOLDER / "SoundEffects" / dir1
     if dir2:
         path = path / dir2
@@ -390,7 +407,7 @@ def load_audios(
         return None
 
     sounds = {}
-    for sub_dir in [d for d in path.iterdir() if Path(Path(path) / d).is_dir()]:
+    for sub_dir in [d for d in path.iterdir() if (path / d).is_dir()]:
         audio = __load_single_audio__(sub_dir, suppress_error = suppress_error)
         if audio:
             sounds.update(audio)
@@ -412,9 +429,10 @@ def load_audios(
 def set_sound_source(
         source_rect:  pygame.Rect | None,
         player_rect:  pygame.Rect | None,
-        vol_modifier: float | int | None,
+        vol_modifier: float | None,
         channel:      pygame.mixer.Channel | None,
 ) -> None:
+    """Pan and attenuate a channel's volume based on a source's position relative to the player."""
     if not source_rect or not player_rect or not vol_modifier or not channel:
         return None
 
@@ -440,6 +458,7 @@ def set_sound_source(
 def load_text_from_file(
         file: str,
 ) -> list[str] | None:
+    """Load a text file from the Text directory into a list of newline-stripped lines."""
     path = ASSETS_FOLDER / "Text" / file
 
     if not path.is_file():
@@ -455,9 +474,10 @@ def load_text_from_file(
 
 
 def process_text(
-        line: str,
+        line:       str,
         controller: Controller,
 ) -> tuple[str, bool, bool]:
+    """Strip bold/italic markers and substitute key tags, returning the text and its bold/italic flags."""
     if "<b>" in line:
         line = line.replace("<b>", "")
         is_bold = True
@@ -484,7 +504,8 @@ def process_text(
                 keys_out = ["KEY NOT FOUND"]
 
             if len(keys_out) > 2:
-                txt = f"{", ".join([pygame.key.name(int(k)).title() for k in keys_out[:-1]])}, or {pygame.key.name(int(keys_out[-1])).title()}"
+                joined = ", ".join([pygame.key.name(int(k)).title() for k in keys_out[:-1]])
+                txt    = f"{joined}, or {pygame.key.name(int(keys_out[-1])).title()}"
             elif len(keys_out) > 1:
                 txt = f"{pygame.key.name(int(keys_out[0])).title()} or {pygame.key.name(int(keys_out[1])).title()}"
             elif len(keys_out) == 1:
@@ -503,13 +524,14 @@ def process_text(
 def display_text(
         output:           list | str,
         controller:       Controller,
-        should_type_text: bool =False,
-        min_pause_time:   float | int = 0.08,
-        should_sleep:     bool = True,
+        should_type_text: bool                            = False,
+        min_pause_time:   float                           = 0.08,
+        should_sleep:     bool                            = True,
         audio:            list[pygame.mixer.Sound] | None = None,
-        retro:            bool = False,
-        background:       bool = False,
+        retro:            bool                            = False,
+        background:       bool                            = False,
 ) -> None:
+    """Render text to the screen, optionally typed out, with optional audio and retro framing."""
     if not output:
         return None
 
@@ -565,7 +587,7 @@ def display_text(
 
                     pygame.display.update()
 
-                    pause_dtime: float | int = 0.0
+                    pause_dtime: float = 0.0
                     while pause_dtime < min_pause_time:
                         for event in pygame.event.get():
                             match event.type:
@@ -624,9 +646,10 @@ def display_text(
 
 
 def glitch(
-        odds:   float | int,
+        odds:   float,
         screen: pygame.Surface,
 ) -> list:
+    """Generate a list of randomly displaced screen fragments to render a glitch effect."""
     color    = GLITCH_COLOURS
     screen   = screen.copy()
     glitches = []
@@ -655,25 +678,37 @@ def glitch(
     return glitches
 
 
+class PathPoint:
+    def __init__(
+        self: PathPoint,
+        x:    float | int,
+        y:    float | int,
+    ) -> None:
+        self.x = x
+        self.y = y
+        self.wait = False
+
+
 def load_path(
         path_in:    list[str] | tuple[str] | None,
-        i:          float | int,
-        j:          float | int,
-        block_size: float | int,
-) -> list[list[tuple[float | int, float | int] | bool]] | None:
+        i:          float,
+        j:          float,
+        block_size: float,
+) -> list[PathPoint] | None:
+    """Convert a list of relative path points into absolute coordinates with optional wait flags."""
     if not path_in:
         return None
 
-    path: list[list[tuple[float | int, float | int] | bool]] = []
+    path: list[PathPoint] = []
 
     for k in range(len(path_in)):
         if k > 0 and path_in[k] == path_in[k - 1]:
-            path[-1].append(True)
+            path[-1].wait = True
         else:
             try:
                 x = (int(path_in[k][0]) + j) * block_size
                 y = (int(path_in[k][1]) + i) * block_size
-                path.append([(x, y)])
+                path.append(PathPoint(x, y))
             except ValueError:
                 handle_exception(f"Path {path_in[k]} could not be resolved.")
                 return None
@@ -683,8 +718,9 @@ def load_path(
 
 def set_property(
         triggering_entity: Entity,
-        prop_to_set:       dict[str, Any]
+        prop_to_set:       dict[str, Any],
 ) -> None:
+    """Set one or more properties (or abilities) on entities matching the given target names."""
     if prop_to_set:
         targs, props, vals = prop_to_set["target"], prop_to_set["property"], prop_to_set["value"]
 
