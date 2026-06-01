@@ -5,29 +5,20 @@ import pygame
 
 from Block import (
     Block,
-    BreakableBlock,
-    MovableBlock,
-    MovingBlock,
-    Door,
     Hazard,
-    MovingHazard,
-    FallingHazard,
 )
-from Boss import Boss
-from Controller import Controller
 from Entity import Entity
 from Helpers import (
     ASSETS_FOLDER,
     display_text,
     handle_exception,
     load_text_from_file,
-    load_path,
     set_property,
 )
+
 if TYPE_CHECKING:
+    from Controller import Controller
     from Level import Level
-from NonPlayer import NonPlayer
-from Objective import Objective
 
 
 class Trigger(Entity):
@@ -496,6 +487,9 @@ class SpawnTrigger(Trigger):
             value: dict,
     ) -> Entity | None:
         """Construct (but do not yet add) the entity this trigger will spawn from the object dict."""
+        # Deferred import breaks the EntityFactory <-> Trigger module cycle: by the time a
+        # trigger actually fires, EntityFactory is fully initialized.
+        from EntityFactory import build_entity
         refs, input_unpacked = self.__unpack_input__(value)
         objects_dict   = refs["objects_dict"]
         sprite_master  = refs["sprite_master"]
@@ -509,96 +503,7 @@ class SpawnTrigger(Trigger):
             j, i  = tuple(map(int, input_unpacked["coords"].split(" ")))
             entry = objects_dict[element]
             data  = entry["data"]
-
-            def __convert_coords__(coord: int) -> int:
-                """Scale small tile coordinates up to pixel coordinates."""
-                actual_size = block_size // 2
-                if coord < actual_size:
-                    return coord * actual_size
-                else:
-                    return coord
-
-            match entry["type"].upper():
-                case "OBJECTIVE":
-                    return Objective(self.level, self.controller, j * block_size, i * block_size, block_size, block_size, sprite_master, block_audios, is_active=(False if data.get("is_active") is None else data["is_active"]), sprite=(None if data.get("sprite") is None else data["sprite"]), sound=("objective" if data.get("sound") is None else data["sound"].lower()), text=(None if data.get("text") is None else data["text"]), trigger=(None if data.get("trigger") is None else data["trigger"]), is_blocking=(False if data.get("is_blocking") is None else data["is_blocking"]), achievement=(None if data.get("achievement") is None else data["achievement"]), name=(element if data.get("name") is None else data["name"]))
-                case "BLOCK":
-                    is_stacked = False
-                    return Block(self.level, self.controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, coord_x=__convert_coords__(data["coord_x"]), coord_y=__convert_coords__(data["coord_y"]), is_blocking=(True if data.get("is_blocking") is None else data["is_blocking"]), name=(element if data.get("name") is None else data["name"]))
-                case "BREAKABLEBLOCK":
-                    is_stacked = False
-                    return BreakableBlock(self.level, self.controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, coord_x=__convert_coords__(data["coord_x"]), coord_y=__convert_coords__(data["coord_y"]), coord_x2=__convert_coords__(data["coord_x2"]), coord_y2=__convert_coords__(data["coord_y2"]), name=(element if data.get("name") is None else data["name"]))
-                case "MOVINGBLOCK":
-                    path       = None if data["path"] is None else load_path(data["path"], i, j, block_size)
-                    is_stacked = False
-                    return MovingBlock(self.level, self.controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, is_enabled=(True if data.get("is_enabled") is None else data["is_enabled"]), hold_for_collision=(False if data.get("hold_for_collision") is None else data["hold_for_collision"]), speed=data["speed"], path=path, coord_x=__convert_coords__(data["coord_x"]), coord_y=__convert_coords__(data["coord_y"]), is_blocking=(True if data.get("is_blocking") is None else data["is_blocking"]), name=(element if data.get("name") is None else data["name"]))
-                case "DOOR":
-                    is_stacked = False
-                    return Door(self.level, self.controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, speed=data["speed"], direction=data["direction"], is_locked=(False if data.get("is_locked") is None else data["is_locked"]), coord_x=(0 if data.get("coord_x") is None else __convert_coords__(data["coord_x"])), coord_y=(0 if data.get("coord_y") is None else __convert_coords__(data["coord_y"])), locked_coord_x=(None if data.get("locked_coord_x") is None else __convert_coords__(data["locked_coord_x"])), locked_coord_y=(None if data.get("locked_coord_y") is None else __convert_coords__(data["locked_coord_y"])), unlocked_coord_x=(None if data.get("unlocked_coord_x") is None else __convert_coords__(data["unlocked_coord_x"])), unlocked_coord_y=(None if data.get("unlocked_coord_y") is None else __convert_coords__(data["unlocked_coord_y"])), name=(element if data.get("name") is None else data["name"]))
-                case "MOVABLEBLOCK":
-                    is_stacked = False
-                    return MovableBlock(self.level, self.controller, j * block_size, i * block_size, block_size, block_size, image_master, block_audios, is_stacked, coord_x=__convert_coords__(data["coord_x"]), coord_y=__convert_coords__(data["coord_y"]))
-                case "HAZARD":
-                    return Hazard(self.level, self.controller, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, block_audios, self.controller.difficulty, hit_sides=("UDLR" if data.get("hit_sides") is None else data["hit_sides"].upper()), sprite=data["sprite"], coord_x=__convert_coords__(data["coord_x"]), coord_y=__convert_coords__(data["coord_y"]), name=(element if data.get("name") is None else data["name"]))
-                case "MOVINGHAZARD":
-                    path       = None if data["path"] is None else load_path(data["path"], i, j, block_size)
-                    is_stacked = False
-                    return MovingHazard(self.level, self.controller, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, block_audios, self.controller.difficulty, is_stacked, speed=data["speed"], path=path, hit_sides=("UDLR" if data.get("hit_sides") is None else data["hit_sides"].upper()), sprite=data["sprite"], coord_x=__convert_coords__(data["coord_x"]), coord_y=__convert_coords__(data["coord_y"]), name=(element if data.get("name") is None else data["name"]))
-                case "FALLINGHAZARD":
-                    return FallingHazard(self.level, self.controller, j * block_size, i * block_size, block_size, block_size, image_master, sprite_master, block_audios, self.controller.difficulty, drop_x=data["drop_x"] * block_size, drop_y=data["drop_y"] * block_size, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), hit_sides=("UDLR" if data.get("hit_sides") is None else data["hit_sides"].upper()), sprite=data["sprite"], coord_x=__convert_coords__(data["coord_x"]), coord_y=__convert_coords__(data["coord_y"]), name=(element if data.get("name") is None else data["name"]))
-                case "ENEMY":
-                    path = None if data["path"] is None else load_path(data["path"], i, j, block_size)
-                    return NonPlayer(self.level, self.controller, j * block_size, i * block_size, sprite_master, enemy_audios, self.controller.difficulty, block_size, path=path, kill_at_end=(False if data.get("kill_at_end") is None else data["kill_at_end"]), is_hostile=(True if data.get("is_hostile") is None else data["is_hostile"]), collision_message=(None if data.get("collision_message") is None else data["collision_message"]), bark=(None if data.get("bark") is None else data["bark"]), hp=data["hp"], can_shoot=(False if data.get("can_shoot") is None else data["can_shoot"]), sprite=data["sprite"], proj_sprite=(None if data.get("proj_sprite") is None else data["proj_sprite"]), name=(element if data.get("name") is None else data["name"]))
-                case "BOSS":
-                    path = None if data["path"] is None else load_path(data["path"], i, j, block_size)
-                    return Boss(self.level, self.controller, j * block_size, i * block_size, sprite_master, enemy_audios, self.controller.difficulty, block_size, music=(None if data.get("music") is None else data["music"]), trigger=(None if data.get("trigger") is None else data["trigger"]), path=path, hp=data["hp"], show_health_bar=(True if data.get("show_health_bar") is None else data["show_health_bar"]), can_shoot=(False if data.get("can_shoot") is None else data["can_shoot"]), sprite=data["sprite"], proj_sprite=(None if data.get("proj_sprite") is None else data["proj_sprite"]), name=(element if data.get("name") is None else data["name"]))
-                case "TRIGGER":
-                    packed_input = (None if data.get("input") is None else data["input"])
-                    return Trigger(self.level, self.controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"]))
-                case "TEXTTRIGGER":
-                    packed_input = {"ref": message_audios, "input": (None if data.get("input") is None else data["input"])}
-                    return TextTrigger(self.level, self.controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"]))
-                case "SOUNDTRIGGER":
-                    packed_input = (None if data.get("input") is None else data["input"])
-                    return SoundTrigger(self.level, self.controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"]))
-                case "SPAWNTRIGGER":
-                    all_refs     = {"objects_dict": objects_dict, "sprite_master": sprite_master, "enemy_audios": enemy_audios, "block_audios": block_audios, "message_audios": message_audios, "image_master": image_master, "block_size": block_size}
-                    packed_input = {"ref": all_refs, "input": (None if data.get("input") is None else data["input"])}
-                    return SpawnTrigger(self.level, self.controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"]))
-                case "REVERTTRIGGER":
-                    packed_input = (None if data.get("input") is None else data["input"])
-                    return RevertTrigger(self.level, self.controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"]))
-                case "SAVETRIGGER":
-                    packed_input = (None if data.get("input") is None else data["input"])
-                    return SaveTrigger(self.level, self.controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"]))
-                case "CHANGELEVELTRIGGER":
-                    packed_input = (None if data.get("input") is None else data["input"])
-                    return ChangeLevelTrigger(self.level, self.controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"]))
-                case "PROPERTYTRIGGER":
-                    packed_input = (None if data.get("input") is None else data["input"])
-                    return PropertyTrigger(self.level, self.controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"]))
-                case "CINEMATICTRIGGER":
-                    packed_input = (None if data.get("input") is None else data["input"])
-                    return CinematicTrigger(self.level, self.controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"]))
-                case "ACHIEVEMENTTRIGGER":
-                    packed_input = (None if data.get("input") is None else data["input"])
-                    return AchievementTrigger(self.level, self.controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"]))
-                case "OBJECTIVETRIGGER":
-                    packed_input = (None if data.get("input") is None else data["input"])
-                    return ObjectiveTrigger(self.level, self.controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"]))
-                case "SWAPLEVELTRIGGER":
-                    packed_input = (None if data.get("input") is None else data["input"])
-                    return SwapLevelTrigger(self.level, self.controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"]))
-                case "CAMERATOPOINTTRIGGER":
-                    packed_input = {"ref": block_size, "input": (None if data.get("input") is None else data["input"])}
-                    return CameraToPointTrigger(self.level, self.controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"]))
-                case "CAMERATOPLAYERTRIGGER":
-                    packed_input = (None if data.get("input") is None else data["input"])
-                    return CameraToPlayerTrigger(self.level, self.controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"]))
-                case "DISCORDSTATUSTRIGGER":
-                    packed_input = (None if data.get("input") is None else data["input"])
-                    return DiscordStatusTrigger(self.level, self.controller, j * block_size, (i - (data["height"] - 1)) * block_size, data["width"] * block_size, data["height"] * block_size, packed_input, fire_once=(True if data.get("fire_once") is None else data["fire_once"]), name=(element if data.get("name") is None else data["name"]))
-                case _:
-                    pass
+            return build_entity(entry["type"].upper(), data, element, self.level, self.controller, i, j, block_size, objects_dict, sprite_master, image_master, enemy_audios, block_audios, message_audios, is_stacked=False)
         return None
 
     def collide(
@@ -606,6 +511,9 @@ class SpawnTrigger(Trigger):
             ent:  Entity | None,
     ) -> float:
         """Add the prepared spawn entity to the appropriate level list, returning the frame-time offset."""
+        # Deferred import: NonPlayer pulls in Actor -> Objective -> Trigger, so importing it at
+        # module load would re-introduce a cycle. It is only needed for this isinstance check.
+        from NonPlayer import NonPlayer
         if self.fire_once and self.has_fired:
             return 0.0
         else:

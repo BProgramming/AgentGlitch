@@ -67,7 +67,7 @@ def main(
     clock = pygame.time.Clock()
 
     levels       = load_levels("Levels")
-    objects_dict = load_object_dicts(str(Path(Path("ReferenceDicts") / "GameObjects").resolve()))
+    objects_dict = load_object_dicts("ReferenceDicts/GameObjects")
     meta_dict    = load_json_dict("ReferenceDicts", "meta.agd")
 
     if not levels or not objects_dict or not meta_dict:

@@ -104,13 +104,13 @@ class Entity(pygame.sprite.Sprite):
         return None
 
     def loop(
-            self:  Entity,
+            self: Entity,
             dtime: float,
     ) -> float:
         """Advance the entity by one frame and queue it for purging if dead."""
-        if self.cooldowns is not None:
+        if self.cooldowns:
             self.update_cooldowns(dtime)
-        if self.hp <= 0 and self.cooldowns and self.cooldowns.get("dead", 0) <= 0:
+        if self.hp <= 0 and (not self.cooldowns or self.cooldowns.get("dead", 0) <= 0):
             self.level.queue_purge(self)
         return 0.0
 

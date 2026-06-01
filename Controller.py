@@ -253,8 +253,8 @@ class Controller:
         self.active_objective: str | None     = None
 
     def activate_objective(
-            self:  Controller,
-            name:  str | None,
+            self: Controller,
+            name: str | None,
             value: bool,
             popup: bool = True,
     ) -> None:
@@ -266,16 +266,15 @@ class Controller:
                 text = None
                 for objective in self.level.objectives:
                     if objective.name.casefold().split(" ")[0] == name.casefold().split(" ")[0]:
-                        text = objective
                         objective.is_active = value
-                        if not text and objective.text:
+                        if objective.text:
                             text = objective.text
             else:
                 text = self.level.default_objective
 
             if text and self.hud:
                 if popup:
-                    display_text(f"New objective: {text}", self, retro = self.retro)
+                    display_text(f"New objective: {text}", self, retro=self.retro)
                 self.hud.activate_objective(text)
         return None
 
