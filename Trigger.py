@@ -511,9 +511,10 @@ class SpawnTrigger(Trigger):
             ent:  Entity | None,
     ) -> float:
         """Add the prepared spawn entity to the appropriate level list, returning the frame-time offset."""
-        # Deferred import: NonPlayer pulls in Actor -> Objective -> Trigger, so importing it at
-        # module load would re-introduce a cycle. It is only needed for this isinstance check.
+        # Deferred import: NonPlayer pulls in Actor -> Objective -> Trigger, and Objective pulls in Trigger, so
+        # importing them at module load would cause a circular import. It is only needed for this isinstance check.
         from NonPlayer import NonPlayer
+        from Objective import Objective
         if self.fire_once and self.has_fired:
             return 0.0
         else:
@@ -528,6 +529,8 @@ class SpawnTrigger(Trigger):
                     self.level.hazards.append(self.value)
                 elif isinstance(self.value, Block):
                     self.level.blocks.append(self.value)
+                elif isinstance(self.value, Objective):
+                    self.level.objectives.append(self.value)
             return time.perf_counter() - start
 
 
