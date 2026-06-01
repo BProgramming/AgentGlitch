@@ -525,12 +525,14 @@ class SpawnTrigger(Trigger):
                     self.level.triggers.append(self.value)
                 elif isinstance(self.value, NonPlayer):
                     self.level.enemies.append(self.value)
+                    self.level.enemies_available += 1
                 elif isinstance(self.value, Hazard):
                     self.level.hazards.append(self.value)
                 elif isinstance(self.value, Block):
                     self.level.blocks.append(self.value)
                 elif isinstance(self.value, Objective):
                     self.level.objectives.append(self.value)
+                    self.level.objectives_available += 1
             return time.perf_counter() - start
 
 
