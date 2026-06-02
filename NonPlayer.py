@@ -180,8 +180,7 @@ class NonPlayer(Actor):
             self.alert_state                 = NPCAlertState.SEARCH
             self.cooldowns["alert_cooldown"] = NonPlayer.ALERT_COOLDOWN
             self.cooldowns["search_turn"]    = NonPlayer.SEARCH_LOOK_TIME
-            vfx_name = "LOSE_PLAYER" if from_pursue else "SPOT_PLAYER"
-            # TODO: create SPOT_PLAYER and LOSE_PLAYER images in Assets/VisualEffects/
+            vfx_name = "LOSEPLAYER" if from_pursue else "SPOTPLAYER"
             self.level.visual_effects_manager.spawn(
                 VisualEffect(
                     self,

@@ -42,4 +42,5 @@ class SteamworksConnection:
             self: SteamworksConnection,
     ) -> dict[str, bool]:
         """Return a mapping of DLC names to whether they are installed."""
+        # TODO this is hard-coded for testing, change back when the DLC has an app ID
         return {"gumshoe": True}  ## self.connection.Apps.IsDLCInstalled(DLC_APP_ID)}

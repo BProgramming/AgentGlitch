@@ -521,12 +521,12 @@ class Selector(Menu):
         self.image_index = index
         if isinstance(images, dict):
             if list(images.keys()) != ["normal", "retro"]:
-                handle_exception(f"Picker sprites error: {ValueError(images.keys())}")
+                handle_exception(f"Couldn't load picker sprites: {ValueError(images.keys())}")
             else:
                 self.images = {}
                 for key in images.keys():
                     self.images[key] = []
-                    for image in images[key]:
+                    for i, image in enumerate(images[key]):
                         if image:
                             scale_val: int = min(image.get_width() / self.controller.win.get_width(), image.get_height() / self.controller.win.get_height())
                             if scale_val > 1:
@@ -534,6 +534,8 @@ class Selector(Menu):
                             max_image_width  = max(max_image_width, image.get_width())
                             max_image_height = max(max_image_height, image.get_height())
                             self.images[key].append(image)
+                        else:
+                            handle_exception(f"No picker sprite found for {key} at element {i}.")
         else:
             self.images = {"normal": [], "retro": []}
             for image in images:

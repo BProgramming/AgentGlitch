@@ -162,15 +162,16 @@ def load_picker_sprites(
                 surface.blit(asset, (0, 0), rect)
                 images["normal"].append(surface)
                 values.append(folder.name[-1])
-                retro_path = path / f"Retro{folder}" / "picker.png"
-                if retro_path.is_file():
-                    asset   = image_to_retro(pygame.transform.smoothscale_by(pygame.image.load(retro_path).convert_alpha(), 4))
-                    surface = pygame.Surface((asset.get_width(), asset.get_height()), pygame.SRCALPHA)
-                    rect    = pygame.Rect(0, 0, asset.get_width(), asset.get_height())
-                    surface.blit(asset, (0, 0), rect)
-                    images["retro"].append(surface)
-                else:
-                    images["retro"].append(None)
+        if folder.name.casefold().startswith("retroplayer"):
+            lower_path = folder / "picker.png"
+            if lower_path.is_file():
+                asset   = image_to_retro(pygame.transform.smoothscale_by(pygame.image.load(lower_path).convert_alpha(), 4))
+                surface = pygame.Surface((asset.get_width(), asset.get_height()), pygame.SRCALPHA)
+                rect    = pygame.Rect(0, 0, asset.get_width(), asset.get_height())
+                surface.blit(asset, (0, 0), rect)
+                images["retro"].append(surface)
+            else:
+                images["retro"].append(None)
 
     if not images or not values:
         handle_exception(f"No sprite images found in {FileNotFoundError(path.resolve())}.")
