@@ -4,7 +4,12 @@ import math
 import time
 import pygame
 from enum import Enum
-from Actor import Actor, MovementState
+from SimpleVFX.SimpleVFX import VisualEffect, ImageDirection
+
+from Actor import (
+    Actor,
+    MovementState,
+)
 from Block import Door
 from Entity import Entity
 from Helpers import (
@@ -20,7 +25,6 @@ from Helpers import (
     TEXT_BOX_BORDER_RADIUS,
     process_text, PathPoint,
 )
-from SimpleVFX.SimpleVFX import VisualEffect
 
 if TYPE_CHECKING:
     from Controller import Controller
@@ -187,7 +191,8 @@ class NonPlayer(Actor):
                     self.level.visual_effects_manager.image_master, # noqa
                     image_name       = vfx_name,
                     alpha            = 255,
-                    offset           = (0, -2 * self.rect.height),
+                    direction        = ImageDirection.TOP,
+                    offset           = (0, -self.rect.height),
                     scale            = (self.rect.height, self.rect.height),
                     linked_to_source = True
                 ),
