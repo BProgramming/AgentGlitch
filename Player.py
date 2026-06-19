@@ -154,7 +154,14 @@ class Player(Actor):
             self.cooldowns["block"]           = Player.BLOCK_COOLDOWN
             scale = max(self.rect.width, self.rect.height)
             self.level.visual_effects_manager.spawn(
-                VisualEffect(self, self.level.visual_effects_manager.image_master, image_name = "BLOCKSHIELD", alpha = 128, scale = (scale, scale), linked_to_source = True), # noqa
+                VisualEffect(
+                    self,
+                    self.level.visual_effects_manager.image_master, # noqa
+                    image_name       = "BLOCKSHIELD",
+                    alpha            = 128,
+                    scale            = (scale, scale),
+                    linked_to_source = True
+                ),
                 time=Player.BLOCK_EFFECT_TIME,
             )
         return None

@@ -185,10 +185,11 @@ class NonPlayer(Actor):
                 VisualEffect(
                     self,
                     self.level.visual_effects_manager.image_master, # noqa
-                    image_name = vfx_name,
-                    alpha      = 255,
-                    offset     = (0, -self.rect.height),
-                    scale      = (self.rect.height, self.rect.height),
+                    image_name       = vfx_name,
+                    alpha            = 255,
+                    offset           = (0, -2 * self.rect.height),
+                    scale            = (self.rect.height, self.rect.height),
+                    linked_to_source = True
                 ),
                 time = NonPlayer.ALERT_COOLDOWN,
             )

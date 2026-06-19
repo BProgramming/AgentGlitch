@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Agent Glitch — Level Editor</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header id="toolbar">
+  <div class="toolbar-group">
+    <h1>Agent Glitch <span class="subtitle">Level Editor</span></h1>
+  </div>
+
+  <div class="toolbar-group">
+    <button id="open-project-btn" title="Choose your AgentGlitch project folder (the one containing Assets/). Needed before anything else will work.">Open Project Folder…</button>
+    <span id="level-select-row" style="display:none;">
+      <select id="level-select" title="Choose which level to load from Assets/Levels.">
+        <option value="">— choose a level —</option>
+      </select>
+      <button id="save-btn" title="Write the current level's .agl and .agd files back to Assets/Levels and Assets/ReferenceDicts/GameObjects." disabled>Save</button>
+    </span>
+    <button id="new-level-btn" title="Create a brand-new, empty level grid. You'll be asked for a name and starting size." style="display:none;">+ New Level</button>
+  </div>
+
+  <div class="toolbar-group">
+    <button id="tool-place" class="tool-btn active" title="Place tool: click or click-drag on the grid to stamp down the entity selected in the palette.">Place</button>
+    <button id="tool-erase" class="tool-btn" title="Erase tool: click or click-drag on the grid to remove the top entity from a cell.">Erase</button>
+    <button id="tool-select" class="tool-btn" title="Select tool: click a cell to inspect it in the Cell Layers panel without placing or erasing anything.">Select</button>
+  </div>
+
+  <div class="toolbar-group">
+    <button id="zoom-out-btn" title="Zoom out (smaller grid cells, see more of the level at once).">−</button>
+    <button id="zoom-in-btn" title="Zoom in (bigger grid cells, easier to click precisely).">+</button>
+    <button id="reshuffle-btn" title="Some sprites (like UnarmedAgent) are randomized in-game between several look-alike variants. This re-rolls which variant the editor previews — it doesn't change anything in the level itself.">🎲 Reshuffle previews</button>
+  </div>
+
+  <div class="toolbar-group settings-group">
+    <label title="The pixel size everything gets scaled to in-game. Sprites smaller than this are automatically upscaled.">Block size <input id="block-size-input" type="number" value="96" min="8" step="8" title="The pixel size everything gets scaled to in-game. Sprites smaller than this are automatically upscaled." /></label>
+    <label title="The native cell size of Terrain.png itself, used to slice out individual block tiles by coord_x/coord_y. Adjust this if terrain tiles look cropped or misaligned.">Terrain tile size <input id="terrain-tile-size-input" type="number" value="48" min="8" step="8" title="The native cell size of Terrain.png itself, used to slice out individual block tiles by coord_x/coord_y. Adjust this if terrain tiles look cropped or misaligned." /></label>
+  </div>
+</header>
+
+<main id="main-layout">
+  <aside id="palette-panel">
+    <h2>Palette</h2>
+    <div id="palette-container"></div>
+  </aside>
+
+  <section id="canvas-area">
+    <canvas id="grid-canvas"></canvas>
+  </section>
+
+  <aside id="side-panel">
+    <h2>Cell Layers</h2>
+    <div id="layers-container"></div>
+  </aside>
+</main>
+
+<footer id="status-bar">Open a project folder to begin.</footer>
+
+<div id="modal" class="modal-overlay">
+  <div class="modal-box">
+    <h2 id="modal-title">Edit Entity</h2>
+    <div id="modal-body"></div>
+    <div class="modal-actions">
+      <button id="modal-cancel-btn">Cancel</button>
+      <button id="modal-save-btn" class="primary">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/model.js"></script>
+<script src="js/fsio.js"></script>
+<script src="js/sprites.js"></script>
+<script src="js/canvas.js"></script>
+<script src="js/palette.js"></script>
+<script src="js/layers.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
