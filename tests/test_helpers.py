@@ -517,7 +517,7 @@ class TestProcessText:
         controller.set_keyboard_layout("ARROW_MOVE")
         controller.set_gamepad_layout("XBOX")
         # "button_up" exists only on the gamepad side.
-        assert process_text("<key=button_up>", controller)[0] == "D-Pad Up"
+        assert process_text("<key=button_up>", controller)[0] == "D-Pad ↑"
 
     def test_a_gamepad_button_is_never_named_as_a_key_code(self, controller) -> None:
         """pygame.key.name() on a button index produces nonsense, so it is not used."""
@@ -534,7 +534,7 @@ class TestProcessText:
 
     def test_the_prompt_follows_the_pad_in_the_players_hands(self, controller) -> None:
         """The same binding, named the way it is printed on each controller."""
-        expected = {"XBOX": "A", "PS4": "Cross", "PS5": "Cross", "SWITCH PRO": "A"}
+        expected = {"XBOX": "A", "PS4": "＋", "PS5": "＋", "SWITCH PRO": "A"}
         for layout, label in expected.items():
             controller.set_gamepad_layout(layout)
             assert process_text("<key=button_jump>", controller)[0] == label
@@ -587,14 +587,14 @@ class TestGamepadButtonNames:
                         pygame.CONTROLLER_BUTTON_B: "B",
                         pygame.CONTROLLER_BUTTON_X: "X",
                         pygame.CONTROLLER_BUTTON_Y: "Y"}),
-        ("PS4",        {pygame.CONTROLLER_BUTTON_A: "Cross",
-                        pygame.CONTROLLER_BUTTON_B: "Circle",
-                        pygame.CONTROLLER_BUTTON_X: "Square",
-                        pygame.CONTROLLER_BUTTON_Y: "Triangle"}),
-        ("PS5",        {pygame.CONTROLLER_BUTTON_A: "Cross",
-                        pygame.CONTROLLER_BUTTON_B: "Circle",
-                        pygame.CONTROLLER_BUTTON_X: "Square",
-                        pygame.CONTROLLER_BUTTON_Y: "Triangle"}),
+        ("PS4",        {pygame.CONTROLLER_BUTTON_A: "＋",
+                        pygame.CONTROLLER_BUTTON_B: "◯",
+                        pygame.CONTROLLER_BUTTON_X: "□",
+                        pygame.CONTROLLER_BUTTON_Y: "△"}),
+        ("PS5",        {pygame.CONTROLLER_BUTTON_A: "＋",
+                        pygame.CONTROLLER_BUTTON_B: "◯",
+                        pygame.CONTROLLER_BUTTON_X: "□",
+                        pygame.CONTROLLER_BUTTON_Y: "△"}),
         # SDL_HINT_GAMECONTROLLER_USE_BUTTON_LABELS defaults to "1", so a Switch pad
         # reports its face buttons by their printed label, not by position -- which
         # means CONTROLLER_BUTTON_A really is the button marked A and no swap applies.
@@ -621,7 +621,7 @@ class TestGamepadButtonNames:
         ("XBOX",       "View",   "Menu"),
         ("PS4",        "Share",  "Options"),
         ("PS5",        "Create", "Options"),
-        ("SWITCH PRO", "Minus",  "Plus"),
+        ("SWITCH PRO", "－",  "＋"),
     ])
     def test_system_buttons_carry_the_families_own_names(self, layout, back, start) -> None:
         """PS4's Share became PS5's Create -- the one place the two Sony pads differ."""
@@ -630,7 +630,7 @@ class TestGamepadButtonNames:
 
     def test_the_d_pad_reads_the_same_everywhere(self) -> None:
         for layout in GAMEPAD_BUTTON_NAMES:
-            assert gamepad_button_name(pygame.CONTROLLER_BUTTON_DPAD_UP, layout) == "D-Pad Up"
+            assert gamepad_button_name(pygame.CONTROLLER_BUTTON_DPAD_UP, layout) == "D-Pad ↑"
 
     def test_an_unknown_layout_falls_back_rather_than_raising(self) -> None:
         """An unrecognised pad is set up with the XBOX bindings, so it gets XBOX labels."""
@@ -645,7 +645,7 @@ class TestGamepadButtonNames:
 
     def test_describe_binding_uses_the_active_layout(self, controller) -> None:
         controller.set_gamepad_layout("PS5")
-        assert describe_binding("button_bullet_time", controller) == "Triangle"
+        assert describe_binding("button_bullet_time", controller) == "△"
         controller.set_gamepad_layout("XBOX")
         assert describe_binding("button_bullet_time", controller) == "Y"
 
