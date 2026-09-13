@@ -17,9 +17,13 @@ import pytest
 import Helpers
 from Helpers import (
     DifficultyScale,
+    FALLBACK_GAMEPAD_LAYOUT,
+    GAMEPAD_BUTTON_NAMES,
     MovementDirection,
     PathPoint,
+    describe_binding,
     flip,
+    gamepad_button_name,
     glitch,
     image_to_retro,
     link_trigger,
@@ -525,12 +529,132 @@ class TestProcessText:
     def test_an_unmapped_button_index_still_renders_something_readable(
             self, controller, monkeypatch: pytest.MonkeyPatch) -> None:
         controller.set_gamepad_layout("XBOX")
-        monkeypatch.delitem(Helpers.GAMEPAD_BUTTON_NAMES, pygame.CONTROLLER_BUTTON_A)
+        monkeypatch.delitem(Helpers.GAMEPAD_BUTTON_NAMES["XBOX"], pygame.CONTROLLER_BUTTON_A)
         assert process_text("<key=button_jump>", controller)[0].startswith("Button ")
+
+    def test_the_prompt_follows_the_pad_in_the_players_hands(self, controller) -> None:
+        """The same binding, named the way it is printed on each controller."""
+        expected = {"XBOX": "A", "PS4": "Cross", "PS5": "Cross", "SWITCH PRO": "A"}
+        for layout, label in expected.items():
+            controller.set_gamepad_layout(layout)
+            assert process_text("<key=button_jump>", controller)[0] == label
 
     def test_repeated_tags_are_all_replaced(self, controller) -> None:
         line = process_text("<key=keys_jump> and <key=keys_jump>", controller)[0]
         assert "<key=" not in line
+
+
+# --------------------------------------------------------------------------- #
+# gamepad button labels
+# --------------------------------------------------------------------------- #
+class TestGamepadButtonNames:
+    """Prompts have to read the way the button is printed on the pad in use.
+
+    The SDL constants are positional on an Xbox pad, so every other family is a
+    relabel of the same indices rather than a different set of them.
+    """
+
+    def _bound_buttons(self, controller, layout: str) -> set[int]:
+        """The button indices a layout actually binds (its axes and Nones excluded)."""
+        return {value for action, value in controller.GAMEPAD_LAYOUTS[layout].items()
+                if action.startswith("button_") and value is not None}
+
+    def test_every_layout_that_binds_buttons_has_a_name_table(self, controller) -> None:
+        binding = {name for name in controller.GAMEPAD_LAYOUTS
+                   if self._bound_buttons(controller, name)}
+        assert binding <= set(GAMEPAD_BUTTON_NAMES)
+
+    def test_every_bound_button_has_a_label_in_its_own_layout(self, controller) -> None:
+        """A new binding with no label would silently print "Button 7" in-game."""
+        missing = {
+            (layout, button)
+            for layout in GAMEPAD_BUTTON_NAMES
+            for button in self._bound_buttons(controller, layout)
+            if button not in GAMEPAD_BUTTON_NAMES[layout]
+        }
+        assert missing == set()
+
+    def test_labels_within_a_layout_are_distinct(self) -> None:
+        for layout, names in GAMEPAD_BUTTON_NAMES.items():
+            assert len(set(names.values())) == len(names), f"duplicate label in {layout}"
+
+    def test_no_label_is_blank(self) -> None:
+        for names in GAMEPAD_BUTTON_NAMES.values():
+            assert all(label.strip() for label in names.values())
+
+    @pytest.mark.parametrize(("layout", "expected"), [
+        ("XBOX",       {pygame.CONTROLLER_BUTTON_A: "A",
+                        pygame.CONTROLLER_BUTTON_B: "B",
+                        pygame.CONTROLLER_BUTTON_X: "X",
+                        pygame.CONTROLLER_BUTTON_Y: "Y"}),
+        ("PS4",        {pygame.CONTROLLER_BUTTON_A: "Cross",
+                        pygame.CONTROLLER_BUTTON_B: "Circle",
+                        pygame.CONTROLLER_BUTTON_X: "Square",
+                        pygame.CONTROLLER_BUTTON_Y: "Triangle"}),
+        ("PS5",        {pygame.CONTROLLER_BUTTON_A: "Cross",
+                        pygame.CONTROLLER_BUTTON_B: "Circle",
+                        pygame.CONTROLLER_BUTTON_X: "Square",
+                        pygame.CONTROLLER_BUTTON_Y: "Triangle"}),
+        # SDL_HINT_GAMECONTROLLER_USE_BUTTON_LABELS defaults to "1", so a Switch pad
+        # reports its face buttons by their printed label, not by position -- which
+        # means CONTROLLER_BUTTON_A really is the button marked A and no swap applies.
+        ("SWITCH PRO", {pygame.CONTROLLER_BUTTON_A: "A",
+                        pygame.CONTROLLER_BUTTON_B: "B",
+                        pygame.CONTROLLER_BUTTON_X: "X",
+                        pygame.CONTROLLER_BUTTON_Y: "Y"}),
+    ])
+    def test_face_buttons_carry_the_families_own_names(self, layout, expected) -> None:
+        for button, label in expected.items():
+            assert gamepad_button_name(button, layout) == label
+
+    @pytest.mark.parametrize(("layout", "expected"), [
+        ("XBOX",       ("LB", "RB")),
+        ("PS4",        ("L1", "R1")),
+        ("PS5",        ("L1", "R1")),
+        ("SWITCH PRO", ("L",  "R")),
+    ])
+    def test_shoulders_carry_the_families_own_names(self, layout, expected) -> None:
+        assert (gamepad_button_name(pygame.CONTROLLER_BUTTON_LEFTSHOULDER, layout),
+                gamepad_button_name(pygame.CONTROLLER_BUTTON_RIGHTSHOULDER, layout)) == expected
+
+    @pytest.mark.parametrize(("layout", "back", "start"), [
+        ("XBOX",       "View",   "Menu"),
+        ("PS4",        "Share",  "Options"),
+        ("PS5",        "Create", "Options"),
+        ("SWITCH PRO", "Minus",  "Plus"),
+    ])
+    def test_system_buttons_carry_the_families_own_names(self, layout, back, start) -> None:
+        """PS4's Share became PS5's Create -- the one place the two Sony pads differ."""
+        assert gamepad_button_name(pygame.CONTROLLER_BUTTON_BACK, layout) == back
+        assert gamepad_button_name(pygame.CONTROLLER_BUTTON_START, layout) == start
+
+    def test_the_d_pad_reads_the_same_everywhere(self) -> None:
+        for layout in GAMEPAD_BUTTON_NAMES:
+            assert gamepad_button_name(pygame.CONTROLLER_BUTTON_DPAD_UP, layout) == "D-Pad Up"
+
+    def test_an_unknown_layout_falls_back_rather_than_raising(self) -> None:
+        """An unrecognised pad is set up with the XBOX bindings, so it gets XBOX labels."""
+        fallback = GAMEPAD_BUTTON_NAMES[FALLBACK_GAMEPAD_LAYOUT]
+        for layout in (None, "NONE", "STEAM DECK", ""):
+            assert gamepad_button_name(pygame.CONTROLLER_BUTTON_A, layout) == \
+                fallback[pygame.CONTROLLER_BUTTON_A]
+
+    def test_an_unmapped_index_renders_as_its_number(self) -> None:
+        assert gamepad_button_name(pygame.CONTROLLER_BUTTON_MAX, "XBOX") == \
+            f"Button {int(pygame.CONTROLLER_BUTTON_MAX)}"
+
+    def test_describe_binding_uses_the_active_layout(self, controller) -> None:
+        controller.set_gamepad_layout("PS5")
+        assert describe_binding("button_bullet_time", controller) == "Triangle"
+        controller.set_gamepad_layout("XBOX")
+        assert describe_binding("button_bullet_time", controller) == "Y"
+
+    def test_switching_pads_mid_session_changes_the_prompt(self, controller) -> None:
+        """A player unplugging an Xbox pad for a DualSense should see the prompt follow."""
+        controller.set_gamepad_layout("XBOX")
+        before = describe_binding("button_shrink", controller)
+        controller.set_gamepad_layout("PS4")
+        assert describe_binding("button_shrink", controller) != before
 
 
 # --------------------------------------------------------------------------- #
@@ -691,6 +815,25 @@ class TestSetProperty:
         trigger, (guard,) = self._trigger("Guard")
         set_property(trigger, {"target": "Guard", "property": "speed", "value": "fast"})
         assert guard.speed == "fast"
+
+    @pytest.mark.parametrize("raw", [
+        "fast", "Slow Patrol", "TESTLEVEL", "Guard A", "north-east",
+        "3 blocks", "v1.2", "true-ish", "", " ", "-", "+", ".",
+    ])
+    def test_string_values_survive_the_numeric_coercion(self, raw: str) -> None:
+        """Coercion only fires on values float() accepts; everything else is untouched."""
+        trigger, (guard,) = self._trigger("Guard")
+        set_property(trigger, {"target": "Guard", "property": "speed", "value": raw})
+        assert guard.speed == raw
+        assert isinstance(guard.speed, str)
+
+    @pytest.mark.parametrize("raw", ["nan", "NaN", "inf", "-inf", "Infinity"])
+    def test_non_finite_number_words_neither_crash_nor_coerce(self, raw: str) -> None:
+        """float() takes all five and int() refuses all five, which used to raise."""
+        trigger, (guard,) = self._trigger("Guard")
+        set_property(trigger, {"target": "Guard", "property": "speed", "value": raw})
+        assert guard.speed == raw
+        assert isinstance(guard.speed, str)
 
     def test_real_numbers_pass_through_untouched(self) -> None:
         trigger, (guard,) = self._trigger("Guard")

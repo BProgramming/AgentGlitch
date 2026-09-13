@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Any, TYPE_CHECKING
 import csv
 import json
+import math
 import pygame
 import random
 import re
@@ -84,7 +85,7 @@ class DifficultyScale(float, Enum):
 #     HARD         4                         4
 #     HARDEST      5                         2
 #
-# DifficultyScale's own values (0.25 .. 2.00) are not evenly spaced, so "linear"
+# DifficultyScale's own values (0.25 -> 2.00) are not evenly spaced, so "linear"
 # here means linear in the position on the ladder, not in the raw float -- see
 # difficulty_ratio below.
 HITS_TO_KILL_RANGE: tuple[float, float] = (1.0, 5.0)
@@ -544,28 +545,86 @@ def load_text_from_file(
     return text
 
 
-#: Display names for the gamepad buttons the layouts bind.  Keyed by the SDL
-#: controller constant, so the label is the same whichever layout is active --
-#: swap in per-layout names (Cross/Circle for PlayStation, and so on) if the
-#: on-screen prompts should match the pad in the player's hands.
-GAMEPAD_BUTTON_NAMES: dict[int, str] = {
-    pygame.CONTROLLER_BUTTON_A:             "A",
-    pygame.CONTROLLER_BUTTON_B:             "B",
-    pygame.CONTROLLER_BUTTON_X:             "X",
-    pygame.CONTROLLER_BUTTON_Y:             "Y",
-    pygame.CONTROLLER_BUTTON_BACK:          "Back",
-    pygame.CONTROLLER_BUTTON_GUIDE:         "Guide",
-    pygame.CONTROLLER_BUTTON_START:         "Start",
-    pygame.CONTROLLER_BUTTON_LEFTSHOULDER:  "Left Bumper",
-    pygame.CONTROLLER_BUTTON_RIGHTSHOULDER: "Right Bumper",
-    pygame.CONTROLLER_BUTTON_DPAD_UP:       "D-Pad Up",
-    pygame.CONTROLLER_BUTTON_DPAD_DOWN:     "D-Pad Down",
-    pygame.CONTROLLER_BUTTON_DPAD_LEFT:     "D-Pad Left",
-    pygame.CONTROLLER_BUTTON_DPAD_RIGHT:    "D-Pad Right",
+# D-pad and stick-click labels are the same on every pad, so they live here once.
+_SHARED_GAMEPAD_BUTTON_NAMES: dict[int, str] = {
+    pygame.CONTROLLER_BUTTON_DPAD_UP:    "D-Pad ↑",
+    pygame.CONTROLLER_BUTTON_DPAD_DOWN:  "D-Pad ↓",
+    pygame.CONTROLLER_BUTTON_DPAD_LEFT:  "D-Pad ←",
+    pygame.CONTROLLER_BUTTON_DPAD_RIGHT: "D-Pad →",
 }
 
-#: shown when an action name resolves to no binding at all
+# PS4 and PS5 differ only in what Sony renamed the left-hand system button.
+_PLAYSTATION_BUTTON_NAMES: dict[int, str] = {
+    **_SHARED_GAMEPAD_BUTTON_NAMES,
+    pygame.CONTROLLER_BUTTON_A:             "＋",
+    pygame.CONTROLLER_BUTTON_B:             "◯",
+    pygame.CONTROLLER_BUTTON_X:             "□",
+    pygame.CONTROLLER_BUTTON_Y:             "△",
+    pygame.CONTROLLER_BUTTON_GUIDE:         "PS",
+    pygame.CONTROLLER_BUTTON_START:         "Options",
+    pygame.CONTROLLER_BUTTON_LEFTSHOULDER:  "L1",
+    pygame.CONTROLLER_BUTTON_RIGHTSHOULDER: "R1",
+    pygame.CONTROLLER_BUTTON_LEFTSTICK:     "L3",
+    pygame.CONTROLLER_BUTTON_RIGHTSTICK:    "R3",
+}
+
+GAMEPAD_BUTTON_NAMES: dict[str, dict[int, str]] = {
+    "XBOX": {
+        **_SHARED_GAMEPAD_BUTTON_NAMES,
+        pygame.CONTROLLER_BUTTON_A:             "A",
+        pygame.CONTROLLER_BUTTON_B:             "B",
+        pygame.CONTROLLER_BUTTON_X:             "X",
+        pygame.CONTROLLER_BUTTON_Y:             "Y",
+        pygame.CONTROLLER_BUTTON_BACK:          "View",
+        pygame.CONTROLLER_BUTTON_GUIDE:         "Xbox",
+        pygame.CONTROLLER_BUTTON_START:         "Menu",
+        pygame.CONTROLLER_BUTTON_LEFTSHOULDER:  "LB",
+        pygame.CONTROLLER_BUTTON_RIGHTSHOULDER: "RB",
+        pygame.CONTROLLER_BUTTON_LEFTSTICK:     "LS",
+        pygame.CONTROLLER_BUTTON_RIGHTSTICK:    "RS",
+    },
+    "PS4": {
+        **_PLAYSTATION_BUTTON_NAMES,
+        pygame.CONTROLLER_BUTTON_BACK: "Share",
+    },
+    "PS5": {
+        **_PLAYSTATION_BUTTON_NAMES,
+        pygame.CONTROLLER_BUTTON_BACK: "Create",
+    },
+    "SWITCH PRO": {
+        **_SHARED_GAMEPAD_BUTTON_NAMES,
+        pygame.CONTROLLER_BUTTON_A:             "A",
+        pygame.CONTROLLER_BUTTON_B:             "B",
+        pygame.CONTROLLER_BUTTON_X:             "X",
+        pygame.CONTROLLER_BUTTON_Y:             "Y",
+        pygame.CONTROLLER_BUTTON_BACK:          "－",
+        pygame.CONTROLLER_BUTTON_GUIDE:         "Home",
+        pygame.CONTROLLER_BUTTON_START:         "＋",
+        pygame.CONTROLLER_BUTTON_LEFTSHOULDER:  "L",
+        pygame.CONTROLLER_BUTTON_RIGHTSHOULDER: "R",
+        pygame.CONTROLLER_BUTTON_LEFTSTICK:     "L-Stick",
+        pygame.CONTROLLER_BUTTON_RIGHTSTICK:    "R-Stick",
+    },
+}
+
+# Labels used when the layout is unknown. An unrecognized pad is set up with the
+# XBOX bindings by Controller.__detect_gamepad_layout__, so it gets those labels too.
+FALLBACK_GAMEPAD_LAYOUT: str = "XBOX"
+
+# shown when an action name resolves to no binding at all
 UNBOUND_ACTION_TEXT: str = "KEY NOT FOUND"
+
+
+def gamepad_button_name(
+        button: int,
+        layout: str | None = None,
+) -> str:
+    """Return the label printed on the pad for a gamepad button, for the active layout."""
+    if layout is not None and GAMEPAD_BUTTON_NAMES.get(layout):
+        names = GAMEPAD_BUTTON_NAMES[layout]
+    else:
+        names = GAMEPAD_BUTTON_NAMES[FALLBACK_GAMEPAD_LAYOUT]
+    return names.get(int(button)) or f"Button {int(button)}"
 
 
 def resolve_binding(
@@ -592,7 +651,7 @@ def describe_binding(
     if keys:
         names = [pygame.key.name(int(code)).title() for code in keys]
     elif button is not None:
-        names = [GAMEPAD_BUTTON_NAMES.get(int(button), f"Button {int(button)}")]
+        names = [gamepad_button_name(button, controller.active_gamepad_layout)]
     else:
         return UNBOUND_ACTION_TEXT
 
@@ -847,15 +906,13 @@ def set_property(
                     if val.casefold() in ("true", "false"):
                         val = bool(val.casefold() == "true")
                     else:
-                        # str.isnumeric() only passes digit-only strings, so it
-                        # rejected "0.5" and "-3"; float() accepts what an .agd
-                        # author would reasonably write.
                         try:
                             number = float(val)
                         except ValueError:
                             pass
                         else:
-                            val = int(number) if number == int(number) else number
+                            if math.isfinite(number):
+                                val = int(number) if number == int(number) else number
 
                 for ent in triggering_entity.level.entities:
                     if ent.name.casefold().startswith(targ.casefold()):
