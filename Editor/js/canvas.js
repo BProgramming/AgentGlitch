@@ -425,7 +425,8 @@ const GridCanvas = (() => {
         let wasRandomized = false;
         if (schema && schema.addressing === 'terrain') {
           const tileSizeSetting = this.assetLib.terrainNativeTileSize || 48;
-          canvas = await this.assetLib.getTerrainTile(data.coord_x, data.coord_y, tileSizeSetting);
+          const [cx, cy] = Model.terrainCoordsFor(type, data);
+          canvas = await this.assetLib.getTerrainTile(cx, cy, tileSizeSetting);
         } else if (schema && schema.addressing === 'sprite' && data.sprite) {
           const preview = await this.assetLib.getSpritePreview(data.sprite);
           canvas = preview ? preview.canvas : null;

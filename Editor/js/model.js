@@ -145,6 +145,21 @@ const Model = (() => {
     return !!schema && schema.addressing === 'trigger';
   }
 
+  // Returns the [coordX, coordY] pair that should be used to look up a
+  // terrain-addressed entity's preview tile from Terrain.png. Most terrain
+  // types (Block, MovableBlock, MovingBlock) store these directly as
+  // coord_x/coord_y, but Door stores separate locked/unlocked coordinate
+  // pairs instead (it has no plain coord_x/coord_y of its own) — this
+  // function is the single place that knows how to resolve the right pair
+  // per type, so canvas.js and palette.js don't each need their own
+  // Door-specific special case.
+  function terrainCoordsFor(type, data) {
+    if (type === 'Door') {
+      return [data.unlocked_coord_x, data.unlocked_coord_y];
+    }
+    return [data.coord_x, data.coord_y];
+  }
+
   // ---- CSV parsing / serialization -------------------------------------
   // .agl files use CRLF line endings and comma-separated cells. Cells may
   // contain zero, one, or multiple space-separated entity-name tokens
@@ -336,6 +351,7 @@ const Model = (() => {
   return {
     TYPE_SCHEMAS,
     isTriggerType,
+    terrainCoordsFor,
     parseCSV,
     serializeCSV,
     cellToTokens,

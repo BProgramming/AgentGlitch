@@ -48,6 +48,7 @@
       setStatus(`Project loaded. Found ${levels.length} level(s) and ${state.assetLib.listSpriteFolders().length} sprite folders.`);
       el('level-select-row').style.display = '';
       el('new-level-btn').style.display = '';
+      el('resize-grid-btn').style.display = '';
     } catch (e) {
       console.error(e);
       setStatus(`Failed to open project: ${e.message}`, true);
@@ -148,7 +149,7 @@
 
     const hint = document.createElement('p');
     hint.className = 'modal-hint';
-    hint.textContent = 'You can resize the grid later from the Grid menu; these are just a starting size.';
+    hint.textContent = 'You can resize the grid later with the "⬚ Resize Grid…" toolbar button; these are just a starting size.';
     body.appendChild(hint);
 
     showModal(() => {
@@ -192,6 +193,71 @@
     }
   }
 
+  function handleResizeGrid() {
+    if (!state.model) {
+      setStatus('Load or create a level first.', true);
+      return;
+    }
+
+    const modal = el('modal');
+    const body = el('modal-body');
+    body.innerHTML = '';
+    el('modal-title').textContent = 'Resize Grid';
+
+    const rowsWrap = document.createElement('div');
+    rowsWrap.className = 'form-field';
+    const rowsLabel = document.createElement('label');
+    rowsLabel.textContent = 'Rows';
+    const rowsInput = document.createElement('input');
+    rowsInput.type = 'number';
+    rowsInput.value = state.model.rows;
+    rowsInput.min = 1;
+    rowsWrap.appendChild(rowsLabel);
+    rowsWrap.appendChild(rowsInput);
+    body.appendChild(rowsWrap);
+
+    const colsWrap = document.createElement('div');
+    colsWrap.className = 'form-field';
+    const colsLabel = document.createElement('label');
+    colsLabel.textContent = 'Columns';
+    const colsInput = document.createElement('input');
+    colsInput.type = 'number';
+    colsInput.value = state.model.cols;
+    colsInput.min = 1;
+    colsWrap.appendChild(colsLabel);
+    colsWrap.appendChild(colsInput);
+    body.appendChild(colsWrap);
+
+    const hint = document.createElement('p');
+    hint.className = 'modal-hint';
+    hint.textContent = 'Shrinking a dimension permanently discards any placements in the rows/columns being removed. Growing only ever adds empty space — nothing existing moves or is lost. Remember to Save afterward.';
+    body.appendChild(hint);
+
+    showModal(() => {
+      const newRows = parseInt(rowsInput.value, 10) || state.model.rows;
+      const newCols = parseInt(colsInput.value, 10) || state.model.cols;
+
+      if (newRows === state.model.rows && newCols === state.model.cols) {
+        return true; // nothing to do, just close
+      }
+
+      const shrinking = newRows < state.model.rows || newCols < state.model.cols;
+      if (shrinking) {
+        const ok = confirm(
+          `This will shrink the grid from ${state.model.rows}×${state.model.cols} to ${newRows}×${newCols}. ` +
+          `Any entities placed in the removed rows/columns will be discarded from the grid (their entity definitions are kept, just unplaced). Continue?`
+        );
+        if (!ok) return false;
+      }
+
+      state.model.resizeGrid(newRows, newCols);
+      state.gridEditor.requestRedraw();
+      markDirty(true);
+      setStatus(`Resized grid to ${newRows}×${newCols}. Click Save to write the change to disk.`);
+      return true;
+    });
+  }
+
   function wireUpEditorsForNewModel() {
     if (!state.gridEditor) {
       state.gridEditor = new GridCanvas.Editor(el('grid-canvas'), state.model, state.assetLib, { tileSize: 32 });
@@ -208,8 +274,12 @@
     if (!state.paletteUI) {
       state.paletteUI = new Palette.PaletteUI(el('palette-container'), state.model, state.assetLib, {
         onSelectForPlacement: (name) => {
-          state.gridEditor.setTool('place', name);
-          setStatus(`Placing "${name}" — click or drag on the grid. Switch to Erase to remove.`);
+          if (state.gridEditor.activeTool === 'place') {
+            state.gridEditor.setTool('place', name);
+          } else {
+            state.gridEditor.placingEntityName = name;
+          }
+          setStatus(`Selected "${name}" for placing. Switch to the Place tool to stamp it on the grid.`);
         },
         onEditRequest: (name) => openEntityEditor(name),
         onCreateRequest: (type) => openEntityCreator(type),
@@ -230,6 +300,7 @@
             : `Path editing "${name}": Shift+click the grid to add waypoints.`);
         },
       });
+      state.layerPanel.setModel(state.model);
     } else {
       state.layerPanel.setModel(state.model);
     }
@@ -385,6 +456,7 @@
     el('level-select').addEventListener('change', (e) => handleLoadLevel(e.target.value));
     el('save-btn').addEventListener('click', handleSaveLevel);
     el('new-level-btn').addEventListener('click', handleCreateLevel);
+    el('resize-grid-btn').addEventListener('click', handleResizeGrid);
 
     el('tool-place').addEventListener('click', () => {
       setActiveToolButton('tool-place');

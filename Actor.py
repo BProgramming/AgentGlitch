@@ -192,8 +192,8 @@ class Actor(Entity):
         self.update_sprite()
         self.update_geo()
         if self.rect:
-            self.rect.x += (block_size - self.rect.width) // 2
-            self.rect.y += (block_size - self.rect.height)
+            self.rect.x += int(block_size - self.rect.width) // 2
+            self.rect.y += int(block_size - self.rect.height)
             self.cached_x: float = self.rect.x
             self.cached_y: float = self.rect.y
 
@@ -324,7 +324,7 @@ class Actor(Entity):
                 elif self.rect.right + dx > self.level.level_bounds[1][0] + (self.rect.width // 5):
                     self.rect.right = self.level.level_bounds[1][0] + (self.rect.width // 5)
                 else:
-                    self.rect.x += dx
+                    self.rect.x += int(dx)
 
             if dy != 0:
                 if self.rect.top + dy < self.level.level_bounds[0][1]:
@@ -332,7 +332,7 @@ class Actor(Entity):
                 elif self.rect.top + dy > self.level.level_bounds[1][1]:
                     self.die()  # die()'s frame-time offset is discarded here; move() returns None
                 else:
-                    self.rect.y += dy
+                    self.rect.y += int(dy)
 
         return None
 
@@ -541,7 +541,8 @@ class Actor(Entity):
 
                             collided = True
 
-                        if overlap.width >= overlap.height:
+                        effective_width = overlap.width - (self.rect.width // 5 if self.is_wall_jumping else 0)
+                        if effective_width >= overlap.height:
                             if self.y_vel >= 0 and not ent.is_stacked and rect.bottom == overlap.bottom:
                                 rect.bottom = ent_rect.top
                                 dtime_offset += self.land()
@@ -758,7 +759,7 @@ class Actor(Entity):
         """Advance the actor: healing, projectiles, resizing, motion, caching, and state."""
         dtime_offset: float = super().loop(dtime)
 
-        self.animation_count += dtime
+        self.animation_count += int(dtime)
 
         if self.abilities["can_heal"] and self.hp < self.max_hp and self.cooldowns["heal"] <= 0:
             self.hp = min(self.max_hp, self.hp + ((self.max_hp * dtime) / (50 * self.difficulty)))

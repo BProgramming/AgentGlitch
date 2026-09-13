@@ -105,8 +105,9 @@ const Palette = (() => {
         let canvas = null;
         let wasRandomized = false;
         if (schema.addressing === 'terrain') {
+          const [cx, cy] = Model.terrainCoordsFor(type, data);
           canvas = await this.assetLib.getTerrainTile(
-            data.coord_x, data.coord_y, this.assetLib.terrainNativeTileSize || 48
+            cx, cy, this.assetLib.terrainNativeTileSize || 48
           );
         } else if (schema.addressing === 'sprite' && data.sprite) {
           const preview = await this.assetLib.getSpritePreview(data.sprite);
