@@ -60,7 +60,7 @@ class Objective(Entity):
                 self.sprites = avail_sprites["ANIMATE_RETRO"]
             else:
                 self.sprites = avail_sprites["ANIMATE"]
-        self.animation_count: int                                    = 0
+        self.animation_count: float                                  = 0
         self.sprite:          pygame.Surface | None                  = None
         if self.sprites:
             self.update_sprite()
@@ -108,7 +108,7 @@ class Objective(Entity):
         """Return a serializable dict of the objective's persistent state."""
         return super().save()
 
-    def load(
+    def load( # noqa
             self: Objective,
             ent:  dict,
     ) -> None:

@@ -1,0 +1,10 @@
+# Test and coverage artefacts.
+#
+# Added alongside the test suite -- the repo had no .gitignore before, so delete this
+# file if you would rather not have one, or fold these lines into your own.
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/

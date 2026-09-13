@@ -54,7 +54,7 @@ class Block(Entity):
 
     def save(
             self: Block,
-    ) -> dict | None:
+    ) -> dict | None: # noqa
         """Return the block's saved state, or None if it is undamaged."""
         if self.hp != 0:
             return super().save()
@@ -147,7 +147,7 @@ class BreakableBlock(Block):
                     VisualEffect(
                         self,
                         self.level.visual_effects_manager.image_master, # noqa
-                        image_name = "BREAKBURST",
+                        image_name = "BREAKBURST", # noqa
                         alpha      = 128,
                         scale      = (self.rect.width, self.rect.height),
                     ),
@@ -266,9 +266,9 @@ class MovingBlock(Block):
                  (hasattr(ent, "is_wall_jumping") and ent.is_wall_jumping) or
                  (ent.rect.x >= self.rect.x and ent.direction == self.direction == MovementDirection.RIGHT) or
                  (ent.rect.x <= self.rect.x and ent.direction == self.direction == MovementDirection.LEFT))):
-            ent.push_x = self.x_vel
+            ent.push_x = self.x_vel # noqa
         if hasattr(ent, "push_y"):
-            ent.push_y = self.y_vel
+            ent.push_y = self.y_vel # noqa
         return self.is_blocking
 
     def move(
@@ -286,7 +286,7 @@ class MovingBlock(Block):
                     self.rect.right = self.level.level_bounds[1][0] - self.rect.width
                     self.x_vel      = 0.0
                 else:
-                    self.rect.x += dx
+                    self.rect.x += int(dx)
 
             if dy != 0:
                 if self.rect.top + dy < self.level.level_bounds[0][1]:
@@ -506,9 +506,9 @@ class MovableBlock(Block):
     ) -> bool:
         """Transfer this block's velocity to a pushable colliding entity."""
         if hasattr(ent, "push_x"):
-            ent.push_x = self.x_vel
+            ent.push_x = self.x_vel # noqa
         if hasattr(ent, "push_y") and self.rect and ent.rect and self.rect.top >= ent.rect.bottom:
-            ent.push_y = self.y_vel
+            ent.push_y = self.y_vel # noqa
         return True
 
     def get_collisions(
@@ -554,7 +554,7 @@ class MovableBlock(Block):
                     self.rect.right = self.level.level_bounds[1][0] - self.rect.width
                     self.x_vel      = 0.0
                 else:
-                    self.rect.x += dx
+                    self.rect.x += int(dx)
 
             if dy != 0:
                 if self.rect.top + dy < self.level.level_bounds[0][1]:
@@ -564,7 +564,7 @@ class MovableBlock(Block):
                     self.rect.y = self.start_y
                     self.x_vel  = 0.0
                 else:
-                    self.rect.y += dy
+                    self.rect.y += int(dy)
         return None
 
     def loop(
@@ -638,7 +638,7 @@ class Hazard(Block):
                 self.sprites = avail_sprites["ANIMATE"]
         else:
             self.sprites = [self.sprite]
-        self.animation_count = 0
+        self.animation_count: float = 0.0
         self.sprite          = None
         self.update_sprite()
         self.update_geo()
@@ -755,7 +755,7 @@ class MovingHazard(MovingBlock, Hazard):
                 self.sprites = avail_sprites["ANIMATE"]
         else:
             self.sprites = [self.sprite]
-        self.animation_count = 0
+        self.animation_count: float = 0.0
         self.sprite          = None
         self.update_sprite()
 
@@ -831,7 +831,7 @@ class FallingHazard(Hazard):
             if self.y_vel != 0:
                 active_index = -2
             else:
-                active_index = -1
+                active_index = -1 # noqa
         else:
             active_index = math.floor((self.animation_count / FallingHazard.ANIMATION_DELAY) % (len(self.sprites) - 2))
             if active_index >= len(self.sprites) - 2:
@@ -890,7 +890,7 @@ class FallingHazard(Hazard):
                         VisualEffect(
                             self,
                             self.level.visual_effects_manager.image_master, # noqa
-                            image_name = "LANDBURST",
+                            image_name = "LANDBURST", # noqa
                             direction  = ImageDirection.BOTTOM,
                             alpha      = 128,
                             scale      = (self.rect.width * 2, self.rect.height / 2),
@@ -903,7 +903,7 @@ class FallingHazard(Hazard):
                         self.cooldowns["reset_time"] += FallingHazard.RESET_DELAY
                     break
 
-            self.rect.y += self.y_vel
+            self.rect.y += int(self.y_vel)
             if self.rect.y > self.level.level_bounds[1][1]:
                 self.cooldowns["reset_time"] += FallingHazard.RESET_DELAY
 

@@ -6,6 +6,7 @@ import random
 from Actor import MovementState
 from NonPlayer import NonPlayer
 from Helpers import validate_file_list, PathPoint
+from Trigger import Trigger
 
 if TYPE_CHECKING:
     from Controller import Controller

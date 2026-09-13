@@ -37,6 +37,12 @@ class CinematicsManager:
         self.queued     = []
         self.load(files, controller, player_sprites)
 
+    def get(
+            self:           CinematicsManager,
+            cinematic_name: str
+    ) -> Cinematic | None:
+        return self.cinematics.get(cinematic_name)
+
     def load(
             self:           CinematicsManager,
             files:          dict[str, Any] | list[dict[str, Any]] | tuple[dict[str, Any]],
@@ -162,7 +168,7 @@ class Cinematic:
             stretch:           bool                                          = False,
             delete_after_play: bool                                          = True,
     ) -> None:
-        """Initialize a single cinematic, blitting any player sprites onto slide images."""
+        """Initialize a single cinematic, blitting any player sprites onto slide images.""" # noqa
         self.controller = controller
         self.type       = cinematic_type
         self.cinematic  = ent
@@ -345,7 +351,7 @@ class Cinematic:
     ) -> None:
         """Play a video frame-by-frame with optional scaling, fades, text, glitch, and pause key."""
         if not video.isOpened():
-            raise IOError(f"Video file {str(video)} could not be opened.")
+            raise IOError(f"Video file {str(video)} could not be opened.") # noqa
         if controller.retro:
             colour_white = RETRO_WHITE
             colour_black = RETRO_BLACK

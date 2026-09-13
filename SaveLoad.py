@@ -65,7 +65,7 @@ def load_player_profile(
                 and controller.has_dlc["gumshoe"]
                 and data["force retro"]
             )
-        if data.get("is fullscreen") and not data["is fullscreen"]:
+        if data.get("is fullscreen") != pygame.display.is_fullscreen():
             pygame.display.toggle_fullscreen()
         if data.get("level"):
             return data["level"]

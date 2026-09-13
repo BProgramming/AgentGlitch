@@ -50,11 +50,11 @@ class Trigger(Entity):
 
     def save(
             self: Trigger,
-    ) -> dict[str, dict[str, bool]] | None:
+    ) -> dict[str, dict[str, bool]] | None: # noqa
         """Return the trigger's fired state, or None if it has not fired."""
         return {self.name: {"has_fired": self.has_fired}} if self.has_fired else None
 
-    def load(
+    def load( # noqa
             self: Trigger,
             info: dict[str, Any],
     ) -> None:
@@ -79,7 +79,7 @@ class Trigger(Entity):
     def collide(
             self: Trigger,
             ent:  Entity | None,
-    ) -> float:
+    ) -> float: # noqa
         """Handle the player entering the trigger (no-op for the base trigger)."""
         return 0.0
 

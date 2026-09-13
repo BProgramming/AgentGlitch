@@ -1,0 +1,24 @@
+# Coverage settings for the Agent Glitch test suite.
+#
+#   python3.12 -m pytest --cov=. --cov-report=term-missing
+#
+# Engine.py is reported but never covered: it is a single blocking game loop with no
+# seam to drive it from.  tests/test_engine_import.py checks that it imports and wires
+# itself up correctly, which is as far as automated testing usefully reaches.
+
+[run]
+branch = False
+source = .
+omit =
+    tests/*
+    tests/support/*
+    Utilities/*
+    setup.py
+
+[report]
+skip_empty = True
+exclude_lines =
+    pragma: no cover
+    if TYPE_CHECKING:
+    raise NotImplementedError
+    if __name__ == .__main__.:

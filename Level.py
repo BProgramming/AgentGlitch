@@ -273,11 +273,11 @@ class Level:
     # NOTE: weather with lots of particles + lots of enemies + bullets will decrease the frame rate
     def gen_particle_effect(
             self: Level,
-            name: str,
+            name: str | None,
             win:  pygame.Surface,
     ) -> ParticleEffect | None:
         """Construct the particle effect matching a name (rain, snow, or film grain)."""
-        if name is None:
+        if name is None or name == '':
             return None
         else:
             if name == "RAIN":

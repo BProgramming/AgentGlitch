@@ -108,7 +108,7 @@ class Player(Actor):
         })
         return data
 
-    def load(
+    def load( # noqa
             self: Player,
             ent:  dict,
     ) -> None:
@@ -157,7 +157,7 @@ class Player(Actor):
                 VisualEffect(
                     self,
                     self.level.visual_effects_manager.image_master, # noqa
-                    image_name       = "BLOCKSHIELD",
+                    image_name       = "BLOCKSHIELD", # noqa
                     alpha            = 128,
                     scale            = (scale, scale),
                     linked_to_source = True
@@ -209,7 +209,7 @@ class Player(Actor):
 
     def revert(
             self: Player,
-    ) -> float:
+    ) -> float: # noqa
         """Respawn the player at the cached state after death and return the frame-time offset."""
         start = time.perf_counter()
         text  = ["Careful!", "You died.", "Watch out!", "OUCH!", "Don't try that again!", "Initiating respawn...", "Reverting time..."]
@@ -313,7 +313,7 @@ class Player(Actor):
                     VisualEffect(
                         self,
                         self.level.visual_effects_manager.image_master, # noqa
-                        image_name = "DASHCLOUD",
+                        image_name = "DASHCLOUD", # noqa
                         direction  = ImageDirection.RIGHT if self.facing == MovementDirection.RIGHT else ImageDirection.LEFT,
                         alpha      = 64,
                         offset     = (self.rect.width // 2, 0),

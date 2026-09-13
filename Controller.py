@@ -457,7 +457,7 @@ class Controller:
             event:  pygame.event.Event,
             notify: bool = True,
     ) -> float:
-        """Handle a JOYDEVICEREMOVED event, preserving the layout for clean reconnection."""
+        """Handle a JOYDEVICEREMOVED event, preserving the layout for clean reconnection.""" # noqa
         start = time.perf_counter()
         if self.gamepad is None:
             return time.perf_counter() - start

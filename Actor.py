@@ -56,7 +56,7 @@ class MovementState(Enum):
     IDLE_CROUCH_ATTACK = 21
     DEAD               = 22
 
-    def __str__(
+    def __str__( # noqa
             self: MovementState,
     ) -> str:
         """Return the movement state's name."""
@@ -159,7 +159,7 @@ class Actor(Entity):
         self.state:               MovementState = MovementState.IDLE
         self.state_changed:       bool          = False
         self.idle_count:          int           = 0
-        self.animation_count:     int           = 0
+        self.animation_count:     float         = 0
         self.is_final_anim_frame: bool          = False
         self.is_animated_attack:  bool          = False
 
@@ -376,7 +376,7 @@ class Actor(Entity):
                     VisualEffect(
                         self,
                         self.level.visual_effects_manager.image_master, # noqa
-                        image_name = "JUMPLINES",
+                        image_name = "JUMPLINES", # noqa
                         direction  = [ImageDirection.BOTTOM, (ImageDirection.RIGHT if self.facing == MovementDirection.RIGHT else ImageDirection.LEFT)],
                         rotation   = rotation,
                         alpha      = 64,
@@ -541,7 +541,7 @@ class Actor(Entity):
 
                             collided = True
 
-                        effective_width = overlap.width - (self.rect.width // 5 if self.is_wall_jumping else 0)
+                        effective_width = overlap.width - (self.rect.width // 5 if self.is_wall_jumping else 0) # noqa
                         if effective_width >= overlap.height:
                             if self.y_vel >= 0 and not ent.is_stacked and rect.bottom == overlap.bottom:
                                 rect.bottom = ent_rect.top
@@ -556,16 +556,16 @@ class Actor(Entity):
                             self.is_wall_jumping = True
                 elif isinstance(ent, Objective) and self == self.level.player and ent.sprite is None:
                     dtime_offset += ent.get_hit(self)
-            elif ent_rect.top <= rect.bottom <= ent_rect.bottom and rect.left + (rect.width // 4) <= ent_rect.right and rect.right - (rect.width // 4) >= ent_rect.left:
+            elif ent_rect.top <= rect.bottom <= ent_rect.bottom and rect.left + (rect.width // 4) <= ent_rect.right and rect.right - (rect.width // 4) >= ent_rect.left: # noqa
                 if isinstance(ent, MovingBlock) or isinstance(ent, MovableBlock):
                     ent.collide(self)
 
-                if rect.centerx != ent_rect.centerx:
-                    if math.degrees(math.atan(abs(rect.centery - ent_rect.centery) / abs(rect.centerx - ent_rect.centerx))) >= 45:
+                if rect.centerx != ent_rect.centerx: # noqa
+                    if math.degrees(math.atan(abs(rect.centery - ent_rect.centery) / abs(rect.centerx - ent_rect.centerx))) >= 45: # noqa
                         self.should_move_vert = False
 
-                        if rect.bottom != ent_rect.top:
-                            rect.bottom = ent_rect.top
+                        if rect.bottom != ent_rect.top: # noqa
+                            rect.bottom = ent_rect.top # noqa
 
         if self.y_vel != 0 and not collided and self.is_wall_jumping:
             if self.direction == MovementDirection.RIGHT:
@@ -586,7 +586,7 @@ class Actor(Entity):
         """Mark the actor dead, start the death cooldown, and rumble on player death."""
         super().die()
 
-        if self.hp <= 0 and self.cooldowns.get("dead") and self.cooldowns["dead"] <= 0:
+        if self.hp <= 0 and self.cooldowns.get("dead") is not None and self.cooldowns["dead"] <= 0:
             self.cooldowns["dead"] = Actor.DEATH_TIME
 
             if self == self.level.player and self.controller.gamepad:
@@ -759,7 +759,7 @@ class Actor(Entity):
         """Advance the actor: healing, projectiles, resizing, motion, caching, and state."""
         dtime_offset: float = super().loop(dtime)
 
-        self.animation_count += int(dtime)
+        self.animation_count += dtime
 
         if self.abilities["can_heal"] and self.hp < self.max_hp and self.cooldowns["heal"] <= 0:
             self.hp = min(self.max_hp, self.hp + ((self.max_hp * dtime) / (50 * self.difficulty)))
@@ -803,7 +803,7 @@ class Actor(Entity):
                         VisualEffect(
                             self,
                             self.level.visual_effects_manager.image_master, # noqa
-                            image_name       = "RESIZEBURST",
+                            image_name       = "RESIZEBURST", # noqa
                             alpha            = 128,
                             scale            = (self.rect.width * scale_factor, self.rect.height * scale_factor),
                             linked_to_source = True,

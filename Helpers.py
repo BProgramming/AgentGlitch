@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 
 ASSETS_FOLDER:    Path = Path(__file__).parent / "Assets"
-GAME_DATA_FOLDER: Path = Path.home() / ".agentglitch"
+GAME_DATA_FOLDER: Path = Path.home() / ".agentglitch" # noqa
 GAME_DATA_FOLDER.mkdir(parents=True, exist_ok=True)
 
 DLC_APP_ID: int = 0
@@ -44,7 +44,7 @@ class MovementDirection(IntEnum):
     LEFT  = -1
     RIGHT =  1
 
-    def __str__(
+    def __str__( # noqa
             self: MovementDirection,
     ) -> str:
         """Return the direction's name."""
@@ -64,7 +64,7 @@ class DifficultyScale(float, Enum):
     HARD    = 1.50
     HARDEST = 2.00
 
-    def __str__(
+    def __str__( # noqa
             self: DifficultyScale,
     ) -> str:
         """Return the difficulty's name with underscores replaced by spaces."""
@@ -142,7 +142,7 @@ def image_to_retro(
 
 def load_picker_sprites(
         directory: str,
-) -> tuple[dict[str, list[Any]], list[Any]] | None:
+) -> tuple[dict[str, list[Any]], list[Any]]:
     """Load player picker sprites (normal and retro) and their values from a directory."""
     images = {"normal": [], "retro": []}
     values = []
@@ -150,7 +150,6 @@ def load_picker_sprites(
 
     if not path.is_dir():
         handle_exception(f"File {FileNotFoundError(path.resolve())} not found.")
-        return None
 
     for folder in [f for f in path.iterdir() if (path / f).is_dir()]:
         if folder.name.casefold().startswith("player"):
@@ -162,7 +161,7 @@ def load_picker_sprites(
                 surface.blit(asset, (0, 0), rect)
                 images["normal"].append(surface)
                 values.append(folder.name[-1])
-        if folder.name.casefold().startswith("retroplayer"):
+        if folder.name.casefold().startswith("retroplayer"): # noqa
             lower_path = folder / "picker.png"
             if lower_path.is_file():
                 asset   = image_to_retro(pygame.transform.smoothscale_by(pygame.image.load(lower_path).convert_alpha(), 4))
@@ -175,14 +174,13 @@ def load_picker_sprites(
 
     if not images or not values:
         handle_exception(f"No sprite images found in {FileNotFoundError(path.resolve())}.")
-        return None
 
     return images, values
 
 
 def load_level_images(
         directory: str,
-) -> tuple | None:
+) -> tuple:
     """Load level preview images and their uppercased stems from a directory."""
     images = []
     values = []
@@ -190,7 +188,6 @@ def load_level_images(
 
     if not path.is_dir():
         handle_exception(f"File {FileNotFoundError(path.resolve())} not found.")
-        return None
 
     for file in sorted([f for f in path.iterdir() if (path / f).is_file() and f.suffix.casefold() == ".png"]):
         asset   = pygame.transform.smoothscale_by(pygame.image.load(path / file).convert_alpha(), 4)
@@ -202,7 +199,6 @@ def load_level_images(
 
     if not images or not values:
         handle_exception(f"No level images found in {FileNotFoundError(path.resolve())}.")
-        return None
 
     return images, values
 

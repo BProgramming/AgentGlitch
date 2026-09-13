@@ -475,10 +475,10 @@ class Menu:
                 self.focused_index -= 1
         return None
 
-    def _handle_bar_confirm(
+    def _handle_bar_confirm( # noqa
             self:   Menu,
             i:      int,
-            button: Bar,
+            button: Bar, # noqa
     ) -> int | None:
         """Handle a confirmation press on a slider, returning its index to the caller."""
         # For now just return the index so the caller knows which bar was activated.

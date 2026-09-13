@@ -51,7 +51,7 @@ class Projectile(Entity):
         """Return a serializable dict of the projectile's persistent state."""
         return {self.name: {"hp": self.hp, "cached x y": (self.rect.x, self.rect.y), "speed": self.speed, "max_dist": self.max_dist, "angle": self.angle}} if self.rect else {}
 
-    def load(
+    def load( # noqa
             self: Projectile,
             ent:  dict,
     ) -> None:

@@ -34,9 +34,9 @@ class ParticleEffect:
         """Initialize a particle effect, generating its static or variable particle image(s)."""
         self.effect_type = effect_type
         self.image: pygame.Surface | list[pygame.Surface] | None = None
-        self.image_index:  int  = 0
-        self.image_count:  int  = 0
-        self.should_move:  bool = should_move
+        self.image_index:  int   = 0
+        self.image_count:  float = 0.0
+        self.should_move:  bool  = should_move
         if self.should_move or win is None:
             bounds: tuple[tuple[int, int], tuple[int, int]] = level.level_bounds
         else:
@@ -114,13 +114,13 @@ class ParticleEffect:
     ) -> None:
         """Scroll the particle layer, wrapping it around the bounds."""
         if self.x_vel != 0:
-            self.rect.x += self.x_vel * dtime
+            self.rect.x += int(self.x_vel * dtime)
             if self.rect.x < 0:
                 self.rect.x = self.rect.width
             elif self.rect.x > self.rect.width:
                 self.rect.x = 0
         if self.y_vel != 0:
-            self.rect.y += self.y_vel * dtime
+            self.rect.y += int(self.y_vel * dtime)
             if self.rect.y < 0:
                 self.rect.y = self.rect.height
             elif self.rect.y > self.rect.height:

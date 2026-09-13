@@ -37,7 +37,7 @@ class NPCAlertState(Enum):
     SEARCH = 2
     PURSUE = 3
 
-    def __str__(
+    def __str__( # noqa
             self: NPCAlertState,
     ) -> str:
         """Return the alert state's name."""
@@ -184,7 +184,7 @@ class NonPlayer(Actor):
             self.alert_state                 = NPCAlertState.SEARCH
             self.cooldowns["alert_cooldown"] = NonPlayer.ALERT_COOLDOWN
             self.cooldowns["search_turn"]    = NonPlayer.SEARCH_LOOK_TIME
-            vfx_name = "LOSEPLAYER" if from_pursue else "SPOTPLAYER"
+            vfx_name = "LOSEPLAYER" if from_pursue else "SPOTPLAYER" # noqa
             self.level.visual_effects_manager.spawn(
                 VisualEffect(
                     self,

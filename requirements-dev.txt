@@ -1,0 +1,24 @@
+# Development-only dependencies for the Agent Glitch test suite.
+#
+# The suite deliberately adds nothing the game itself has to ship: the Nuitka
+# packaging constraint applies to the runtime, and none of these are imported by
+# game code.  pygame is here because the game needs it anyway.
+#
+#   python3.12 -m pip install -r requirements-dev.txt
+#   python3.12 -m pytest
+#
+# NOTE: the game requires Python 3.12 or newer.  SteamworksConnection.py line 25
+# nests same-style quotes inside an f-string, which is only valid from 3.12 (PEP 701);
+# on 3.11 the module fails to parse.
+
+pygame>=2.5,<3
+pytest>=8.0
+
+# Optional.  Only needed for coverage reports (`pytest --cov=.`).
+pytest-cov>=5.0
+
+# Optional.  Unlocks the video-playback tests in tests/test_cinematic.py, which feed
+# frames to pygame.surfarray and therefore need real ndarrays.  Without it those
+# five tests skip; everything else runs.  It arrives for free with opencv-python,
+# which the game already depends on for cinematics.
+numpy>=1.26
