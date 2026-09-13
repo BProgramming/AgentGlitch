@@ -208,6 +208,7 @@ class MovingBlock(Block):
             for i in range(len(self.patrol_path)):
                 dist = math.dist((self.rect.x, self.rect.y), (self.patrol_path[i].x, self.patrol_path[i].y))
                 if dist < min_dist:
+                    min_dist               = dist
                     self.patrol_path_index = i
             self.direction = self.facing = (MovementDirection.RIGHT if self.patrol_path[self.patrol_path_index].x - self.rect.x > 0 else MovementDirection.LEFT)
         self.x_vel = self.y_vel = 0.0
@@ -627,6 +628,7 @@ class Hazard(Block):
             name    = name,
         )
         self.difficulty    = difficulty
+        self.difficulty    = difficulty
         self.attack_damage = attack_damage * difficulty
         self.is_attacking  = True
         self.hit_sides     = hit_sides.upper()
@@ -647,9 +649,11 @@ class Hazard(Block):
             self:  Hazard,
             scale: float,
     ) -> None:
-        """Rescale the hazard's attack damage to the new difficulty."""
+        if scale == self.difficulty:
+            return None
+
+        self.attack_damage *= scale / self.difficulty
         self.difficulty     = scale
-        self.attack_damage *= scale
         return None
 
     def update_sprite(
@@ -744,6 +748,7 @@ class MovingHazard(MovingBlock, Hazard):
             coord_y            = coord_y,
             name               = name,
         )
+        self.difficulty    = difficulty
         self.attack_damage = attack_damage * difficulty
         self.is_attacking  = True
         self.hit_sides     = hit_sides.upper()
@@ -821,7 +826,16 @@ class FallingHazard(Hazard):
         self.has_fired   = False
         self.should_fire = False
         self.y_vel       = 0.0
+        # pygame.Rect is integer-only, so the sub-pixel part of each step is carried
+        # here rather than being truncated away frame by frame.
+        self.fall_offset: float = 0.0
         self.cooldowns.update({"reset_time": 0.0, "landing_effect": 0.0})
+
+    @property
+    def gravity(
+            self: FallingHazard,
+    ) -> float:
+        return Entity.GRAVITY
 
     def update_sprite(
             self: FallingHazard,
@@ -867,15 +881,16 @@ class FallingHazard(Hazard):
                 self.die()
                 return dtime_offset
             else:
-                self.rect.x    = self.start_x
-                self.rect.y    = self.start_y
-                self.has_fired = False
-                self.y_vel     = 0
+                self.rect.x      = self.start_x
+                self.rect.y      = self.start_y
+                self.has_fired   = False
+                self.y_vel       = 0
+                self.fall_offset = 0.0
 
         if self.rect and self.has_fired and self.cooldowns["reset_time"] <= 0:
             self.y_vel += self.gravity * dtime
 
-            ents = self.level.get_entities_in_range((self.rect.x, self.rect.y + self.y_vel), blocks_only=True)
+            ents = self.level.get_entities_in_range((self.rect.x, self.rect.y + (self.y_vel * dtime)), blocks_only=True)
             # this part lets falling hazards hit each other and cause those to fall too
             x = int(self.rect.x / self.level.block_size)
             if self.level.falling_hazards.get(x) is not None:
@@ -883,8 +898,9 @@ class FallingHazard(Hazard):
 
             for ent in ents:
                 if self.rect and ent != self and pygame.sprite.collide_rect(self, ent) and pygame.sprite.collide_mask(self, ent): # noqa
-                    self.rect.bottom = ent.rect.top
-                    self.y_vel       = 0
+                    self.rect.bottom  = ent.rect.top
+                    self.y_vel        = 0
+                    self.fall_offset  = 0.0
                     self.play_sound("block_land")
                     self.level.visual_effects_manager.spawn( # noqa
                         VisualEffect(
@@ -903,7 +919,12 @@ class FallingHazard(Hazard):
                         self.cooldowns["reset_time"] += FallingHazard.RESET_DELAY
                     break
 
-            self.rect.y += int(self.y_vel)
+            self.fall_offset += self.y_vel * dtime
+            step               = int(self.fall_offset)
+            if step:
+                self.fall_offset -= step
+                self.rect.y      += step
+
             if self.rect.y > self.level.level_bounds[1][1]:
                 self.cooldowns["reset_time"] += FallingHazard.RESET_DELAY
 

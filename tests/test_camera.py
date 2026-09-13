@@ -205,25 +205,36 @@ class TestFades:
         assert prepared.win.get_at((5, 5))[:3] == (0, 0, 0)
 
 
-def test_a_background_smaller_than_the_window_crashes_a_small_level(
+def test_a_background_smaller_than_the_window_is_clipped_not_fatal(
         camera: Camera, controller, player, window, hud: HUD) -> None:
-    """Characterisation of a latent crash.
+    """A compact level paired with a compact background used to crash on frame one.
 
-    When a level is small enough to need only one tile of its background,
-    ``Camera.draw`` takes a window-sized subsurface of that image.  If the image is
-    smaller than the window, pygame refuses -- so a compact level paired with a
-    compact background image takes the game down on the first frame.  The same
-    applies to *every* foreground, which is always subsurfaced.
-    See BUGS_FOUND.md #20.
+    ``Camera.draw`` takes a window-sized slice of the background when the level needs
+    only one tile of it, and always takes one of the foreground.  Both are now clipped
+    to the image, so a smaller image draws what it has instead of raising.
     """
     from support.doubles import StubLevel
 
     tiny = StubLevel(controller, width_blocks = 2, height_blocks = 2)
     tiny.background = "Test.png"          # 320x240, smaller than the 1280x720 window
+    tiny.foreground = "Test.png"
     controller.level = tiny
     tiny.set_player(player)
     camera.prepare(tiny, hud)
 
     assert len(camera.bg_tileset) == 1
-    with pytest.raises(ValueError):
-        camera.draw(controller.master_volume)
+    camera.draw(controller.master_volume)
+
+
+def test_a_camera_offset_past_the_background_draws_nothing_rather_than_raising(
+        camera: Camera, controller, player, hud: HUD) -> None:
+    from support.doubles import StubLevel
+
+    tiny = StubLevel(controller, width_blocks = 2, height_blocks = 2)
+    tiny.background = "Test.png"
+    controller.level = tiny
+    tiny.set_player(player)
+    camera.prepare(tiny, hud)
+
+    camera.offset_x = camera.offset_y = 100_000
+    camera.draw(controller.master_volume)

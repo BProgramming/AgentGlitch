@@ -15,6 +15,7 @@ from Entity import Entity
 from Helpers import (
     DifficultyScale,
     MovementDirection,
+    enemy_health_scale,
     load_text_from_file,
     display_text,
     image_to_retro,
@@ -132,7 +133,8 @@ class NonPlayer(Actor):
                 else MovementDirection.LEFT
             )
 
-        self.max_hp = self.hp = hp * self.difficulty
+        self.authored_hp: float = hp
+        self.max_hp = self.hp = hp * enemy_health_scale(self.difficulty)
 
         self.cooldowns.update({
             "spot_player":    0.0,
@@ -173,6 +175,20 @@ class NonPlayer(Actor):
 
         self.bark:       pygame.Surface | None = self.set_bark(load_text_from_file(bark)) if bark else None
         self.has_barked: bool                  = False
+
+    def set_difficulty(
+            self:  NonPlayer,
+            scale: float,
+    ) -> None:
+        if scale == self.difficulty:
+            return None
+
+        wounded     = (self.hp / self.max_hp) if self.max_hp else 1.0
+        self.max_hp = self.authored_hp * enemy_health_scale(scale)
+        self.hp     = self.max_hp * wounded
+
+        super().set_difficulty(scale)
+        return None
 
     def _enter_search(
             self:        NonPlayer,
@@ -277,7 +293,8 @@ class NonPlayer(Actor):
         """Run one tick of the patrol/search/pursue AI, driving movement and attacks."""
         self.should_move_horiz = False
 
-        if (self.cooldowns["get_hit"] > 0
+        if (self.hp <= 0
+                or self.cooldowns["get_hit"] > 0
                 or self.state in (MovementState.WIND_UP, MovementState.WIND_DOWN)):
             return None
 

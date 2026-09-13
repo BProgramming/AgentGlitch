@@ -14,7 +14,7 @@ import pytest
 
 from Actor import Actor, MovementState
 from Entity import Entity
-from Helpers import MovementDirection
+from Helpers import DifficultyScale, MovementDirection
 from Projectile import Projectile
 
 
@@ -49,11 +49,15 @@ class TestConstruction:
         assert actor.facing is MovementDirection.RIGHT
         assert actor.state is MovementState.IDLE
 
-    def test_attack_damage_is_scaled_by_difficulty(self, level, controller, player,
-                                                   sprite_master, enemy_audios) -> None:
-        hard = Actor(level, controller, 0, 0, sprite_master, enemy_audios, 2.0,
-                     level.block_size, sprite = "TestAgent")
-        assert hard.attack_damage == Actor.ATTACK_DAMAGE * 2.0
+    def test_attack_damage_is_flat_across_difficulties(self, level, controller, player,
+                                                       sprite_master, enemy_audios) -> None:
+        """Difficulty buys durability, not damage -- a hit lands for the same at every setting."""
+        damages = {
+            Actor(level, controller, 0, 0, sprite_master, enemy_audios, scale,
+                  level.block_size, sprite = "TestAgent").attack_damage
+            for scale in DifficultyScale
+        }
+        assert damages == {Actor.ATTACK_DAMAGE}
 
     def test_every_ability_starts_off_except_the_ones_passed_in(self, level, controller,
                                                                 player, sprite_master,
@@ -328,35 +332,97 @@ class TestDie:
         actor.die()
         assert actor.hp == 0
 
-    def test_the_death_cooldown_never_starts_from_a_zero_value(self, actor: Actor) -> None:
-        """Characterisation of a real defect.
-
-        ``die`` guards on ``self.cooldowns.get("dead")`` -- a *truthiness* test.  The
-        cooldown's resting value is ``0.0``, which is falsy, so the guard fails and
-        ``DEATH_TIME`` is never assigned.  The practical effect: the DEAD animation
-        never gets a chance to play and the player's death rumble never fires,
-        because ``Entity.loop`` purges the actor on the very next frame.
-        See BUGS_FOUND.md #8.
-        """
-        actor.cooldowns["dead"] = 0.0
-        actor.die()
-        assert actor.cooldowns["dead"] == 0.0
-
-    def test_the_death_cooldown_does_start_from_a_negative_value(self, actor: Actor) -> None:
-        actor.cooldowns["dead"] = -0.1
+    def test_dying_starts_the_death_cooldown(self, actor: Actor) -> None:
         actor.die()
         assert actor.cooldowns["dead"] == Actor.DEATH_TIME
+
+    def test_every_actor_carries_a_death_cooldown_not_just_the_player(
+            self, actor: Actor, player, make_enemy) -> None:
+        # update_state gates the DEAD animation on the key being present at all, so
+        # an enemy without one could never play a death animation.
+        for entity in (actor, player, make_enemy()):
+            assert "dead" in entity.cooldowns
+
+    def test_dying_twice_does_not_restart_the_cooldown(self, actor: Actor) -> None:
+        actor.die()
+        actor.update_cooldowns(0.5)
+        actor.die()
+        assert actor.cooldowns["dead"] == pytest.approx(Actor.DEATH_TIME - 0.5)
+
+    def test_a_dead_actor_lingers_for_its_death_animation(self, make_enemy, player,
+                                                          level) -> None:
+        enemy = make_enemy()
+        enemy.die()
+        enemy.update_state()
+        assert enemy.state is MovementState.DEAD
+
+        frames = 0
+        while enemy in level.enemies and frames < 600:
+            enemy.loop(1 / 150)
+            level.purge()
+            frames += 1
+        assert frames / 150 == pytest.approx(Actor.DEATH_TIME, abs = 0.05)
+
+    def test_a_dead_patroller_stops_walking_its_route(self, make_enemy, player,
+                                                      level) -> None:
+        from Helpers import PathPoint
+
+        enemy = make_enemy()
+        enemy.patrol_path = [PathPoint(enemy.rect.x, enemy.rect.y),
+                             PathPoint(enemy.rect.x + 500, enemy.rect.y)]
+        enemy.patrol_path_index = 1
+        enemy.die()
+
+        start_x = enemy.rect.x
+        for _ in range(100):
+            enemy.patrol(1 / 150)
+            enemy.loop(1 / 150)
+        assert enemy.rect.x == start_x
+
+    def test_the_player_gets_a_death_rumble(self, player, controller,
+                                            gamepad) -> None:
+        controller.gamepad = gamepad
+        player.die()
+        assert gamepad.rumbles
 
 
 # --------------------------------------------------------------------------- #
 # difficulty and resizing
 # --------------------------------------------------------------------------- #
 class TestSetDifficulty:
-    def test_scales_health_and_damage(self, actor: Actor) -> None:
+    def test_records_the_new_scale_without_touching_damage(self, actor: Actor) -> None:
+        """Damage is flat, and the bare Actor has no difficulty-scaled health of its own."""
         actor.set_difficulty(2.0)
-        assert actor.max_hp == 200
-        assert actor.hp == 200
-        assert actor.attack_damage == Actor.ATTACK_DAMAGE * 2
+        assert actor.difficulty == 2.0
+        assert actor.attack_damage == Actor.ATTACK_DAMAGE
+
+    def test_repeated_changes_do_not_compound(self, make_enemy) -> None:
+        enemy         = make_enemy(col = 4, difficulty = 1.0, hp = 100)
+        max_hp, damage = enemy.max_hp, enemy.attack_damage
+        enemy.set_difficulty(2.0)
+        enemy.set_difficulty(0.5)
+        enemy.set_difficulty(1.0)
+        assert enemy.max_hp == pytest.approx(max_hp)
+        assert enemy.attack_damage == pytest.approx(damage)
+
+    def test_switching_matches_constructing_at_that_difficulty(
+            self, actor: Actor, level, controller, sprite_master,
+            enemy_audios) -> None:
+        # The bare Actor scales neither damage nor health at construction, so parity
+        # here means nothing moved.  NonPlayer is the class that scales hp, and it is
+        # covered by the parity test below.
+        actor.set_difficulty(2.0)
+        fresh = Actor(level, controller, 0, 0, sprite_master, enemy_audios, 2.0,
+                      level.block_size, sprite = "TestAgent")
+        assert actor.attack_damage == pytest.approx(fresh.attack_damage)
+
+    def test_an_npc_switching_matches_constructing_at_that_difficulty(
+            self, make_enemy, player) -> None:
+        switched = make_enemy(col = 4, difficulty = 1.0, hp = 100)
+        switched.set_difficulty(2.0)
+        fresh = make_enemy(col = 6, difficulty = 2.0, hp = 100)
+        assert switched.max_hp == pytest.approx(fresh.max_hp)
+        assert switched.attack_damage == pytest.approx(fresh.attack_damage)
 
     def test_rescales_projectiles_in_flight(self, actor: Actor) -> None:
         actor.abilities["can_shoot"] = True
@@ -700,24 +766,21 @@ class TestLoop:
         player.loop(0.1)
         assert player.y_vel > 0
 
-    def test_the_animation_counter_is_truncated_to_whole_seconds(self,
-                                                                 actor: Actor) -> None:
-        """Characterisation of a real defect.
-
-        ``Actor.loop`` does ``self.animation_count += int(dtime)``.  The engine feeds
-        it seconds (``clock.tick(150) / 1000``), so ``int(dtime)`` is 0 on every
-        frame and the counter never advances -- actors are frozen on frame 0 of every
-        animation.  ``Objective`` and ``Hazard`` use ``+= dtime`` and animate
-        correctly, which is what makes the difference visible in game.
-        See BUGS_FOUND.md #9.
-        """
+    def test_the_animation_counter_advances_with_real_frame_times(self,
+                                                                  actor: Actor) -> None:
         actor.animation_count = 0
         for _ in range(100):
             actor.loop(1 / 150)
-        assert actor.animation_count == 0
+        assert actor.animation_count == pytest.approx(100 / 150)
 
-        actor.loop(1.5)
-        assert actor.animation_count == 1
+    def test_the_counter_crosses_a_frame_boundary_at_the_animation_delay(
+            self, actor: Actor) -> None:
+        # ANIMATION_DELAY seconds of frames is exactly one animation frame.
+        actor.animation_count = 0
+        assert actor.update_sprite() == 0
+        for _ in range(int(Actor.ANIMATION_DELAY * 150) + 1):
+            actor.loop(1 / 150)
+        assert actor.update_sprite() == 1
 
 
 class TestDraw:

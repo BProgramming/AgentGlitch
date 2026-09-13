@@ -43,15 +43,20 @@ class TestFormattedTime:
             level.time = seconds
             assert len(level.formatted_time) == 7
 
-    def test_an_hour_overflows_the_hud_budget(self, level) -> None:
-        """Characterisation: the timer has no hours field.
+    def test_the_clock_clamps_instead_of_overflowing_the_hud_budget(self, level) -> None:
+        """Past 99 minutes the string would grow to 8 characters and vanish.
 
-        At 60 minutes the string becomes ``60:00.0`` and keeps counting up; past
-        99 minutes it grows to 8 characters and the HUD stops drawing the clock
-        entirely.  See BUGS_FOUND.md #5.
+        HUD.__draw_time__ refuses to draw anything longer than 7, so the clock is
+        pinned at its maximum rather than disappearing.
         """
-        level.time = 6000  # 100 minutes
-        assert len(level.formatted_time) == 8
+        level.time = 6000                      # 100 minutes
+        assert level.formatted_time == "99:59.9"
+        level.time = 1_000_000
+        assert level.formatted_time == "99:59.9"
+
+    def test_a_negative_clock_reads_as_zero(self, level) -> None:
+        level.time = -5
+        assert level.formatted_time == "00:00.0"
 
 
 # --------------------------------------------------------------------------- #

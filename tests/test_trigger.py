@@ -205,14 +205,6 @@ class TestCinematicTrigger:
         trigger = _make(CinematicTrigger, level, controller, "intro")
         assert trigger.collide(player) >= 0.0
 
-    @pytest.mark.xfail(
-        strict = True,
-        reason = "BUG: collide calls level.cinematics.get(name), but CinematicsManager "
-                 "has no .get -- any level that actually has cinematics raises "
-                 "AttributeError the moment a CinematicTrigger fires. "
-                 "See BUGS_FOUND.md #6.",
-        raises = AttributeError,
-    )
     def test_queues_the_named_cinematic(self, level, controller, player) -> None:
         from Cinematic import CinematicsManager
 
@@ -220,6 +212,15 @@ class TestCinematicTrigger:
             {"name": "intro", "type": "slide", "file": "slide.png"}, controller)
         _make(CinematicTrigger, level, controller, "intro").collide(player)
         assert level.cinematics.queued == ["intro"]
+
+    def test_an_unknown_cinematic_name_queues_nothing(self, level, controller,
+                                                      player) -> None:
+        from Cinematic import CinematicsManager
+
+        level.cinematics = CinematicsManager(
+            {"name": "intro", "type": "slide", "file": "slide.png"}, controller)
+        _make(CinematicTrigger, level, controller, "missing").collide(player)
+        assert level.cinematics.queued == []
 
 
 # --------------------------------------------------------------------------- #
@@ -371,24 +372,30 @@ class TestSpawnTrigger:
         return _make(SpawnTrigger, level, controller,
                      {"ref": refs, "input": {"name": token, "coords": coords}}, **kwargs)
 
-    def test_the_entity_is_built_up_front_not_at_fire_time(self, level, controller,
-                                                           refs, player) -> None:
+    def test_the_recipe_is_recorded_and_nothing_is_built_until_it_fires(
+            self, level, controller, refs, player) -> None:
         trigger = self._spawner(level, controller, refs, "E")
-        assert isinstance(trigger.value, NonPlayer)
-        assert trigger.value not in level.enemies
+        assert trigger.value["element"] == "E"
+        assert level.enemies == []
 
-    def test_an_unknown_token_builds_nothing(self, level, controller, refs) -> None:
+    def test_an_unknown_token_records_no_recipe(self, level, controller,
+                                                refs) -> None:
         assert self._spawner(level, controller, refs, "NOPE").value is None
 
-    def test_an_unknown_entity_type_builds_nothing(self, level, controller, refs) -> None:
-        assert self._spawner(level, controller, refs, "?").value is None
+    def test_an_unknown_entity_type_spawns_nothing(self, level, controller, refs,
+                                                   player) -> None:
+        trigger = self._spawner(level, controller, refs, "?")
+        before  = len(level.entities)
+        trigger.collide(player)
+        assert len(level.entities) == before
 
-    def test_firing_files_an_enemy_and_bumps_the_census(self, level, controller, refs,
-                                                        player) -> None:
+    def test_firing_files_an_enemy_and_bumps_the_census(self, level, controller,
+                                                        refs, player) -> None:
         trigger = self._spawner(level, controller, refs, "E")
         before  = level.enemies_available
         trigger.collide(player)
-        assert trigger.value in level.enemies
+        assert len(level.enemies) == 1
+        assert isinstance(level.enemies[0], NonPlayer)
         assert level.enemies_available == before + 1
 
     def test_firing_files_an_objective_and_bumps_the_census(self, level, controller,
@@ -396,55 +403,59 @@ class TestSpawnTrigger:
         trigger = self._spawner(level, controller, refs, "O")
         before  = level.objectives_available
         trigger.collide(player)
-        assert trigger.value in level.objectives
+        assert len(level.objectives) == 1
         assert level.objectives_available == before + 1
 
     def test_firing_files_a_hazard(self, level, controller, refs, player) -> None:
-        trigger = self._spawner(level, controller, refs, "H")
-        assert isinstance(trigger.value, Hazard)
-        trigger.collide(player)
-        assert trigger.value in level.hazards
+        self._spawner(level, controller, refs, "H").collide(player)
+        assert len(level.hazards) == 1
+        assert isinstance(level.hazards[0], Hazard)
 
     def test_firing_files_a_block(self, level, controller, refs, player) -> None:
-        trigger = self._spawner(level, controller, refs, "B")
-        assert isinstance(trigger.value, Block)
-        trigger.collide(player)
-        assert trigger.value in level.blocks
+        self._spawner(level, controller, refs, "B").collide(player)
+        assert len(level.blocks) == 1
+        assert isinstance(level.blocks[0], Block)
 
     def test_firing_files_a_trigger(self, level, controller, refs, player) -> None:
-        trigger = self._spawner(level, controller, refs, "S")
-        assert isinstance(trigger.value, Trigger)
-        trigger.collide(player)
-        assert trigger.value in level.triggers
+        self._spawner(level, controller, refs, "S").collide(player)
+        assert any(isinstance(t, Trigger) for t in level.triggers)
 
     def test_coordinates_are_read_as_column_then_row(self, level, controller, refs,
                                                      player) -> None:
-        trigger = self._spawner(level, controller, refs, "B", coords = "5 2")
-        assert trigger.value.rect.topleft == (5 * 96, 2 * 96)
+        self._spawner(level, controller, refs, "B", coords = "5 2").collide(player)
+        assert level.blocks[0].rect.topleft == (5 * 96, 2 * 96)
 
-    def test_a_repeatable_spawner_files_the_same_object_twice(self, level, controller,
-                                                              refs, player) -> None:
-        """Characterisation: the entity is built once, so repeat fires re-add it.
-
-        ``SpawnTrigger`` builds its payload in ``__load_input__``, which runs once at
-        level build time.  With ``fire_once = False`` the *same* object is appended
-        again, and the census counter keeps climbing.  See BUGS_FOUND.md #7.
-        """
+    def test_a_repeatable_spawner_builds_a_new_entity_each_time(
+            self, level, controller, refs, player) -> None:
+        """The entity used to be built once, so repeat fires re-added the same object
+        and the census counter climbed without any new enemy appearing."""
         trigger = self._spawner(level, controller, refs, "E", fire_once = False)
         trigger.collide(player)
         trigger.collide(player)
-        assert level.enemies.count(trigger.value) == 2
+
+        assert len(level.enemies) == 2
+        assert level.enemies[0] is not level.enemies[1]
         assert level.enemies_available == 2
 
-    def test_spawned_entities_do_not_get_their_triggers_linked(self, level, controller,
-                                                               refs, player) -> None:
-        """Documented gap, called out in the project notes as a design decision.
+    def test_spawned_entities_get_their_triggers_linked(self, level, controller,
+                                                        refs, player) -> None:
+        """build_level links everything it builds; the spawn path used to skip it,
+        leaving a spawned entity's trigger reference an unresolved string."""
+        alarm = _make(SaveTrigger, level, controller, None, name = "Packetalarm")
+        level.triggers.append(alarm)
 
-        ``build_level`` runs ``link_triggers`` over everything it builds; the spawn
-        path does not, so a spawned entity's ``trigger`` stays an unresolved string.
-        """
-        trigger = self._spawner(level, controller, refs, "O")
-        assert not isinstance(trigger.value.trigger, list) or trigger.value.trigger == []
+        spawner = self._spawner(level, controller, refs, "OT")
+        spawner.collide(player)
+
+        spawned = level.objectives[0]
+        assert spawned.trigger == [alarm]
+
+    def test_a_spawner_reports_the_wall_clock_cost_of_building(self, level,
+                                                               controller, refs,
+                                                               player) -> None:
+        # Construction now happens at fire time, so the engine needs the offset to
+        # subtract the hitch from the frame's delta time.
+        assert self._spawner(level, controller, refs, "E").collide(player) > 0.0
 
 
 # --------------------------------------------------------------------------- #

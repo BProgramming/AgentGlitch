@@ -7,9 +7,11 @@ covered in ``tests/test_actor.py``.
 
 from __future__ import annotations
 
+import pytest
+
 from Actor import MovementState
 from Block import BreakableBlock
-from Helpers import MovementDirection
+from Helpers import DifficultyScale, MovementDirection
 from Player import Player
 from Trigger import SaveTrigger
 
@@ -38,12 +40,21 @@ class TestConstruction:
         assert player.x_accel_max_time == Player.ACCEL_MAX_TIME
 
     def test_health_scales_inversely_with_difficulty(self, make_player) -> None:
-        easy = make_player(difficulty = 0.5)
-        assert easy.max_hp == easy.hp == 200
+        """Full health at EASIEST, a fifth of it at HARDEST, stepping evenly between."""
+        assert make_player(difficulty = 0.25).max_hp == 100
+        assert make_player(difficulty = 0.50).max_hp == 80
+        assert make_player(difficulty = 1.00).max_hp == 60
+        assert make_player(difficulty = 1.50).max_hp == 40
+        assert make_player(difficulty = 2.00).max_hp == 20
+        assert make_player(difficulty = 1.00).hp == 60
 
-    def test_the_player_hits_twice_as_hard_as_the_base_actor(self, make_player) -> None:
+    def test_the_player_hits_twice_as_hard_as_the_base_actor_at_every_difficulty(
+            self, make_player) -> None:
+        """The agent's punch is flat -- difficulty costs durability, not damage."""
         from Actor import Actor
-        assert make_player(difficulty = 1.0).attack_damage == Actor.ATTACK_DAMAGE * 2
+        damages = {make_player(difficulty = scale).attack_damage
+                   for scale in DifficultyScale}
+        assert damages == {Actor.ATTACK_DAMAGE * 2}
 
     def test_per_level_statistics_start_clean(self, player: Player) -> None:
         assert player.been_hit_this_level is False
@@ -232,19 +243,27 @@ class TestRevert:
             self, player: Player) -> None:
         assert player.revert() >= 0.0
 
-    def test_reverting_aliases_the_cooldown_dict_onto_the_cache(self,
-                                                                player: Player) -> None:
-        """Characterisation: ``self.cooldowns = self.cached_cooldowns`` shares one dict.
+    def test_reverting_copies_the_cooldowns_rather_than_aliasing_them(
+            self, player: Player) -> None:
+        """The snapshot has to survive the revert it was restored from.
 
-        Until the next ``cache()``, every cooldown tick also mutates the snapshot the
-        player would revert to.  Reverting twice in a row therefore restores the
-        *decayed* cooldowns rather than the ones captured at the checkpoint.
-        See BUGS_FOUND.md #10.
+        Sharing one dict meant every later cooldown tick also mutated the checkpoint,
+        so dying twice between saves restored the decayed values.
         """
         player.revert()
-        assert player.cooldowns is player.cached_cooldowns
+        assert player.cooldowns is not player.cached_cooldowns
+
         player.cooldowns["teleport"] = 99
-        assert player.cached_cooldowns["teleport"] == 99
+        assert player.cached_cooldowns["teleport"] != 99
+
+    def test_reverting_twice_restores_the_same_cooldowns_both_times(
+            self, player: Player) -> None:
+        player.cached_cooldowns["teleport"] = 2.5
+
+        player.revert()
+        player.update_cooldowns(1.0)
+        player.revert()
+        assert player.cooldowns["teleport"] == pytest.approx(2.5)
 
 
 # --------------------------------------------------------------------------- #
@@ -457,22 +476,54 @@ class TestGetTriggers:
 # difficulty and persistence
 # --------------------------------------------------------------------------- #
 class TestDifficultyAndSave:
-    def test_a_harder_setting_lowers_health_and_damage(self, player: Player) -> None:
+    def test_a_harder_setting_lowers_health_and_leaves_damage_alone(self,
+                                                                    player: Player) -> None:
+        max_hp, damage = player.max_hp, player.attack_damage       # MEDIUM: 60 hp
+        player.set_difficulty(2.0)                                 # HARDEST: 20 hp
+        assert max_hp == 60
+        assert player.max_hp == player.hp == 20
+        assert player.attack_damage == damage
+
+    def test_an_easier_setting_raises_health_and_leaves_damage_alone(self,
+                                                                     player: Player) -> None:
+        max_hp, damage = player.max_hp, player.attack_damage       # MEDIUM: 60 hp
+        player.set_difficulty(0.25)                                # EASIEST: 100 hp
+        assert max_hp == 60
+        assert player.max_hp == player.hp == 100
+        assert player.attack_damage == damage
+
+    def test_the_agent_is_weaker_the_harder_the_setting(self, make_player) -> None:
+        """Matches the menu copy: "Agent is weaker" on the harder settings."""
+        healths = [make_player(difficulty = scale).max_hp for scale in DifficultyScale]
+        assert healths == sorted(healths, reverse = True)
+        assert len(set(healths)) == len(healths)
+
+    def test_switching_difficulty_matches_starting_at_it(self, make_player,
+                                                          player: Player) -> None:
+        """The menu path and the level-build path must agree on the numbers."""
+        player.set_difficulty(2.0)
+        fresh = make_player(difficulty = 2.0)
+        assert player.max_hp == pytest.approx(fresh.max_hp)
+        assert player.attack_damage == pytest.approx(fresh.attack_damage)
+
+    def test_repeated_difficulty_changes_do_not_compound(self, player: Player) -> None:
+        """The scale is absolute, so MEDIUM -> HARD -> MEDIUM returns to MEDIUM.
+
+        Controller.set_difficulty walks every entity with the new absolute scale;
+        applying it to the current value each time used to leave the player on
+        two-thirds of the health they started with.
+        """
         max_hp, damage = player.max_hp, player.attack_damage
         player.set_difficulty(2.0)
-        assert player.max_hp == max_hp / 2
-        assert player.attack_damage == damage / 2
-
-    def test_repeated_difficulty_changes_compound(self, player: Player) -> None:
-        """Characterisation: the scale is applied to the *current* value each time.
-
-        ``Controller.set_difficulty`` walks every entity and calls this with the new
-        absolute scale, so switching MEDIUM -> HARD -> MEDIUM leaves the player at
-        two-thirds of the health they started with.  See BUGS_FOUND.md #11.
-        """
-        player.set_difficulty(2.0)
         player.set_difficulty(1.0)
-        assert player.max_hp == 50          # not back to 100
+        assert player.max_hp == pytest.approx(max_hp)
+        assert player.attack_damage == pytest.approx(damage)
+
+    def test_setting_the_same_difficulty_twice_is_a_no_op(self, player: Player) -> None:
+        max_hp = player.max_hp
+        player.set_difficulty(player.difficulty)
+        player.set_difficulty(player.difficulty)
+        assert player.max_hp == max_hp
 
     def test_save_includes_the_per_level_statistics(self, player: Player) -> None:
         player.been_hit_this_level = True

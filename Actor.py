@@ -112,7 +112,7 @@ class Actor(Entity):
 
         self.is_hostile:    bool  = False
         self.is_attacking:  bool  = False
-        self.attack_damage: float = attack_damage * difficulty
+        self.attack_damage: float = attack_damage
 
         self.abilities: dict[str, bool] = {
             "can_double_jump": False,
@@ -137,6 +137,9 @@ class Actor(Entity):
                 "heal":                    0.0,
                 "attack":                  0.0,
                 "doublejump_effect_trail": 0.0,
+                # Every actor needs this key, not just the player: die() and
+                # update_state both gate the death animation on its presence.
+                "dead":                    0.0,
             }
         )
         self.cached_cooldowns: dict[str, float] = self.cooldowns.copy()
@@ -269,12 +272,10 @@ class Actor(Entity):
             self:  Actor,
             scale: float,
     ) -> None:
-        """Rescale the actor's hp, damage, and projectiles to the new difficulty."""
-        self.difficulty = scale
+        if scale == self.difficulty:
+            return None
 
-        self.max_hp        *= scale
-        self.hp            *= scale
-        self.attack_damage *= scale
+        self.difficulty = scale
 
         for proj in self.active_projectiles:
             proj.set_difficulty(scale)
@@ -405,7 +406,7 @@ class Actor(Entity):
 
         if self.y_vel > 2 * Actor.VELOCITY_JUMP:
             self.hp -= self.y_vel * self.y_vel / (18000 * self.size)
-            if self.hp < 0:
+            if self.hp <= 0:
                 dtime_offset += self.die()
             elif self == self.level.player and self.controller.gamepad is not None:
                 self.controller.gamepad.rumble(RUMBLE_EFFECT_LOW, RUMBLE_EFFECT_LOW, RUMBLE_EFFECT_DURATION)
@@ -473,13 +474,20 @@ class Actor(Entity):
             ent:  Entity,
     ) -> float:
         """Apply damage from an attacker, refresh hit/heal cooldowns, and die if depleted."""
+        # A corpse lingers for DEATH_TIME so its death animation can play, and it is
+        # still a collidable sprite for all of it.  Without this it would keep taking
+        # hits, and every one of them would re-run die() -- crediting the player with
+        # the same kill again and again.
+        if self.hp <= 0:
+            return 0.0
+
         self.cooldowns["get_hit"] = Actor.GET_HIT_COOLDOWN
         self.cooldowns["heal"]    = Actor.HEAL_DELAY * self.difficulty
 
         dtime_offset: float = 0.0
         if ent.attack_damage is not None:
             self.hp -= ent.attack_damage
-            if self.hp < 0:
+            if self.hp <= 0:
                 dtime_offset += self.die()
 
         return dtime_offset

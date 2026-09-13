@@ -426,29 +426,47 @@ class TestSetSoundSource:
         half = channel.volumes[-1]
         assert half[1] == pytest.approx(full[1] * 0.5)
 
-    def test_a_co_located_source_plays_at_full_volume_ignoring_height(
+    def test_a_co_located_source_is_still_attenuated_by_height(
             self, channel: _FakeChannel) -> None:
-        """Characterisation: the dx == 0 branch skips the height attenuation entirely.
+        """Directly above the player means no panning, but not full volume.
 
-        Two sources the same distance above the player will be attenuated or not
-        purely on whether their x matches exactly.  Flagged in BUGS_FOUND.md.
+        The dx == 0 branch used to skip the height attenuation entirely, so a source
+        was loud or quiet purely on whether its x matched exactly.
         """
         set_sound_source(pygame.Rect(0, 900, 10, 10), pygame.Rect(0, 0, 10, 10), 1.0, channel)
+        left, right = channel.volumes[-1]
+        assert left == right
+        assert left == pytest.approx(0.1)
+
+    def test_a_source_on_top_of_the_player_plays_at_full_volume(
+            self, channel: _FakeChannel) -> None:
+        set_sound_source(pygame.Rect(0, 0, 10, 10), pygame.Rect(0, 0, 10, 10), 1.0, channel)
         assert channel.volumes[-1] == (1.0, 1.0)
 
     @pytest.mark.parametrize("source, player, modifier", [
         (None,                     pygame.Rect(0, 0, 1, 1), 1.0),
         (pygame.Rect(0, 0, 1, 1),  None,                    1.0),
         (pygame.Rect(0, 0, 1, 1),  pygame.Rect(0, 0, 1, 1), None),
-        (pygame.Rect(0, 0, 1, 1),  pygame.Rect(0, 0, 1, 1), 0.0),
-        (pygame.Rect(0, 0, 0, 0),  pygame.Rect(0, 0, 1, 1), 1.0),
     ])
-    def test_falsy_arguments_are_a_no_op(self, channel: _FakeChannel,
-                                         source, player, modifier) -> None:
-        # Note the last two rows: a muted channel (0.0) and a zero-size rect are both
-        # falsy, so the guard swallows them along with the genuine Nones.
+    def test_missing_arguments_are_a_no_op(self, channel: _FakeChannel,
+                                           source, player, modifier) -> None:
         set_sound_source(source, player, modifier, channel)
         assert channel.volumes == []
+
+    def test_a_deliberately_muted_channel_is_set_to_silence(self,
+                                                            channel: _FakeChannel) -> None:
+        """0.0 is a real volume, not a missing argument.
+
+        The guard used to test truthiness, so muting a channel left it at whatever
+        volume it already had.
+        """
+        set_sound_source(pygame.Rect(0, 0, 1, 1), pygame.Rect(0, 0, 1, 1), 0.0, channel)
+        assert channel.volumes[-1] == (0.0, 0.0)
+
+    def test_a_zero_size_rect_is_still_a_position(self,
+                                                  channel: _FakeChannel) -> None:
+        set_sound_source(pygame.Rect(0, 0, 0, 0), pygame.Rect(0, 0, 1, 1), 1.0, channel)
+        assert channel.volumes
 
     def test_a_missing_channel_is_a_no_op(self) -> None:
         set_sound_source(pygame.Rect(0, 0, 1, 1), pygame.Rect(0, 0, 1, 1), 1.0, None)
@@ -484,28 +502,31 @@ class TestProcessText:
     def test_the_first_unknown_key_reports_key_not_found(self, controller) -> None:
         assert process_text("<key=keys_nope>", controller)[0] == "KEY NOT FOUND"
 
-    def test_later_unknown_keys_are_silently_blanked(self, controller) -> None:
-        """Characterisation: only index 0 gets the placeholder.
-
-        The ``elif i == 0`` in the substitution loop means a second unresolved tag on
-        the same line vanishes instead of announcing itself.  Flagged in BUGS_FOUND.md.
-        """
+    def test_every_unknown_key_reports_key_not_found(self, controller) -> None:
+        """A second unresolved tag on a line used to vanish instead of announcing itself."""
         line = process_text("<key=keys_jump> then <key=keys_nope>", controller)[0]
-        assert line.endswith(" then ")
+        assert line.endswith(" then KEY NOT FOUND")
 
-    @pytest.mark.xfail(
-        strict = True,
-        reason = "BUG: the gamepad fallback does `keys_out += layout[key]`, but gamepad "
-                 "layout values are bare ints, not lists -- so it raises TypeError. "
-                 "See BUGS_FOUND.md #1.",
-        raises = TypeError,
-    )
     def test_falls_back_to_the_gamepad_layout_when_the_keyboard_lacks_the_action(
             self, controller) -> None:
+        """Gamepad layout values are bare ints, not lists -- this used to raise."""
         controller.set_keyboard_layout("ARROW_MOVE")
         controller.set_gamepad_layout("XBOX")
         # "button_up" exists only on the gamepad side.
-        assert process_text("<key=button_up>", controller)[0] != "KEY NOT FOUND"
+        assert process_text("<key=button_up>", controller)[0] == "D-Pad Up"
+
+    def test_a_gamepad_button_is_never_named_as_a_key_code(self, controller) -> None:
+        """pygame.key.name() on a button index produces nonsense, so it is not used."""
+        controller.set_gamepad_layout("XBOX")
+        line = process_text("<key=button_jump>", controller)[0]
+        assert line == "A"
+        assert line != pygame.key.name(int(pygame.CONTROLLER_BUTTON_A)).title()
+
+    def test_an_unmapped_button_index_still_renders_something_readable(
+            self, controller, monkeypatch: pytest.MonkeyPatch) -> None:
+        controller.set_gamepad_layout("XBOX")
+        monkeypatch.delitem(Helpers.GAMEPAD_BUTTON_NAMES, pygame.CONTROLLER_BUTTON_A)
+        assert process_text("<key=button_jump>", controller)[0].startswith("Button ")
 
     def test_repeated_tags_are_all_replaced(self, controller) -> None:
         line = process_text("<key=keys_jump> and <key=keys_jump>", controller)[0]
@@ -653,22 +674,23 @@ class TestSetProperty:
         assert guard.speed == expected
         assert isinstance(guard.speed, type(expected))
 
-    def test_decimal_strings_are_left_as_strings(self) -> None:
-        """Characterisation: ``"12.5".isnumeric()`` is False, so the coercion is skipped.
-
-        The surrounding code (``float(val)``, then narrowing to ``int`` when whole)
-        clearly intends to accept decimals, but ``isnumeric`` only passes digit-only
-        strings.  A ``.agd`` author writing ``"value": "0.5"`` silently gets the
-        string ``"0.5"`` assigned.  Flagged in BUGS_FOUND.md #2.
-        """
+    def test_decimal_strings_are_coerced(self) -> None:
+        """``"12.5".isnumeric()`` is False, so decimals used to be assigned as strings."""
         trigger, (guard,) = self._trigger("Guard")
         set_property(trigger, {"target": "Guard", "property": "speed", "value": "12.5"})
-        assert guard.speed == "12.5"
+        assert guard.speed == 12.5
+        assert isinstance(guard.speed, float)
 
-    def test_negative_number_strings_are_also_left_as_strings(self) -> None:
+    def test_negative_number_strings_are_coerced(self) -> None:
         trigger, (guard,) = self._trigger("Guard")
         set_property(trigger, {"target": "Guard", "property": "speed", "value": "-3"})
-        assert guard.speed == "-3"
+        assert guard.speed == -3
+        assert isinstance(guard.speed, int)
+
+    def test_a_non_numeric_string_is_left_alone(self) -> None:
+        trigger, (guard,) = self._trigger("Guard")
+        set_property(trigger, {"target": "Guard", "property": "speed", "value": "fast"})
+        assert guard.speed == "fast"
 
     def test_real_numbers_pass_through_untouched(self) -> None:
         trigger, (guard,) = self._trigger("Guard")

@@ -46,7 +46,10 @@ class TestConstruction:
         assert guard.target_vel == NonPlayer.VELOCITY_TARGET
 
     def test_health_scales_with_difficulty(self, make_enemy) -> None:
-        assert make_enemy(difficulty = 2.0, hp = 50).max_hp == 100
+        """Enemies are authored at full strength; the easier settings shave that down."""
+        assert make_enemy(difficulty = 2.00, hp = 50).max_hp == 50    # HARDEST: as authored
+        assert make_enemy(difficulty = 1.00, hp = 50).max_hp == 30    # MEDIUM
+        assert make_enemy(difficulty = 0.25, hp = 50).max_hp == 10    # EASIEST: a fifth
 
     def test_a_stationary_guard_sees_twice_as_far(self, level, guard: NonPlayer,
                                                   patroller: NonPlayer) -> None:

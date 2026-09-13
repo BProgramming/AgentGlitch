@@ -122,26 +122,52 @@ class TestLoadPlayerProfile:
         SaveLoad.load_player_profile(fresh)
         assert fresh.active_gamepad_layout is None
 
-    def test_the_fullscreen_branch_can_never_fire(self, controller, level,
-                                                  monkeypatch: pytest.MonkeyPatch) -> None:
-        """Characterisation of a dead branch.
-
-        ``if data.get("is fullscreen") and not data["is fullscreen"]`` is
-        ``X and not X``, which is False for every value.  The saved fullscreen
-        preference is therefore never applied on load.  See BUGS_FOUND.md #4.
-        """
+    def test_the_saved_fullscreen_preference_is_applied(
+            self, controller, level, monkeypatch: pytest.MonkeyPatch,
+            game_data_dir: Path) -> None:
+        """The old condition was ``X and not X``, which is False for every value."""
         toggles: list[int] = []
         monkeypatch.setattr(pygame.display, "toggle_fullscreen",
                             lambda: toggles.append(1))
+        monkeypatch.setattr(pygame.display, "is_fullscreen", lambda: False)
 
-        for flag in (True, False):
-            SaveLoad.save_player_profile(controller, level)
-            path = SaveLoad.GAME_DATA_FOLDER / "profile.p"
-            data = pickle.loads(path.read_bytes())
-            data["is fullscreen"] = flag
-            path.write_bytes(pickle.dumps(data))
-            SaveLoad.load_player_profile(type(controller)(win = controller.win))
+        SaveLoad.save_player_profile(controller, level)
+        path = game_data_dir / "profile.p"
+        data = pickle.loads(path.read_bytes())
+        data["is fullscreen"] = True
+        path.write_bytes(pickle.dumps(data))
 
+        SaveLoad.load_player_profile(type(controller)(win = controller.win))
+        assert toggles == [1]
+
+    def test_a_matching_fullscreen_preference_changes_nothing(
+            self, controller, level, monkeypatch: pytest.MonkeyPatch,
+            game_data_dir: Path) -> None:
+        toggles: list[int] = []
+        monkeypatch.setattr(pygame.display, "toggle_fullscreen",
+                            lambda: toggles.append(1))
+        monkeypatch.setattr(pygame.display, "is_fullscreen", lambda: False)
+
+        SaveLoad.save_player_profile(controller, level)
+        SaveLoad.load_player_profile(type(controller)(win = controller.win))
+        assert toggles == []
+
+    def test_a_profile_predating_the_fullscreen_key_is_left_alone(
+            self, controller, level, monkeypatch: pytest.MonkeyPatch,
+            game_data_dir: Path) -> None:
+        """``None != False`` would have forced an old profile into fullscreen."""
+        toggles: list[int] = []
+        monkeypatch.setattr(pygame.display, "toggle_fullscreen",
+                            lambda: toggles.append(1))
+        monkeypatch.setattr(pygame.display, "is_fullscreen", lambda: False)
+
+        SaveLoad.save_player_profile(controller, level)
+        path = game_data_dir / "profile.p"
+        data = pickle.loads(path.read_bytes())
+        del data["is fullscreen"]
+        path.write_bytes(pickle.dumps(data))
+
+        SaveLoad.load_player_profile(type(controller)(win = controller.win))
         assert toggles == []
 
     def test_a_profile_with_no_level_returns_an_empty_string(self, controller, level,

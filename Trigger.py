@@ -485,34 +485,51 @@ class SpawnTrigger(Trigger):
     def __load_input__(
             self:  SpawnTrigger,
             value: dict,
-    ) -> Entity | None:
-        """Construct (but do not yet add) the entity this trigger will spawn from the object dict."""
-        # Deferred import breaks the EntityFactory <-> Trigger module cycle: by the time a
-        # trigger actually fires, EntityFactory is fully initialized.
-        from EntityFactory import build_entity
+    ) -> dict[str, Any] | None:
+        """Record the recipe for the entity to spawn, or None if the token is unknown."""
         refs, input_unpacked = self.__unpack_input__(value)
-        objects_dict   = refs["objects_dict"]
-        sprite_master  = refs["sprite_master"]
-        enemy_audios   = refs["enemy_audios"]
-        block_audios   = refs["block_audios"]
-        message_audios = refs["message_audios"]
-        image_master   = refs["image_master"]
-        block_size     = refs["block_size"]
-        element        = input_unpacked["name"]
-        if len(element) > 0 and objects_dict.get(element) is not None:
-            j, i  = tuple(map(int, input_unpacked["coords"].split(" ")))
-            entry = objects_dict[element]
-            data  = entry["data"]
-            return build_entity(entry["type"].upper(), data, element, self.level, self.controller, i, j, block_size, objects_dict, sprite_master, image_master, enemy_audios, block_audios, message_audios, is_stacked=False)
-        return None
+        element = input_unpacked["name"]
+
+        if not element or refs["objects_dict"].get(element) is None:
+            return None
+
+        j, i = tuple(map(int, input_unpacked["coords"].split(" ")))
+        return {"refs": refs, "element": element, "row": i, "column": j}
+
+    def __spawn__(
+            self: SpawnTrigger,
+    ) -> Entity | None:
+        """Build a fresh entity from the recorded recipe."""
+        from EntityFactory import build_entity
+
+        if not isinstance(self.value, dict):
+            return None
+
+        refs  = self.value["refs"]
+        entry = refs["objects_dict"][self.value["element"]]
+        return build_entity(
+            entry["type"].upper(),
+            entry["data"],
+            self.value["element"],
+            self.level,
+            self.controller,
+            self.value["row"],
+            self.value["column"],
+            refs["block_size"],
+            refs["objects_dict"],
+            refs["sprite_master"],
+            refs["image_master"],
+            refs["enemy_audios"],
+            refs["block_audios"],
+            refs["message_audios"],
+            is_stacked = False,
+        )
 
     def collide(
             self: SpawnTrigger,
             ent:  Entity | None,
     ) -> float:
-        """Add the prepared spawn entity to the appropriate level list, returning the frame-time offset."""
-        # Deferred import: NonPlayer pulls in Actor -> Objective -> Trigger, and Objective pulls in Trigger, so
-        # importing them at module load would cause a circular import. It is only needed for this isinstance check.
+        """Build a fresh entity, file it into the level, and return the frame-time offset."""
         from NonPlayer import NonPlayer
         from Objective import Objective
         if self.fire_once and self.has_fired:
@@ -520,18 +537,22 @@ class SpawnTrigger(Trigger):
         else:
             start          = time.perf_counter()
             self.has_fired = True
-            if self.value is not None:
-                if isinstance(self.value, Trigger):
-                    self.level.triggers.append(self.value)
-                elif isinstance(self.value, NonPlayer):
-                    self.level.enemies.append(self.value)
+
+            spawned = self.__spawn__()
+            if spawned is not None:
+                spawned.link_triggers(self.level.triggers)
+
+                if isinstance(spawned, Trigger):
+                    self.level.triggers.append(spawned)
+                elif isinstance(spawned, NonPlayer):
+                    self.level.enemies.append(spawned)
                     self.level.enemies_available += 1
-                elif isinstance(self.value, Hazard):
-                    self.level.hazards.append(self.value)
-                elif isinstance(self.value, Block):
-                    self.level.blocks.append(self.value)
-                elif isinstance(self.value, Objective):
-                    self.level.objectives.append(self.value)
+                elif isinstance(spawned, Hazard):
+                    self.level.hazards.append(spawned)
+                elif isinstance(spawned, Block):
+                    self.level.blocks.append(spawned)
+                elif isinstance(spawned, Objective):
+                    self.level.objectives.append(spawned)
                     self.level.objectives_available += 1
             return time.perf_counter() - start
 

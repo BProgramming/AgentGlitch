@@ -319,6 +319,11 @@ OBJECT_DICT: dict[str, dict] = {
         "data": {"sprite": "TestAnim", "is_active": True, "text": "Grab the packet",
                  "sound": "objective", "name": "Packet"},
     },
+    "OT": {
+        "type": "Objective",
+        "data": {"sprite": "TestAnim", "is_active": True, "trigger": "Packetalarm",
+                 "name": "Packet"},
+    },
     "S": {
         "type": "SaveTrigger",
         "data": {"width": 1, "height": 1, "input": None, "name": "Autosave"},

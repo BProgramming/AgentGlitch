@@ -34,6 +34,7 @@ class Projectile(Entity):
         self.rect.center = (int(x), int(y))
         self.speed       = (0.75 * speed * (stock_size / sprite.get_width())) + (0.25 * speed * difficulty * (stock_size / sprite.get_width())) if sprite else 0
         self.max_dist    = max_dist
+        self.difficulty  = difficulty
         if target is None:
             self.target = (x * 2, y * 2)
         else:
@@ -111,7 +112,9 @@ class Projectile(Entity):
 
             dist = math.dist(self.rect.center, self.target)
             if dist != 0:
-                self.rect.center = self.lerp(self.rect.center, self.target, speed / dist)
+                # Clamped: a weight above 1 would overshoot the target rather than
+                # land on it, and the arrival check below would then never fire.
+                self.rect.center = self.lerp(self.rect.center, self.target, min(1.0, speed / dist))
 
             if abs(math.dist(self.rect.center, self.target)) <= self.PIXEL_DIST_TOLERANCE:
                 self.die()
@@ -138,6 +141,9 @@ class Projectile(Entity):
             self:  Projectile,
             scale: float,
     ) -> None:
-        """Rescale the projectile's speed toward the new difficulty."""
-        self.speed = (0.75 * self.speed) + (0.25 * self.speed * scale)
+        if scale == self.difficulty:
+            return None
+
+        self.speed      *= (0.75 + (0.25 * scale)) / (0.75 + (0.25 * self.difficulty))
+        self.difficulty  = scale
         return None

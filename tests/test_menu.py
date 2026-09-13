@@ -239,21 +239,24 @@ class TestSelector:
         selector.cycle_images(-1)
         assert selector.image_index == len(selector.values) - 1
 
-    def test_set_index_does_not_validate_its_argument(self,
-                                                      selector: Selector) -> None:
-        """Characterisation: ``set_index`` indexes the image bank directly.
+    def test_set_index_clamps_out_of_range_requests(self,
+                                                    selector: Selector) -> None:
+        """An index past the end used to raise, and a negative one wrapped silently.
 
-        ``cycle_images`` wraps, but ``set_index`` neither wraps nor clamps: an index
-        past the end raises IndexError, and a negative one silently selects from the
-        far end via Python's negative indexing.  Callers currently only pass indices
-        they computed from the bank itself, so nothing trips it today.
-        See BUGS_FOUND.md #14.
+        Callers derive the index from a parallel list of values, so a layout added
+        without a matching picker image would have taken the controls menu down.
         """
-        with pytest.raises(IndexError):
-            selector.set_index(999)
+        selector.set_index(999)
+        assert selector.image_index == len(selector.images["normal"]) - 1
 
-        selector.set_index(-1)
-        assert selector.image_index == -1
+        selector.set_index(-5)
+        assert selector.image_index == 0
+
+    def test_set_index_selects_the_matching_image(self,
+                                                  selector: Selector) -> None:
+        selector.set_index(1)
+        assert selector.image_index == 1
+        assert selector.image_selected is selector.images["normal"][1]
 
     def test_navigation_walks_the_two_by_two_grid(self, selector: Selector) -> None:
         selector.focused_index = 0

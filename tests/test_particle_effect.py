@@ -76,37 +76,39 @@ class TestVariableEffect:
 class TestMovement:
     def test_a_falling_layer_scrolls_downwards(self, level) -> None:
         effect = ParticleEffect(level, None, 2, 2, 5, (255, 255, 255, 255), y_vel = 120)
-        before = effect.rect.y
         effect.loop(1.0)
-        assert effect.rect.y > before
+        assert effect.pos_y == pytest.approx(120)
 
     def test_the_layer_wraps_when_it_runs_off_the_bottom(self, level) -> None:
         effect = ParticleEffect(level, None, 2, 2, 5, (255, 255, 255, 255), y_vel = 120)
-        effect.rect.y = effect.rect.height
+        effect.pos_y = effect.rect.height - 10
         effect.loop(1.0)
-        assert effect.rect.y == 0
+        assert effect.pos_y == pytest.approx(110)
 
     def test_a_leftward_layer_wraps_at_the_left_edge(self, level) -> None:
         effect = ParticleEffect(level, None, 2, 2, 5, (255, 255, 255, 255), x_vel = -50)
-        effect.rect.x = 0
+        effect.pos_x = 0
         effect.loop(1.0)
-        assert effect.rect.x == effect.rect.width
+        assert effect.pos_x == pytest.approx(effect.rect.width - 50)
 
-    def test_sub_pixel_velocities_are_swallowed_by_the_integer_rect(self,
-                                                                    static_effect) -> None:
-        """Characterisation of a real defect.
+    def test_sub_pixel_velocities_accumulate_instead_of_truncating(
+            self, static_effect) -> None:
+        """The scroll position is a float, so slow layers still creep.
 
-        ``move`` does ``self.rect.y += self.y_vel * dtime``, and ``pygame.Rect``
-        coordinates are integers -- so any per-frame delta below 1px truncates to
-        zero and is lost entirely rather than accumulating.  Rain ships with
-        ``y_vel = 0.2`` and Snow with ``0.15``, which at any real frame time gives a
-        delta of well under a thousandth of a pixel: the weather layers never move.
-        See BUGS_FOUND.md #13.
+        ``pygame.Rect`` coordinates are integers; driving the layer straight off the
+        rect truncated any per-frame delta below 1px to zero and lost it, which at
+        Rain's shipped 0.2 px/s meant the weather never moved at all.
         """
         static_effect.y_vel = 0.2
         for _ in range(1000):
             static_effect.loop(1 / 150)
-        assert static_effect.rect.y == 0
+        assert static_effect.pos_y == pytest.approx(0.2 * 1000 / 150)
+
+    def test_the_wrap_preserves_the_sub_pixel_remainder(self, level) -> None:
+        effect = ParticleEffect(level, None, 2, 2, 5, (255, 255, 255, 255), y_vel = 100)
+        effect.pos_y = effect.rect.height - 0.25
+        effect.loop(0.5)
+        assert effect.pos_y == pytest.approx(49.75)
 
     def test_a_stationary_layer_never_moves(self, variable_effect) -> None:
         before = (variable_effect.rect.x, variable_effect.rect.y)

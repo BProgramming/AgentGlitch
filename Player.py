@@ -10,6 +10,7 @@ from Block import BreakableBlock
 from Helpers import (
     MovementDirection,
     load_sprite_sheets,
+    player_health_scale,
     display_text,
     RUMBLE_EFFECT_LOW,
     RUMBLE_EFFECT_DURATION,
@@ -22,6 +23,7 @@ if TYPE_CHECKING:
 
 
 class Player(Actor):
+    BASE_HEALTH           = 100
     ATTACK_PUSHBACK       = 200
     VELOCITY_TARGET       = 500
     ACCEL_MAX_TIME        = 0.5
@@ -76,8 +78,8 @@ class Player(Actor):
         self.x_accel_max_time      = Player.ACCEL_MAX_TIME
         self.is_blocking           = False
         self.is_slow_time          = False
-        self.attack_damage         *= 2
-        self.max_hp = self.hp      = 100 / self.difficulty
+        self.attack_damage        *= 2
+        self.max_hp = self.hp      = Player.BASE_HEALTH * player_health_scale(self.difficulty)
         self.been_hit_this_level   = False
         self.been_seen_this_level  = False
         self.deaths_this_level     = 0
@@ -124,11 +126,14 @@ class Player(Actor):
             self:  Player,
             scale: float,
     ) -> None:
-        """Rescale the player's hp and damage inversely with difficulty."""
-        self.difficulty     = scale
-        self.max_hp         /= scale
-        self.hp             /= scale
-        self.attack_damage  /= scale
+        if scale == self.difficulty:
+            return None
+
+        wounded     = (self.hp / self.max_hp) if self.max_hp else 1.0
+        self.max_hp = Player.BASE_HEALTH * player_health_scale(scale)
+        self.hp     = self.max_hp * wounded
+
+        super().set_difficulty(scale)
         return None
 
     def toggle_crouch(
@@ -219,7 +224,7 @@ class Player(Actor):
         self.hp                  = self.max_hp
         self.size                = self.cached_size
         self.size_target         = self.cached_size_target
-        self.cooldowns           = self.cached_cooldowns
+        self.cooldowns           = self.cached_cooldowns.copy()
         self.cooldowns["dead"]   = 0.0
         self.deaths_this_level   += 1
         self.x_vel = self.y_vel  = 0.0
@@ -257,7 +262,7 @@ class Player(Actor):
             self.is_attacking = True
             for ent in self.level.get_entities_in_range((self.rect.x, self.rect.y)):
                 if ent.rect:
-                    if isinstance(ent, NonPlayer) and ent.is_hostile and pygame.sprite.collide_rect(self, ent) and self.facing == (MovementDirection.RIGHT if ent.rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT): # noqa
+                    if isinstance(ent, NonPlayer) and ent.is_hostile and ent.hp > 0 and pygame.sprite.collide_rect(self, ent) and self.facing == (MovementDirection.RIGHT if ent.rect.centerx - self.rect.centerx >= 0 else MovementDirection.LEFT): # noqa
                         dtime_offset += ent.get_hit(self)
                         if ent.patrol_path is not None:
                             ent.push_x -= self.direction * int(Player.ATTACK_PUSHBACK)

@@ -6,6 +6,7 @@ import time
 from enum import Enum
 from pathlib import Path
 from Helpers import (
+    resolve_binding,
     glitch,
     handle_exception,
     ASSETS_FOLDER,
@@ -212,6 +213,50 @@ class Cinematic:
         return time.perf_counter() - start
 
     @staticmethod
+    def __resolve_pause_keys__(
+            pause_key:  str | list[str] | tuple[str, ...] | None,
+            controller: Controller,
+    ) -> tuple[set[int], set[int]]:
+        keys:    set[int] = set()
+        buttons: set[int] = set()
+
+        if pause_key is None:
+            return keys, buttons
+        if isinstance(pause_key, str):
+            pause_key = [pause_key]
+
+        for action in pause_key:
+            bound_keys, bound_button = resolve_binding(action, controller)
+            keys.update(bound_keys)
+            if bound_button is not None:
+                buttons.add(int(bound_button))
+
+        return keys, buttons
+
+    @staticmethod
+    def __wait_for_pause_key__(
+            pause_key:  str | list[str] | tuple[str, ...] | None,
+            controller: Controller,
+    ) -> None:
+        keys, buttons = Cinematic.__resolve_pause_keys__(pause_key, controller)
+        accept_any    = not keys and not buttons
+
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    controller.quit()
+                elif event.type == pygame.KEYDOWN:
+                    if accept_any or event.key in keys:
+                        return None
+                elif event.type == pygame.JOYBUTTONDOWN:
+                    if accept_any or event.button in buttons:
+                        return None
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    # A click always continues.
+                    return None
+            time.sleep(0.01)
+
+    @staticmethod
     def __play_slide__(
             slide:           pygame.Surface,
             controller:      Controller,
@@ -291,26 +336,7 @@ class Cinematic:
             pause_dtime += 0.01
 
         if pause_key is not None:
-            valid_keys = []
-            if not isinstance(pause_key, list) and not isinstance(pause_key, tuple):
-                pause_key = [pause_key]
-            if isinstance(pause_key, list):
-                for key in pause_key:
-                    if hasattr(controller, key):
-                        controller_keys = getattr(controller, key)
-                        for options in controller_keys:
-                            valid_keys.append(options)
-            cont = False
-            while True:
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        controller.quit()
-                    elif (event.type == pygame.KEYDOWN and event.key in valid_keys) or ((event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.JOYBUTTONDOWN) and event.button in valid_keys):
-                        cont = True
-                        break
-                if cont:
-                    break
-                time.sleep(0.01)
+            Cinematic.__wait_for_pause_key__(pause_key, controller)
 
         if should_fade_out:
             for i in range(64):
@@ -421,26 +447,7 @@ class Cinematic:
                     break
 
             if pause_key is not None:
-                valid_keys = []
-                if not isinstance(pause_key, list) and not isinstance(pause_key, tuple):
-                    pause_key = [pause_key]
-                if isinstance(pause_key, list):
-                    for key in pause_key:
-                        if hasattr(controller, key):
-                            controller_keys = getattr(controller, key)
-                            for options in controller_keys:
-                                valid_keys.append(options)
-                cont = False
-                while True:
-                    for event in pygame.event.get():
-                        if event.type == pygame.QUIT:
-                            controller.quit()
-                        elif (event.type == pygame.KEYDOWN and event.key in valid_keys) or ((event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.JOYBUTTONDOWN) and event.button in valid_keys):
-                            cont = True
-                            break
-                    if cont:
-                        break
-                    time.sleep(0.01)
+                Cinematic.__wait_for_pause_key__(pause_key, controller)
 
             if should_fade_out:
                 for i in range(64):

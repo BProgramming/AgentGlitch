@@ -153,11 +153,16 @@ class Level:
     def formatted_time(
             self: Level,
     ) -> str:
-        """Return the level time formatted as MM:SS.t."""
-        minutes            = int(self.time // 60)
-        seconds            = int(self.time - (minutes * 60))
-        fractional_seconds = int((self.time - ((minutes * 60) + seconds)) * 10)
-        return f'{"0" if minutes < 10 else ""}{minutes}:{"0" if seconds < 10 else ""}{seconds}.{fractional_seconds}'
+        """Return the level time formatted as MM:SS.t, clamped to 99:59.9."""
+        total              = max(0.0, self.time)
+        minutes            = int(total // 60)
+        seconds            = int(total - (minutes * 60))
+        fractional_seconds = int((total - ((minutes * 60) + seconds)) * 10)
+
+        if minutes > 99:
+            minutes, seconds, fractional_seconds = 99, 59, 9
+
+        return f"{minutes:02d}:{seconds:02d}.{fractional_seconds}"
 
     def get_recap_text(
             self: Level,

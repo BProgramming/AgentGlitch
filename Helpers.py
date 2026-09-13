@@ -71,6 +71,80 @@ class DifficultyScale(float, Enum):
         return self.name.replace("_", " ")
 
 
+# Difficulty is expressed as durability, not damage.  Damage numbers are flat at
+# every setting -- the agent's punch always lands for the same amount, and so does
+# an enemy's -- and what the difficulty changes is how much of it each side can
+# absorb.  The design target is stated below in whole hits at the two ends of the
+# ladder, and every setting in between is a straight interpolation:
+#
+#     setting     hits to kill an enemy     hits before the agent dies
+#     EASIEST      1                        10
+#     EASY         2                         8
+#     MEDIUM       3                         6
+#     HARD         4                         4
+#     HARDEST      5                         2
+#
+# DifficultyScale's own values (0.25 .. 2.00) are not evenly spaced, so "linear"
+# here means linear in the position on the ladder, not in the raw float -- see
+# difficulty_ratio below.
+HITS_TO_KILL_RANGE: tuple[float, float] = (1.0, 5.0)
+HITS_TO_DIE_RANGE:  tuple[float, float] = (10.0, 2.0)
+
+
+def difficulty_ratio(
+        difficulty: float,
+) -> float:
+    """Return where `difficulty` sits on the difficulty ladder: 0.0 at EASIEST, 1.0 at HARDEST.
+
+    The ladder's steps are unevenly spaced, so the position is measured in steps
+    rather than in the raw value: each of the five settings is one quarter further
+    along than the last.  A value between two settings interpolates within that
+    step, and anything off either end clamps.
+    """
+    ladder = sorted(float(step) for step in DifficultyScale)
+    steps  = len(ladder) - 1
+
+    if steps <= 0 or difficulty <= ladder[0]:
+        return 0.0
+    if difficulty >= ladder[-1]:
+        return 1.0
+
+    for i in range(steps):
+        low, high = ladder[i], ladder[i + 1]
+        if low <= difficulty <= high:
+            within = 0.0 if high == low else (difficulty - low) / (high - low)
+            return (i + within) / steps
+
+    return 1.0
+
+
+def player_health_scale(
+        difficulty: float,
+) -> float:
+    """Return the multiplier on the agent's authored health for this difficulty.
+
+    1.0 at EASIEST falling to 0.2 at HARDEST, so that a flat enemy hit takes the
+    agent down in HITS_TO_DIE_RANGE hits across the ladder.
+    """
+    easiest, hardest = HITS_TO_DIE_RANGE
+    hits             = easiest + ((hardest - easiest) * difficulty_ratio(difficulty))
+    return hits / easiest
+
+
+def enemy_health_scale(
+        difficulty: float,
+) -> float:
+    """Return the multiplier on an enemy's authored health for this difficulty.
+
+    0.2 at EASIEST rising to 1.0 at HARDEST, so that a flat agent hit takes an
+    enemy down in HITS_TO_KILL_RANGE hits across the ladder.  Enemies are authored
+    at full strength, which is what HARDEST delivers.
+    """
+    easiest, hardest = HITS_TO_KILL_RANGE
+    hits             = easiest + ((hardest - easiest) * difficulty_ratio(difficulty))
+    return hits / hardest
+
+
 def handle_exception(
         msg: str,
 ) -> None:
@@ -430,7 +504,7 @@ def set_sound_source(
         channel:      pygame.mixer.Channel | None,
 ) -> None:
     """Pan and attenuate a channel's volume based on a source's position relative to the player."""
-    if not source_rect or not player_rect or not vol_modifier or not channel:
+    if source_rect is None or player_rect is None or vol_modifier is None or channel is None:
         return None
 
     height_vol = max(1 - (abs(source_rect.y - player_rect.y) / 1000), 0)
@@ -445,7 +519,7 @@ def set_sound_source(
         left_vol  = max(1 + strength_x, 0) * height_vol
         right_vol = left_vol  ** 2
     else:
-        left_vol  = right_vol = 1
+        left_vol  = right_vol = height_vol
 
     channel.set_volume(left_vol * vol_modifier, right_vol * vol_modifier)
 
@@ -470,6 +544,65 @@ def load_text_from_file(
     return text
 
 
+#: Display names for the gamepad buttons the layouts bind.  Keyed by the SDL
+#: controller constant, so the label is the same whichever layout is active --
+#: swap in per-layout names (Cross/Circle for PlayStation, and so on) if the
+#: on-screen prompts should match the pad in the player's hands.
+GAMEPAD_BUTTON_NAMES: dict[int, str] = {
+    pygame.CONTROLLER_BUTTON_A:             "A",
+    pygame.CONTROLLER_BUTTON_B:             "B",
+    pygame.CONTROLLER_BUTTON_X:             "X",
+    pygame.CONTROLLER_BUTTON_Y:             "Y",
+    pygame.CONTROLLER_BUTTON_BACK:          "Back",
+    pygame.CONTROLLER_BUTTON_GUIDE:         "Guide",
+    pygame.CONTROLLER_BUTTON_START:         "Start",
+    pygame.CONTROLLER_BUTTON_LEFTSHOULDER:  "Left Bumper",
+    pygame.CONTROLLER_BUTTON_RIGHTSHOULDER: "Right Bumper",
+    pygame.CONTROLLER_BUTTON_DPAD_UP:       "D-Pad Up",
+    pygame.CONTROLLER_BUTTON_DPAD_DOWN:     "D-Pad Down",
+    pygame.CONTROLLER_BUTTON_DPAD_LEFT:     "D-Pad Left",
+    pygame.CONTROLLER_BUTTON_DPAD_RIGHT:    "D-Pad Right",
+}
+
+#: shown when an action name resolves to no binding at all
+UNBOUND_ACTION_TEXT: str = "KEY NOT FOUND"
+
+
+def resolve_binding(
+        action:     str,
+        controller: Controller,
+) -> tuple[list[int], int | None]:
+    """Return an action's (keyboard key codes, gamepad button index)."""
+    keyboard = controller.KEYBOARD_LAYOUTS.get(controller.active_keyboard_layout) or {}
+    gamepad  = controller.GAMEPAD_LAYOUTS.get(controller.active_gamepad_layout) or {}
+
+    keys   = list(keyboard.get(action) or [])
+    button = gamepad.get(action)
+
+    return keys, button
+
+
+def describe_binding(
+        action:     str,
+        controller: Controller,
+) -> str:
+    """Render an action's binding as readable prompt text."""
+    keys, button = resolve_binding(action, controller)
+
+    if keys:
+        names = [pygame.key.name(int(code)).title() for code in keys]
+    elif button is not None:
+        names = [GAMEPAD_BUTTON_NAMES.get(int(button), f"Button {int(button)}")]
+    else:
+        return UNBOUND_ACTION_TEXT
+
+    if len(names) > 2:
+        return f'{", ".join(names[:-1])}, or {names[-1]}'
+    if len(names) == 2:
+        return f"{names[0]} or {names[1]}"
+    return names[0]
+
+
 def process_text(
         line:       str,
         controller: Controller,
@@ -488,32 +621,8 @@ def process_text(
         is_italics = False
 
     if "<key=" in line:
-        keys_to_replace = re.findall(r"<key=\w+>", line)
-        for i, key in enumerate(keys_to_replace):
-            key_partial = key[5:-1]
-            keys_out    = []
-
-            if controller.active_keyboard_layout and controller.KEYBOARD_LAYOUTS[controller.active_keyboard_layout].get(key_partial):
-                keys_out += controller.KEYBOARD_LAYOUTS[controller.active_keyboard_layout][key_partial]
-            elif controller.active_gamepad_layout and controller.GAMEPAD_LAYOUTS[controller.active_gamepad_layout].get(key_partial):
-                keys_out += controller.GAMEPAD_LAYOUTS[controller.active_gamepad_layout][key_partial]
-            elif i == 0:
-                keys_out = ["KEY NOT FOUND"]
-
-            if len(keys_out) > 2:
-                joined = ", ".join([pygame.key.name(int(k)).title() for k in keys_out[:-1]])
-                txt    = f"{joined}, or {pygame.key.name(int(keys_out[-1])).title()}"
-            elif len(keys_out) > 1:
-                txt = f"{pygame.key.name(int(keys_out[0])).title()} or {pygame.key.name(int(keys_out[1])).title()}"
-            elif len(keys_out) == 1:
-                if keys_out[0] == "KEY NOT FOUND":
-                    txt = f"{keys_out[0]}"
-                else:
-                    txt = f"{pygame.key.name(int(keys_out[0])).title()}"
-            else:
-                txt = ""
-
-            line = line.replace(key, txt)
+        for key in re.findall(r"<key=\w+>", line):
+            line = line.replace(key, describe_binding(key[5:-1], controller))
 
     return line, is_bold, is_italics
 
@@ -737,10 +846,16 @@ def set_property(
                 if isinstance(val, str):
                     if val.casefold() in ("true", "false"):
                         val = bool(val.casefold() == "true")
-                    elif val.isnumeric():
-                        val = float(val)
-                        if val == int(val):
-                            val = int(val)
+                    else:
+                        # str.isnumeric() only passes digit-only strings, so it
+                        # rejected "0.5" and "-3"; float() accepts what an .agd
+                        # author would reasonably write.
+                        try:
+                            number = float(val)
+                        except ValueError:
+                            pass
+                        else:
+                            val = int(number) if number == int(number) else number
 
                 for ent in triggering_entity.level.entities:
                     if ent.name.casefold().startswith(targ.casefold()):

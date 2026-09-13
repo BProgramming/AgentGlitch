@@ -86,8 +86,7 @@ class Entity(pygame.sprite.Sprite):
             data:      dict[str, Any],
             attribute: str,
     ) -> None:
-        """Set an attribute from saved data if a truthy value is present."""
-        if data.get(attribute):
+        if attribute in data and data[attribute] is not None:
             setattr(self, attribute, data[attribute])
         return None
 

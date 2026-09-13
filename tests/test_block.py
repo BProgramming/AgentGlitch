@@ -564,6 +564,52 @@ class TestFallingHazard:
         crusher.loop(0.016)
         assert crusher.cooldowns["reset_time"] > 0
 
+    def test_the_fall_does_not_depend_on_the_frame_rate(self, level, controller,
+                                                        image_master, sprite_master,
+                                                        block_audios, player) -> None:
+        """A crusher used to fall 2.6x faster at 240 FPS than at 30.
+
+        The rect was advanced by ``y_vel`` once per frame regardless of how long the
+        frame took, so the same trap behaved differently on a 60Hz handheld and a
+        150 FPS desktop.
+        """
+        def seconds_to_fall(fps: float, distance: int = 96) -> float:
+            tall = type(level)(controller, height_blocks = 60)
+            tall.set_player(player)
+            hazard = FallingHazard(tall, controller, 0, 0, tall.block_size,
+                                   tall.block_size, image_master, sprite_master,
+                                   block_audios, 1.0, sprite = "TestAnim",
+                                   fire_once = False)
+            hazard.should_fire = True
+            start, frames = hazard.rect.y, 0
+            while hazard.rect.y - start < distance and frames < 100_000:
+                hazard.loop(1 / fps)
+                frames += 1
+            return frames / fps
+
+        slow = seconds_to_fall(30)
+        fast = seconds_to_fall(240)
+        assert slow == pytest.approx(fast, rel = 0.05)
+
+    def test_sub_pixel_fall_steps_are_carried_not_truncated(self, crusher,
+                                                            player) -> None:
+        crusher.should_fire = True
+        crusher.loop(1 / 150)
+        for _ in range(5):
+            crusher.loop(1 / 150)
+        assert crusher.y_vel > 0
+        assert crusher.fall_offset >= 0.0
+
+    def test_landing_clears_the_carried_remainder(self, crusher, make_block,
+                                                  player) -> None:
+        make_block(col = 2, row = 3)
+        crusher.should_fire = True
+        for _ in range(60):
+            crusher.loop(0.05)
+            if crusher.y_vel == 0 and crusher.has_fired:
+                break
+        assert crusher.fall_offset == 0.0
+
     def test_the_sprite_shows_the_falling_frame_while_in_motion(self,
                                                                 crusher: FallingHazard) -> None:
         crusher.has_fired = True
@@ -583,24 +629,34 @@ class TestFallingHazard:
         assert crusher.update_sprite() == 0
 
 
-def test_a_moving_block_does_not_always_start_at_its_nearest_waypoint(
+def test_a_moving_block_starts_at_its_nearest_waypoint(
         level, controller, image_master, block_audios) -> None:
-    """Characterisation: the nearest-waypoint search never narrows its yardstick.
+    """The nearest-waypoint search narrows its yardstick as it goes.
 
-    ``MovingBlock.__init__`` computes ``min_dist`` from waypoint 0 and then compares
-    every waypoint against that same value without ever updating it -- so the index
-    ends up on the *last* waypoint closer than waypoint 0, not the closest one.
-    ``NonPlayer`` does the same search correctly, which is what makes the difference
-    visible: an identical path produces a different starting index for a block than
-    for a guard.  See BUGS_FOUND.md #18.
+    ``NonPlayer`` does the same search; an identical path must give a block and a
+    guard the same starting index.
     """
     block = MovingBlock(level, controller, 0, 0, level.block_size, level.block_size,
                         image_master, block_audios, False,
                         path = _path(level, (9, 0), (1, 0), (0, 0)))
-    # Waypoint 2 is the closest, but waypoint 1 is the last one that beat waypoint 0.
     assert block.patrol_path_index == 2
 
     far = MovingBlock(level, controller, 0, 0, level.block_size, level.block_size,
                       image_master, block_audios, False,
                       path = _path(level, (9, 0), (0, 0), (5, 0)))
-    assert far.patrol_path_index == 2        # 5 tiles away, not the 0-tile waypoint
+    assert far.patrol_path_index == 1
+
+
+def test_a_moving_block_and_a_guard_agree_on_the_starting_waypoint(
+        level, controller, image_master, block_audios, player, sprite_master,
+        enemy_audios) -> None:
+    from NonPlayer import NonPlayer
+
+    path = [(9, 1), (1, 1), (4, 1)]
+    block = MovingBlock(level, controller, level.block_size, level.block_size,
+                        level.block_size, level.block_size, image_master,
+                        block_audios, False, path = _path(level, *path))
+    guard = NonPlayer(level, controller, level.block_size, level.block_size,
+                      sprite_master, enemy_audios, 1.0, level.block_size,
+                      sprite = "TestAgent", path = _path(level, *path))
+    assert block.patrol_path_index == guard.patrol_path_index

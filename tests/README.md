@@ -5,7 +5,7 @@ python3.12 -m pip install -r requirements-dev.txt
 ./run_tests.sh                    # or: python3.12 -m pytest
 ```
 
-Around 1,090 tests, ~25 seconds, no display, no audio device, no game assets required.
+Around 1,130 tests, ~26 seconds, no display, no audio device, no game assets required.
 Python 3.12 or newer — `SteamworksConnection.py` nests same-style quotes inside an
 f-string, which only parses from 3.12 (PEP 701), so the repo cannot be imported at all
 on 3.11.
@@ -110,6 +110,7 @@ tests/
   test_actor.py                 movement, jumping, damage, resizing, animation states
   test_player.py                abilities, per-level stats, input-facing verbs
   test_nonplayer.py             patrol routes, alert state machine, detection
+  test_difficulty.py            the hits-to-kill / hits-to-die contract, end to end
   test_boss.py                  on-screen presence, health bar, boss music
   test_block.py                 terrain, breakables, movers, doors, hazards
   test_projectile.py            travel, range clamping, impact
@@ -138,9 +139,12 @@ tests/
 
 ## Known defects
 
-Seventeen real defects turned up while writing these tests. They are listed with
-reproduction notes in `BUGS_FOUND.md` at the repo root. Two are pinned with
-`@pytest.mark.xfail(strict=True)`, so fixing either one makes its test fail until the
-marker is removed — that is deliberate. The rest are pinned as *characterisation*
-tests: they assert what the code does today, with a docstring explaining what it
-should probably do instead. Fixing one of those means changing its assertion.
+None outstanding. Twenty real defects turned up while this suite was written; all of
+them are fixed, and every test asserts the corrected behaviour rather than pinning the
+old one. `BUGS_FOUND.md` at the repo root records what each one was, what changed, and
+which test covers it — three of them changed how the game plays and are marked there.
+
+If you fix something the suite has an opinion about in future, the convention used here
+is worth keeping: write the test against the behaviour you *want*, and if you are not
+ready to fix it yet, mark it `@pytest.mark.xfail(strict=True)` so the marker fails the
+build once the bug goes away and forces you to clean it up.

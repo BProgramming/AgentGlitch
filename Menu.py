@@ -726,9 +726,12 @@ class Selector(Menu):
             self:  Selector,
             index: int,
     ) -> None:
-        """Set the currently displayed image index and selected image."""
-        self.image_index    = index
-        self.image_selected = self.images["retro" if self.controller.retro else "normal"][index] # noqa
+        images = self.images["retro" if self.controller.retro else "normal"]
+        if not images:
+            return None
+
+        self.image_index    = max(0, min(index, len(images) - 1))
+        self.image_selected = images[self.image_index] # noqa
         return None
 
     def cycle_images(

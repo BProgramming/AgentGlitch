@@ -171,7 +171,10 @@ class Camera:
 
         if self.bg_image:
             if len(self.bg_tileset) == 1:
-                self.win.blit(self.bg_image.subsurface(visible_screen), (0, 0))
+                # Clipped to the image: subsurface() refuses a rect that does not fit
+                # inside the source, so a background smaller than the window would
+                # otherwise take the game down on the first frame.
+                self.win.blit(self.bg_image, (0, 0), visible_screen.clip(self.bg_image.get_rect()))
             else:
                 for tile in self.bg_tileset:
                     self.win.blit(self.bg_image, (tile[0] - self.offset_x, tile[1] - self.offset_y))
@@ -180,7 +183,7 @@ class Camera:
             self.level.draw(self.win, self.offset_x, self.offset_y, master_volume)
 
         if self.fg_image is not None:
-            self.win.blit(self.fg_image.subsurface(visible_screen), (0, 0))
+            self.win.blit(self.fg_image, (0, 0), visible_screen.clip(self.fg_image.get_rect()))
 
         if self.hud and self.level:
             self.hud.boss_hp_pct = self.level.boss_hp_pct

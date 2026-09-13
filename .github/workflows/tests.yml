@@ -1,0 +1,79 @@
+name: tests
+
+# Note: a workflow file only takes effect once it is committed and pushed to the
+# default branch. GitHub reads it from the repository, not from your working copy.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The game needs 3.12+: SteamworksConnection.py nests same-style quotes
+        # inside an f-string, which only parses from 3.12 onwards (PEP 701).
+        python-version: ["3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+
+      - name: Run the test suite
+        # The suite is headless: tests/conftest.py forces the dummy SDL drivers and
+        # generates its own asset tree, so no display, no audio device and no game
+        # assets are needed on the runner.
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+          PYGAME_HIDE_SUPPORT_PROMPT: "1"
+        run: python -m pytest -ra --durations=10
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+
+      - name: Coverage report
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+          PYGAME_HIDE_SUPPORT_PROMPT: "1"
+        run: python -m pytest -q --cov=. --cov-report=term-missing
+
+      - name: Build the HTML report
+        if: always()
+        run: python -m coverage html
+        continue-on-error: true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-html
+          path: htmlcov/
+          if-no-files-found: ignore

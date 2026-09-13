@@ -198,15 +198,10 @@ class TestDispatch:
         assert manager.cinematics["intro"].play(window) >= 0.0
 
 
-def test_the_manager_has_no_get_method(manager) -> None:
-    """Pins the defect behind the xfail in ``tests/test_trigger.py``.
-
-    ``CinematicTrigger.collide`` calls ``level.cinematics.get(name)``.  Nothing on
-    ``CinematicsManager`` provides that; the dictionary it wraps is ``.cinematics``.
-    See BUGS_FOUND.md #6.
-    """
-    assert not hasattr(manager, "get")
-    assert "intro" in manager.cinematics
+def test_the_manager_looks_a_cinematic_up_by_name(manager) -> None:
+    """``CinematicTrigger.collide`` calls ``level.cinematics.get(name)``."""
+    assert manager.get("intro") is manager.cinematics["intro"]
+    assert manager.get("nope") is None
 
 
 # --------------------------------------------------------------------------- #
@@ -305,23 +300,27 @@ class TestSlidePlayback:
         Cinematic.__play_slide__(self._slide(), controller, window)
         assert controller.quit_calls == 1
 
-    def test_a_pause_key_cinematic_can_never_be_dismissed(self, controller, window,
-                                                          fast_sleep) -> None:
-        """Characterisation of a game-freezing defect.
-
-        The pause-to-continue gate resolves its accepted keys with
-        ``hasattr(controller, key)`` -- but the bindings live in
-        ``Controller.KEYBOARD_LAYOUTS[layout][key]``, not as attributes on the
-        controller.  ``valid_keys`` therefore stays empty and the ``while True``
-        never breaks, whatever the player presses.  Any cinematic authored with
-        ``pause_key`` hard-locks the game.  See BUGS_FOUND.md #15.
-        """
-        # The 1-second "hold the slide" loop runs first and skips on any key press,
-        # so the key is only offered once playback has reached the pause gate
-        # (100 frames at 0.01s).
-        fast_sleep["limit"] = 160
+    def test_a_bound_pause_key_dismisses_the_slide(self, controller, window,
+                                                   fast_sleep) -> None:
+        """The gate opens on the key the active layout binds to the named action."""
+        controller.set_keyboard_layout("ARROW_MOVE")
+        fast_sleep["limit"] = 200
+        # The 1-second hold runs first and skips on any key press, so the key is only
+        # offered once playback has reached the pause gate (100 frames at 0.01s).
         fast_sleep["on_sleep"] = lambda: (
             pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key = pygame.K_UP))
+            if fast_sleep["calls"] > 105 else None)
+
+        Cinematic.__play_slide__(self._slide(), controller, window,
+                                 pause_key = "keys_jump",
+                                 should_fade_in = False, should_fade_out = False)
+
+    def test_the_wrong_key_does_not_dismiss_the_slide(self, controller, window,
+                                                      fast_sleep) -> None:
+        controller.set_keyboard_layout("ARROW_MOVE")
+        fast_sleep["limit"] = 160
+        fast_sleep["on_sleep"] = lambda: (
+            pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key = pygame.K_q))
             if fast_sleep["calls"] > 105 else None)
 
         with pytest.raises(_SleepTimeout):
@@ -329,23 +328,85 @@ class TestSlidePlayback:
                                      pause_key = "keys_jump",
                                      should_fade_in = False, should_fade_out = False)
 
-    def test_the_gate_does_open_when_the_binding_is_an_attribute(self, controller,
-                                                                 window,
-                                                                 fast_sleep) -> None:
-        """The same gate, fed the shape it actually expects, does work.
+    def test_an_unresolvable_binding_accepts_any_key(self, controller, window,
+                                                     fast_sleep) -> None:
+        """A typo in a .agd must not trap the player.
 
-        This is what the fix would look like from the outside: ``pause_key`` naming
-        something ``getattr(controller, ...)`` can find, holding a list of key codes.
+        The gate used to resolve bindings with ``hasattr(controller, name)``, which
+        was never true, so every pause_key cinematic hard-locked the game.
         """
-        controller.keys_continue = [pygame.K_UP]
+        fast_sleep["limit"] = 200
+        fast_sleep["on_sleep"] = lambda: (
+            pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key = pygame.K_q))
+            if fast_sleep["calls"] > 105 else None)
+
+        Cinematic.__play_slide__(self._slide(), controller, window,
+                                 pause_key = "keys_does_not_exist",
+                                 should_fade_in = False, should_fade_out = False)
+
+    def test_a_tuple_of_bindings_is_accepted(self, controller, window,
+                                             fast_sleep) -> None:
+        """A bare string was converted to a list, but a tuple fell through unmatched."""
+        controller.set_keyboard_layout("ARROW_MOVE")
         fast_sleep["limit"] = 200
         fast_sleep["on_sleep"] = lambda: (
             pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key = pygame.K_UP))
             if fast_sleep["calls"] > 105 else None)
 
         Cinematic.__play_slide__(self._slide(), controller, window,
-                                 pause_key = "keys_continue",
+                                 pause_key = ("keys_jump", "keys_attack"),
                                  should_fade_in = False, should_fade_out = False)
+
+    def test_a_mouse_click_always_continues(self, controller, window,
+                                            fast_sleep) -> None:
+        controller.set_keyboard_layout("ARROW_MOVE")
+        fast_sleep["limit"] = 200
+        fast_sleep["on_sleep"] = lambda: (
+            pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button = 1))
+            if fast_sleep["calls"] > 105 else None)
+
+        Cinematic.__play_slide__(self._slide(), controller, window,
+                                 pause_key = "keys_jump",
+                                 should_fade_in = False, should_fade_out = False)
+
+
+class TestResolvePauseKeys:
+    def test_a_keyboard_action_resolves_to_its_key_codes(self, controller) -> None:
+        controller.set_keyboard_layout("ARROW_MOVE")
+        keys, buttons = Cinematic.__resolve_pause_keys__("keys_jump", controller)
+        assert keys == {pygame.K_UP}
+        assert buttons == set()
+
+    def test_multi_key_actions_resolve_to_every_binding(self, controller) -> None:
+        controller.set_keyboard_layout("ARROW_MOVE")
+        keys, _ = Cinematic.__resolve_pause_keys__("keys_teleport_dash", controller)
+        assert len(keys) == 3
+
+    def test_a_gamepad_action_resolves_to_a_button_index(self, controller) -> None:
+        controller.set_gamepad_layout("XBOX")
+        keys, buttons = Cinematic.__resolve_pause_keys__("button_jump", controller)
+        assert buttons == {pygame.CONTROLLER_BUTTON_A}
+        assert keys == set()
+
+    def test_keyboard_and_gamepad_namespaces_stay_separate(self, controller) -> None:
+        """A gamepad button index and a mouse button index are both small ints."""
+        controller.set_keyboard_layout("ARROW_MOVE")
+        controller.set_gamepad_layout("XBOX")
+        keys, buttons = Cinematic.__resolve_pause_keys__(
+            ["keys_jump", "button_jump"], controller)
+        assert keys and buttons
+        assert not (keys & buttons)
+
+    def test_no_gamepad_layout_resolves_no_buttons(self, controller) -> None:
+        controller.set_gamepad_layout("NONE")
+        _, buttons = Cinematic.__resolve_pause_keys__("button_jump", controller)
+        assert buttons == set()
+
+    def test_an_unknown_action_resolves_to_nothing(self, controller) -> None:
+        assert Cinematic.__resolve_pause_keys__("nope", controller) == (set(), set())
+
+    def test_no_pause_key_resolves_to_nothing(self, controller) -> None:
+        assert Cinematic.__resolve_pause_keys__(None, controller) == (set(), set())
 
 
 @pytest.mark.slow

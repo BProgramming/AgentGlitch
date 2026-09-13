@@ -114,20 +114,18 @@ class TestMove:
                 break
         assert bullet.hp == 0
 
-    def test_a_step_larger_than_the_remaining_range_overshoots(self,
-                                                               make_projectile) -> None:
-        """Characterisation: ``move`` lerps by ``speed / dist`` with no upper clamp.
+    def test_a_step_larger_than_the_remaining_range_lands_on_the_target(
+            self, make_projectile) -> None:
+        """The lerp weight is clamped at 1, so a huge step arrives instead of overshooting.
 
-        A weight above 1 throws the projectile past its target instead of ending its
-        flight, and the arrival check then fails.  Real frame times keep the step far
-        below the range, so this only bites on a long stall or a very fast bullet.
-        See BUGS_FOUND.md #12.
+        Real frame times keep the step well below the range; this bites on a long
+        stall or a very fast projectile.
         """
-        bullet = make_projectile(x = 100, y = 600, target = (900, 600))
+        bullet   = make_projectile(x = 100, y = 600, target = (900, 600))
         target_x = bullet.target[0]
         bullet.move(10_000)
-        assert bullet.rect.centerx > target_x
-        assert bullet.hp > 0
+        assert bullet.rect.centerx == target_x
+        assert bullet.hp == 0
 
     def test_hitting_the_player_damages_them_and_destroys_the_bullet(
             self, make_projectile, player) -> None:
@@ -190,10 +188,16 @@ class TestImpactAndPersistence:
         assert bullet.hp == 0
 
     def test_set_difficulty_rescales_the_speed(self, make_projectile) -> None:
-        bullet = make_projectile()
+        easy = make_projectile(difficulty = 1.0)
+        easy.set_difficulty(2.0)
+        assert easy.speed == pytest.approx(make_projectile(difficulty = 2.0).speed)
+
+    def test_repeated_difficulty_changes_do_not_compound(self, make_projectile) -> None:
+        bullet = make_projectile(difficulty = 1.0)
         before = bullet.speed
         bullet.set_difficulty(2.0)
-        assert bullet.speed == pytest.approx((0.75 * before) + (0.25 * before * 2.0))
+        bullet.set_difficulty(1.0)
+        assert bullet.speed == pytest.approx(before)
 
     def test_save_captures_flight_state(self, make_projectile) -> None:
         bullet  = make_projectile()

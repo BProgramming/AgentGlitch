@@ -82,15 +82,26 @@ class TestSaveLoad:
         restored.load(payload[entity.name])
         assert restored.hp == 55
 
-    def test_load_attribute_ignores_falsy_values(self, entity: Entity) -> None:
-        """Characterisation: ``load_attribute`` gates on truthiness, not presence.
+    def test_load_attribute_restores_falsy_values(self, entity: Entity) -> None:
+        """A saved hp of 0 -- a dead entity -- has to survive the round trip.
 
-        A saved ``hp`` of 0 -- a dead entity -- is therefore *not* restored, and the
-        entity comes back at full health.  ``Objective`` works around this by
-        assigning ``self.hp`` directly in its own ``load``.  See BUGS_FOUND.md #3.
+        The check is presence, not truthiness, so 0, 0.0 and False all restore.
         """
         entity.hp = 100
         entity.load({"hp": 0})
+        assert entity.hp == 0
+
+    def test_load_attribute_restores_a_false_flag(self, entity: Entity) -> None:
+        entity.is_blocking = True
+        entity.load_attribute({"is_blocking": False}, "is_blocking")
+        assert entity.is_blocking is False
+
+    def test_load_attribute_skips_a_missing_key(self, entity: Entity) -> None:
+        entity.load_attribute({}, "hp")
+        assert entity.hp == 100
+
+    def test_load_attribute_skips_an_explicit_none(self, entity: Entity) -> None:
+        entity.load_attribute({"hp": None}, "hp")
         assert entity.hp == 100
 
     def test_load_ignores_keys_it_does_not_know(self, entity: Entity) -> None:

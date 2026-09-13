@@ -46,6 +46,11 @@ class ParticleEffect:
         elif self.effect_type == ParticleType.VARIABLE:
             self.image = self.generate_variable_effect(width, height, amount, color, level.retro)
         self.rect:  pygame.Rect = pygame.Rect(0, 0, bounds[1][0], bounds[1][1])
+        # pygame.Rect coordinates are integers, so a sub-pixel step truncates to zero
+        # and is lost rather than accumulating.  The scroll position lives here as a
+        # float; self.rect carries the layer's bounds (its width and height) only.
+        self.pos_x: float       = 0.0
+        self.pos_y: float       = 0.0
         self.x_vel: float       = x_vel
         self.y_vel: float       = y_vel
 
@@ -114,17 +119,17 @@ class ParticleEffect:
     ) -> None:
         """Scroll the particle layer, wrapping it around the bounds."""
         if self.x_vel != 0:
-            self.rect.x += int(self.x_vel * dtime)
-            if self.rect.x < 0:
-                self.rect.x = self.rect.width
-            elif self.rect.x > self.rect.width:
-                self.rect.x = 0
+            self.pos_x += self.x_vel * dtime
+            if self.pos_x < 0:
+                self.pos_x += self.rect.width
+            elif self.pos_x > self.rect.width:
+                self.pos_x -= self.rect.width
         if self.y_vel != 0:
-            self.rect.y += int(self.y_vel * dtime)
-            if self.rect.y < 0:
-                self.rect.y = self.rect.height
-            elif self.rect.y > self.rect.height:
-                self.rect.y = 0
+            self.pos_y += self.y_vel * dtime
+            if self.pos_y < 0:
+                self.pos_y += self.rect.height
+            elif self.pos_y > self.rect.height:
+                self.pos_y -= self.rect.height
         return None
 
     def cycle_image(
@@ -162,8 +167,8 @@ class ParticleEffect:
         if self.should_move:
             image = self.image[self.image_index] if isinstance(self.image, list) else self.image
             if image:
-                coord_x = [self.rect.x - offset_x]
-                coord_y = [self.rect.y - offset_y]
+                coord_x = [self.pos_x - offset_x]
+                coord_y = [self.pos_y - offset_y]
                 if self.x_vel > 0:
                     coord_x.append(coord_x[0] - self.rect.width)
                 elif self.x_vel < 0:
